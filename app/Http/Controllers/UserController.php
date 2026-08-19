@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class UserController extends Controller
@@ -119,6 +120,8 @@ class UserController extends Controller
                 ]),
             ],
             'is_active' => ['required', 'boolean'],
+            'avatar' => ['nullable', 'image', 'max:2048'],
+            'remove_avatar' => ['nullable', 'boolean'],
         ]);
 
         $data = [
@@ -130,6 +133,17 @@ class UserController extends Controller
 
         if (! empty($validated['password'])) {
             $data['password'] = Hash::make($validated['password']);
+        }
+
+        if ($request->hasFile('avatar')) {
+            if ($user->avatar_path) {
+                Storage::disk('public')->delete($user->avatar_path);
+            }
+
+            $data['avatar_path'] = $request->file('avatar')->store('avatars', 'public');
+        } elseif ($request->boolean('remove_avatar') && $user->avatar_path) {
+            Storage::disk('public')->delete($user->avatar_path);
+            $data['avatar_path'] = null;
         }
 
         $user->update($data);

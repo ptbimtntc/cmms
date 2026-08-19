@@ -38,6 +38,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_active',
+        'avatar_path',
     ];
 
     /**
@@ -126,5 +127,33 @@ class User extends Authenticatable
         return Attribute::make(
             get: fn () => \Illuminate\Support\Str::title(strtolower($this->name))
         );
+    }
+
+    protected function photoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->avatar_path
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->avatar_path)
+                : null,
+        );
+    }
+
+    public function initials(): string
+    {
+        $words = preg_split('/\s+/', trim($this->name));
+        $words = array_filter($words);
+
+        if (empty($words)) {
+            return '?';
+        }
+
+        if (count($words) === 1) {
+            return \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($words[0], 0, 2));
+        }
+
+        $first = \Illuminate\Support\Str::substr(reset($words), 0, 1);
+        $last = \Illuminate\Support\Str::substr(end($words), 0, 1);
+
+        return \Illuminate\Support\Str::upper($first . $last);
     }
 }

@@ -23,6 +23,7 @@
     <table class="min-w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
             <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Photo</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Email</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
@@ -37,6 +38,15 @@
         <tbody class="divide-y divide-slate-100 bg-white">
             @foreach($users as $user)
             <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3">
+                    @if ($user->avatar_path)
+                        <img src="{{ $user->photo_url }}" alt="{{ $user->name }}" class="h-8 w-8 rounded-full object-cover">
+                    @else
+                        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+                            {{ $user->initials() }}
+                        </div>
+                    @endif
+                </td>
                 <td class="px-4 py-3 text-sm text-slate-700">{{ $user->name }}</td>
                 <td class="px-4 py-3 text-sm text-slate-700">{{ $user->email }}</td>
                 <td class="px-4 py-3">

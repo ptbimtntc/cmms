@@ -17,10 +17,55 @@
         <form
             action="{{ route('users.update', $user) }}"
             method="POST"
+            enctype="multipart/form-data"
             class="space-y-5 p-6"
         >
             @csrf
             @method('PUT')
+
+            <div>
+                <label class="mb-2 block text-sm font-medium text-slate-700">
+                    Profile Photo
+                </label>
+
+                <div class="flex items-center gap-4">
+                    @if ($user->avatar_path)
+                        <img
+                            src="{{ $user->photo_url }}"
+                            alt="{{ $user->name }}"
+                            class="h-16 w-16 rounded-full object-cover"
+                        >
+                    @else
+                        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+                            {{ $user->initials() }}
+                        </div>
+                    @endif
+
+                    <div>
+                        <input
+                            type="file"
+                            name="avatar"
+                            accept="image/*"
+                            class="block text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                        >
+
+                        <p class="mt-1 text-xs text-slate-500">
+                            JPG or PNG, max 2MB. Leave blank to keep current photo.
+                        </p>
+
+                        @if ($user->avatar_path)
+                            <label class="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                                <input type="checkbox" name="remove_avatar" value="1">
+                                Remove current photo
+                            </label>
+                        @endif
+                    </div>
+                </div>
+
+                @error('avatar')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
 
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">
