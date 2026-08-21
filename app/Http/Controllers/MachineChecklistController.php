@@ -6,7 +6,6 @@ use App\Models\Machine;
 use App\Models\MachineChecklist;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\MachineChecklistImport;
 use App\Imports\MachineChecklistsImport;
 
 class MachineChecklistController extends Controller
@@ -265,13 +264,56 @@ class MachineChecklistController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:csv,txt,xlsx,xls'
+            'file' => [
+                'required',
+                'file',
+                'max:20480', // 20 MB
+                function ($attribute, $value, $fail) {
+                    $extension = strtolower(
+                        $value->getClientOriginalExtension()
+                    );
+
+                    $mime = strtolower(
+                        $value->getMimeType()
+                    );
+
+                    $allowedExtensions = [
+                        'csv',
+                        'txt',
+                        'xlsx',
+                        'xls',
+                    ];
+
+                    $allowedMimes = [
+                        'text/csv',
+                        'text/plain',
+                        'application/csv',
+                        'application/vnd.ms-excel',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    ];
+
+                    if (
+                        ! in_array($extension, $allowedExtensions, true)
+                        || ! in_array($mime, $allowedMimes, true)
+                    ) {
+                        $fail('File must be a valid CSV or Excel file.');
+                    }
+                },
+            ],
         ]);
 
-        Excel::import(
-            new MachineChecklistsImport(),
-            $request->file('file')
-        );
+        try {
+            Excel::import(
+                new MachineChecklistsImport(),
+                $request->file('file')
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors([
+                'file' => 'Import failed. Please check the file format and data.',
+            ]);
+        }
 
         return back()->with(
             'success',

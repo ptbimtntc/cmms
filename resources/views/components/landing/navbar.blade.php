@@ -92,12 +92,54 @@
             {{-- Action --}}
             <div class="flex items-center gap-3">
 
-                <a href="{{ route('login') }}"
-                    class="hidden md:inline-flex px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 transition">
+                @guest
+                    <a href="{{ route('login') }}"
+                        class="hidden md:inline-flex px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 transition">
 
-                    Login
+                        Login
 
-                </a>
+                    </a>
+                @else
+                    <flux:dropdown position="bottom end" align="end">
+                        <button type="button" class="hidden md:inline-flex">
+                            <flux:avatar
+                                size="sm"
+                                :src="auth()->user()->photo_url"
+                                :name="auth()->user()->name"
+                                :initials="auth()->user()->initials()"
+                            />
+                        </button>
+
+                        <flux:menu>
+                            <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
+                                <flux:avatar
+                                    :src="auth()->user()->photo_url"
+                                    :name="auth()->user()->name"
+                                    :initials="auth()->user()->initials()"
+                                />
+                                <div class="grid flex-1 text-start text-sm leading-tight">
+                                    <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
+                                    <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
+                                </div>
+                            </div>
+                            <flux:menu.separator />
+                            <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
+                                {{ __('Settings') }}
+                            </flux:menu.item>
+                            <form method="POST" action="{{ route('logout') }}" class="w-full">
+                                @csrf
+                                <flux:menu.item
+                                    as="button"
+                                    type="submit"
+                                    icon="arrow-right-start-on-rectangle"
+                                    class="w-full cursor-pointer"
+                                >
+                                    {{ __('Log out') }}
+                                </flux:menu.item>
+                            </form>
+                        </flux:menu>
+                    </flux:dropdown>
+                @endguest
 
                 <a href="{{ route('qr.scan') }}"
                     class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition shadow">

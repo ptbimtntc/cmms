@@ -27,10 +27,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
-        // if(config('app.env') === 'local'){
-        //     URL::forceScheme('https');
-        // }
-        
+
+        if (env('CODESPACES') === true) {
+            URL::forceRootUrl(config('app.url'));
+            URL::forceScheme('https');
+        }
+
     }
 
     /**

@@ -20,8 +20,9 @@ test('new users can register', function () {
         'password_confirmation' => 'password',
     ]);
 
+    // CreateNewUser always assigns role GUEST, which is redirected to dashboard-guest, not dashboard.
     $response->assertSessionHasNoErrors()
-        ->assertRedirect(route('dashboard', absolute: false));
+        ->assertRedirect(route('dashboard-guest', absolute: false));
 
     $this->assertAuthenticated();
 });

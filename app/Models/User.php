@@ -112,6 +112,11 @@ class User extends Authenticatable
         return $this->role === self::ROLE_PIC_BUL;
     }
 
+    public function isGuest(): bool
+    {
+        return $this->role === self::ROLE_GUEST;
+    }
+
     public function isActive(): bool
     {
         return $this->is_active === true;

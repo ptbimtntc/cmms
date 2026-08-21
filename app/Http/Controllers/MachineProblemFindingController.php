@@ -110,8 +110,10 @@ class MachineProblemFindingController extends Controller
                 $request->file('file')
             );
         } catch (\Throwable $e) {
+            report($e);
+
             return back()->withErrors([
-                'file' => 'Import failed: ' . $e->getMessage(),
+                'file' => 'Import failed. Please check the file format and data.',
             ]);
         }
 
