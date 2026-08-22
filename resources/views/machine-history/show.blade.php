@@ -72,7 +72,7 @@
     @endif
 
     {{-- ============ DESKTOP: Tabel (md ke atas) ============ --}}
-    <div class="hidden overflow-hidden rounded-xl border md:block">
+    <div class="hidden overflow-x-auto rounded-xl border md:block">
         <table class="min-w-full">
             <thead class="bg-slate-100">
                 <tr>

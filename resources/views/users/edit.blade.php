@@ -23,29 +23,136 @@
             @csrf
             @method('PUT')
 
-            <div>
+            <div
+                x-data="{
+                    cropOpen: false,
+                    img: null,
+                    scale: 1,
+                    minScale: 1,
+                    maxScale: 1,
+                    offsetX: 0,
+                    offsetY: 0,
+                    dragging: false,
+                    startX: 0,
+                    startY: 0,
+                    lastX: 0,
+                    lastY: 0,
+                    editorSize: 288,
+                    outputSize: 480,
+                    previewUrl: @js($user->photo_url),
+                    onFileChosen(e) {
+                        const file = e.target.files[0];
+                        if (! file) return;
+                        const image = new Image();
+                        image.onload = () => {
+                            this.img = image;
+                            this.minScale = this.editorSize / Math.min(image.width, image.height);
+                            this.maxScale = this.minScale * 3;
+                            this.scale = this.minScale;
+                            this.offsetX = 0;
+                            this.offsetY = 0;
+                            this.cropOpen = true;
+                            this.$nextTick(() => this.draw());
+                        };
+                        image.src = URL.createObjectURL(file);
+                    },
+                    draw() {
+                        if (! this.img || ! this.$refs.canvas) return;
+                        const canvas = this.$refs.canvas;
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        const w = this.img.width * this.scale;
+                        const h = this.img.height * this.scale;
+                        const cx = canvas.width / 2 + this.offsetX;
+                        const cy = canvas.height / 2 + this.offsetY;
+                        ctx.drawImage(this.img, cx - w / 2, cy - h / 2, w, h);
+                    },
+                    clamp() {
+                        const w = this.img.width * this.scale;
+                        const h = this.img.height * this.scale;
+                        const maxX = Math.max(0, (w - this.editorSize) / 2);
+                        const maxY = Math.max(0, (h - this.editorSize) / 2);
+                        this.offsetX = Math.min(maxX, Math.max(-maxX, this.offsetX));
+                        this.offsetY = Math.min(maxY, Math.max(-maxY, this.offsetY));
+                    },
+                    pointer(e) {
+                        return e.touches && e.touches.length ? e.touches[0] : e;
+                    },
+                    startDrag(e) {
+                        const p = this.pointer(e);
+                        this.dragging = true;
+                        this.startX = p.clientX;
+                        this.startY = p.clientY;
+                        this.lastX = this.offsetX;
+                        this.lastY = this.offsetY;
+                    },
+                    onDrag(e) {
+                        if (! this.dragging) return;
+                        if (e.cancelable) e.preventDefault();
+                        const p = this.pointer(e);
+                        this.offsetX = this.lastX + (p.clientX - this.startX);
+                        this.offsetY = this.lastY + (p.clientY - this.startY);
+                        this.clamp();
+                        this.draw();
+                    },
+                    endDrag() {
+                        this.dragging = false;
+                    },
+                    onZoom() {
+                        this.clamp();
+                        this.draw();
+                    },
+                    applyCrop() {
+                        const out = document.createElement('canvas');
+                        out.width = this.outputSize;
+                        out.height = this.outputSize;
+                        const ctx = out.getContext('2d');
+                        const ratio = this.outputSize / this.editorSize;
+                        const w = this.img.width * this.scale * ratio;
+                        const h = this.img.height * this.scale * ratio;
+                        const cx = this.outputSize / 2 + this.offsetX * ratio;
+                        const cy = this.outputSize / 2 + this.offsetY * ratio;
+                        ctx.drawImage(this.img, cx - w / 2, cy - h / 2, w, h);
+                        out.toBlob((blob) => {
+                            const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+                            const dt = new DataTransfer();
+                            dt.items.add(file);
+                            this.$refs.avatarInput.files = dt.files;
+                            this.previewUrl = out.toDataURL('image/jpeg', 0.9);
+                            this.cropOpen = false;
+                        }, 'image/jpeg', 0.9);
+                    },
+                    cancelCrop() {
+                        this.$refs.avatarInput.value = '';
+                        this.cropOpen = false;
+                    },
+                }"
+            >
                 <label class="mb-2 block text-sm font-medium text-slate-700">
                     Profile Photo
                 </label>
 
                 <div class="flex items-center gap-4">
-                    @if ($user->avatar_path)
-                        <img
-                            src="{{ $user->photo_url }}"
-                            alt="{{ $user->name }}"
-                            class="h-16 w-16 rounded-full object-cover"
-                        >
-                    @else
-                        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
-                            {{ $user->initials() }}
-                        </div>
-                    @endif
+                    <img
+                        x-show="previewUrl"
+                        :src="previewUrl"
+                        alt="{{ $user->name }}"
+                        class="h-16 w-16 rounded-full object-cover"
+                    >
+                    <div
+                        x-show="! previewUrl"
+                        class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600"
+                    >
+                        {{ $user->initials() }}
+                    </div>
 
                     <div>
                         <input
                             type="file"
                             name="avatar"
                             accept="image/*"
+                            x-ref="avatarInput"
+                            @change="onFileChosen($event)"
                             class="block text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
                         >
 
@@ -65,6 +172,59 @@
                 @error('avatar')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror
+
+                {{-- Modal crop/posisi foto --}}
+                <div
+                    x-show="cropOpen"
+                    x-cloak
+                    style="display: none;"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                >
+                    <div class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-lg" @click.outside="cancelCrop()">
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-800">Adjust Photo</h2>
+                            <p class="text-sm text-slate-500">Drag to reposition, use the slider to zoom.</p>
+                        </div>
+
+                        <div class="flex justify-center">
+                            <div
+                                class="relative h-72 w-72 touch-none select-none overflow-hidden rounded-full border-4 border-slate-200 bg-slate-100"
+                                :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
+                                x-on:mousedown="startDrag($event)"
+                                x-on:mousemove.window="onDrag($event)"
+                                x-on:mouseup.window="endDrag()"
+                                x-on:touchstart="startDrag($event)"
+                                x-on:touchmove="onDrag($event)"
+                                x-on:touchend="endDrag()"
+                            >
+                                <canvas x-ref="canvas" width="288" height="288" class="h-72 w-72"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 px-4">
+                            <span class="text-sm text-slate-400">&minus;</span>
+                            <input
+                                type="range"
+                                x-model.number="scale"
+                                :min="minScale"
+                                :max="maxScale"
+                                step="0.001"
+                                x-on:input="onZoom()"
+                                class="w-full accent-blue-600"
+                            >
+                            <span class="text-sm text-slate-400">+</span>
+                        </div>
+
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="cancelCrop()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                                Cancel
+                            </button>
+                            <button type="button" @click="applyCrop()" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                                Save Photo
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div>

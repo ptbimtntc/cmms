@@ -11,6 +11,10 @@ class SparepartsImport implements ToCollection
 {
     public function collection(Collection $rows)
     {
+        $importedCount = 0;
+        $duplicateCount = 0;
+        $skippedCount = 0;
+
         foreach ($rows->skip(1) as $row) {
             $row = $row instanceof \Illuminate\Support\Collection
                 ? $row->toArray()
@@ -19,6 +23,8 @@ class SparepartsImport implements ToCollection
             $materialNumber = trim((string) ($row[0] ?? ''));
 
             if ($materialNumber === '') {
+                $skippedCount++;
+
                 continue;
             }
 
@@ -32,7 +38,7 @@ class SparepartsImport implements ToCollection
             $rop = is_numeric($row[6] ?? null) ? (int) $row[6] : 0;
             $price = is_numeric($row[8] ?? null) ? (float) $row[8] : 0;
 
-            Sparepart::updateOrCreate(
+            $sparepart = Sparepart::updateOrCreate(
                 [
                     'material_number' => $materialNumber,
                 ],
@@ -51,6 +57,18 @@ class SparepartsImport implements ToCollection
                     'pdt'          => trim((string) ($row[12] ?? '')) ?: null,
                 ]
             );
+
+            if ($sparepart->wasRecentlyCreated) {
+                $importedCount++;
+            } else {
+                $duplicateCount++;
+            }
         }
+
+        session()->flash('spareparts_import_result', [
+            'imported' => $importedCount,
+            'duplicate' => $duplicateCount,
+            'skipped' => $skippedCount,
+        ]);
     }
 }

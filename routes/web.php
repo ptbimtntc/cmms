@@ -52,6 +52,7 @@ Route::middleware([
             'store',
             'edit',
             'update',
+            'destroy',
         ]);
 });
 
@@ -69,6 +70,7 @@ Route::middleware([
 
     Route::resource('greasings', GreasingController::class)->except(['index']);
     Route::post('/greasings/import', [GreasingController::class, 'import'])->name('greasings.import');
+    Route::post('/greasings/{greasing}/assign-pic', [GreasingController::class, 'assignPic'])->name('greasings.assign-pic');
 
     Route::resource('spareparts', SparepartController::class);
     Route::post('/spareparts/import', [SparepartController::class, 'import'])->name('spareparts.import');

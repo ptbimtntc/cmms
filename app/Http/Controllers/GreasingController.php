@@ -45,7 +45,12 @@ class GreasingController extends Controller
 
         $groups = Group::orderBy('name')->get();
 
-        return view('greasings.index', compact('greasings', 'groups'));
+        $picsByArea = [
+            'WWD' => User::where('role', User::ROLE_PIC_WWD)->orderBy('name')->get(),
+            'BUL' => User::where('role', User::ROLE_PIC_BUL)->orderBy('name')->get(),
+        ];
+
+        return view('greasings.index', compact('greasings', 'groups', 'picsByArea'));
     }
 
     public function create()
@@ -216,6 +221,61 @@ class GreasingController extends Controller
         $greasing->delete();
 
         return back()->with('success', 'Greasing schedule deleted');
+    }
+
+    /**
+     * Quick PIC assignment from the schedule index dropdown (mirrors
+     * PMScheduleController::assignPic()). The route is only reachable by
+     * ADMIN/KOORDINATOR (see routes/web.php), matching the fact that the
+     * dropdown itself is only rendered for those roles.
+     *
+     * The PIC role offered (PIC WWD vs PIC BUL) is inferred from the
+     * schedule's Group name, since Group/Greasing has no area column.
+     */
+    public function assignPic(Request $request, Greasing $greasing)
+    {
+        // This endpoint is only ever called via fetch()/AJAX from the index
+        // dropdown, so it must always answer in JSON — never rely on
+        // Laravel's default exception-to-redirect behavior, since this
+        // app's shouldRenderJsonWhen() only auto-renders JSON for /api/*.
+        $area = $greasing->group?->inferredArea();
+
+        if ($area === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot determine PIC area (WWD/BUL) from this group\'s name.',
+            ], 422);
+        }
+
+        $picRole = $area === 'WWD' ? User::ROLE_PIC_WWD : User::ROLE_PIC_BUL;
+
+        // Treat an empty selection ("Assign PIC" placeholder option) as
+        // explicitly clearing the PIC, not as an invalid value.
+        $requestedPic = $request->input('pic');
+        $requestedPic = $requestedPic === '' ? null : $requestedPic;
+
+        $validator = validator(['pic' => $requestedPic], [
+            'pic' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::exists('users', 'name')
+                    ->where(fn ($query) => $query->where('role', $picRole)),
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $greasing->update([
+            'pic' => $validator->validated()['pic'],
+        ]);
+
+        return response()->json(['success' => true]);
     }
 
     /**

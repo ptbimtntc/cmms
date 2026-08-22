@@ -62,6 +62,17 @@
             </div>
         @endif
 
+        {{-- IMPORT RESULT --}}
+        @if (session('machine_measurements_import_result'))
+            @php($importResult = session('machine_measurements_import_result'))
+            <div class="mb-4 flex flex-wrap gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+                <span>Import result:</span>
+                <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
+                <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
+                <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
+            </div>
+        @endif
+
         {{-- FILTER --}}
         <div class="bg-white p-4 rounded-lg shadow mb-4">
 
@@ -129,8 +140,8 @@
         </div>
 
 
-        {{-- TABLE --}}
-        <div class="bg-white rounded-lg shadow overflow-x-auto">
+        {{-- ============ DESKTOP: Table (md and up) ============ --}}
+        <div class="hidden bg-white rounded-lg shadow overflow-x-auto md:block">
 
             <table class="w-full">
 
@@ -212,6 +223,44 @@
 
             </table>
 
+        </div>
+
+        {{-- ============ MOBILE: Card List (below md) ============ --}}
+        <div class="space-y-3 md:hidden">
+            @forelse($measurements as $measurement)
+                <div class="rounded-lg border bg-white p-4 shadow-sm">
+                    <div class="text-sm font-semibold text-gray-800">{{ $measurement->machine_type }}</div>
+                    <div class="text-xs text-gray-500">{{ $measurement->measurement_item }}</div>
+                    <div class="mt-2 grid grid-cols-2 gap-y-2 border-t pt-2 text-xs">
+                        <div>
+                            <div class="text-gray-400">Unit</div>
+                            <div class="font-medium text-gray-700">{{ $measurement->unit }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-400">Standard</div>
+                            <div class="font-medium text-gray-700">{{ $measurement->standard }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex gap-2 border-t pt-3">
+                        <a href="{{ route('machine-measurements.edit', $measurement->id) }}"
+                            class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
+                            Edit
+                        </a>
+                        <form action="{{ route('machine-measurements.destroy', $measurement->id) }}"
+                            method="POST" onsubmit="return confirm('Delete this measurement?')" class="flex-1">
+                            @csrf
+                            @method('DELETE')
+                            <button class="w-full rounded bg-red-500 px-3 py-2 text-xs font-medium text-white hover:bg-red-600">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-lg border bg-white p-6 text-center text-sm text-gray-500">
+                    No data found
+                </div>
+            @endforelse
         </div>
 
         <div class="mt-4">

@@ -104,11 +104,10 @@ class MachineProblemFindingController extends Controller
             ],
         ]);
 
+        $import = new MachineProblemFindingImport();
+
         try {
-            Excel::import(
-                new MachineProblemFindingImport(),
-                $request->file('file')
-            );
+            Excel::import($import, $request->file('file'));
         } catch (\Throwable $e) {
             report($e);
 
@@ -116,6 +115,12 @@ class MachineProblemFindingController extends Controller
                 'file' => 'Import failed. Please check the file format and data.',
             ]);
         }
+
+        session()->flash('machine_problem_findings_import_result', [
+            'imported' => $import->importedCount,
+            'duplicate' => $import->duplicateCount,
+            'skipped' => count($import->failures()),
+        ]);
 
         return back()->with(
             'success',

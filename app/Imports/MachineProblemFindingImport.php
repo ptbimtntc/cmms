@@ -19,6 +19,10 @@ class MachineProblemFindingImport implements
 {
     use SkipsFailures;
 
+    public int $importedCount = 0;
+
+    public int $duplicateCount = 0;
+
     public function model(array $row)
     {
         $category = trim((string) ($row['category'] ?? $row['Category'] ?? ''));
@@ -33,8 +37,12 @@ class MachineProblemFindingImport implements
             ->first();
 
         if ($exists) {
+            $this->duplicateCount++;
+
             return null;
         }
+
+        $this->importedCount++;
 
         return new MachineProblemFinding([
             'category' => $category,

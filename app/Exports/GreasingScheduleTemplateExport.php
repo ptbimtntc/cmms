@@ -28,6 +28,15 @@ class GreasingScheduleTemplateExport implements FromArray
                 'Optional remarks',
             ],
 
+            [
+                'WO-0002',
+                '2026-08-02',
+                'Line 1',
+                '16W',
+                '',
+                '',
+            ],
+
         ];
     }
 }

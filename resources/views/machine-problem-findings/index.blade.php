@@ -68,6 +68,17 @@
         </div>
     @endif
 
+    {{-- IMPORT RESULT --}}
+    @if (session('machine_problem_findings_import_result'))
+        @php($importResult = session('machine_problem_findings_import_result'))
+        <div class="mb-4 flex flex-wrap gap-3 rounded bg-gray-50 p-3 text-sm text-gray-700">
+            <span>Import result:</span>
+            <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
+            <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
+            <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
+        </div>
+    @endif
+
     {{-- FILTER --}}
     <form method="GET" class="mb-4 bg-white p-3 rounded shadow flex flex-wrap gap-2">
 
@@ -128,9 +139,10 @@
 
     </form>
 
-    {{-- TABLE --}}
-    <div class="bg-white shadow rounded overflow-hidden">
+    {{-- ============ DESKTOP: Table (md and up) ============ --}}
+    <div class="hidden bg-white shadow rounded overflow-hidden md:block">
 
+        <div class="overflow-x-auto">
         <table class="w-full">
 
             <thead class="bg-gray-100">
@@ -199,7 +211,7 @@
 
                     <tr>
 
-                        <td colspan="4" class="text-center py-6 text-gray-500">
+                        <td colspan="3" class="text-center py-6 text-gray-500">
 
                             No data found.
 
@@ -211,7 +223,38 @@
             </tbody>
 
         </table>
+        </div>
 
+    </div>
+
+    {{-- ============ MOBILE: Card List (below md) ============ --}}
+    <div class="space-y-3 md:hidden">
+        @forelse($findings as $finding)
+            <div class="rounded border bg-white p-4 shadow-sm">
+                <div class="text-xs text-gray-400">Category</div>
+                <div class="text-sm font-semibold text-gray-800">{{ $finding->category }}</div>
+                <div class="mt-2 border-t pt-2 text-xs text-gray-400">Finding</div>
+                <div class="text-sm text-gray-700">{{ $finding->finding }}</div>
+                <div class="mt-3 flex gap-2 border-t pt-3">
+                    <a href="{{ route('machine-problem-findings.edit', $finding->id) }}"
+                        class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
+                        Edit
+                    </a>
+                    <form action="{{ route('machine-problem-findings.destroy', $finding->id) }}" method="POST"
+                        onsubmit="return confirm('Delete this finding?')" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button class="w-full rounded bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @empty
+            <div class="rounded border bg-white p-6 text-center text-sm text-gray-500">
+                No data found.
+            </div>
+        @endforelse
     </div>
 
     <div class="mt-4">

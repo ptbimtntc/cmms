@@ -4,7 +4,6 @@ namespace App\Imports;
 
 use App\Models\Greasing;
 use App\Models\Group;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
@@ -15,7 +14,10 @@ use Maatwebsite\Excel\Concerns\ToCollection;
  *   1: plan_date   (Y-m-d)
  *   2: group       (must match an existing Group.name)
  *   3: cycle       (free text, e.g. "4W", "16W", "52W")
- *   4: pic         (must match an existing User.name with role PIC WWD/PIC BUL)
+ *   4: pic         (optional, free text — not validated against the users
+ *                   table here; PIC assignment is done afterwards by a
+ *                   Koordinator, the same way PMSchedule leaves PIC out of
+ *                   its import and assigns it later via assignPic())
  *   5: remarks     (optional)
  *
  * Day/Week/Month, Due Date, and Status are never read from the file —
@@ -73,16 +75,6 @@ class GreasingScheduleImport implements ToCollection
                 continue;
             }
 
-            $picUser = User::where('name', $picName)
-                ->whereIn('role', [User::ROLE_PIC_WWD, User::ROLE_PIC_BUL])
-                ->first();
-
-            if (! $picUser) {
-                $skippedCount++;
-
-                continue;
-            }
-
             $exists = Greasing::where('group_id', $group->id)
                 ->whereDate('plan_date', $planDate)
                 ->where('order_number', $orderNumber)
@@ -100,7 +92,7 @@ class GreasingScheduleImport implements ToCollection
                 'cycle' => strtoupper($cycle),
                 'plan_date' => $planDate->format('Y-m-d'),
                 'due_date' => Greasing::calculateDueDate($planDate)->format('Y-m-d'),
-                'pic' => $picUser->name,
+                'pic' => $picName !== '' ? $picName : null,
                 'action_date' => null,
                 'status' => 'OPEN',
                 'remarks' => $remarks !== '' ? $remarks : null,

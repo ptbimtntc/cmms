@@ -61,6 +61,17 @@
     </div>
     @endif
 
+    {{-- IMPORT RESULT --}}
+    @if (session('machine_problems_import_result'))
+        @php($importResult = session('machine_problems_import_result'))
+        <div class="mb-4 flex flex-wrap gap-3 rounded bg-gray-50 p-3 text-sm text-gray-700">
+            <span>Import result:</span>
+            <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
+            <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
+            <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
+        </div>
+    @endif
+
     {{-- FILTER BAR --}}
     <div class="bg-white p-4 rounded-lg shadow mb-4">
 
@@ -127,9 +138,10 @@
 
     </div>
 
-    {{-- TABLE --}}
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+    {{-- ============ DESKTOP: Table (md and up) ============ --}}
+    <div class="hidden bg-white rounded-lg shadow overflow-hidden md:block">
 
+        <div class="overflow-x-auto">
         <table class="w-full text-sm">
 
             {{-- HEADER --}}
@@ -189,7 +201,7 @@
                 @empty
 
                 <tr>
-                    <td colspan="3" class="text-center p-6 text-gray-500">
+                    <td colspan="4" class="text-center p-6 text-gray-500">
                         No Big Problem data found
                     </td>
                 </tr>
@@ -198,7 +210,43 @@
             </tbody>
 
         </table>
+        </div>
 
+    </div>
+
+    {{-- ============ MOBILE: Card List (below md) ============ --}}
+    <div class="space-y-3 md:hidden">
+        @forelse($machineProblems as $p)
+            <div class="rounded-lg border bg-white p-4 shadow-sm">
+                <div class="text-sm font-semibold text-gray-800">{{ $p->machine_type }}</div>
+                <div class="mt-2 border-t pt-2 text-xs">
+                    <div class="text-gray-400">Big Problem</div>
+                    <div class="font-medium text-gray-700">{{ $p->problem }}</div>
+                </div>
+                <div class="mt-2 text-xs">
+                    <div class="text-gray-400">Category</div>
+                    <div class="font-medium text-gray-700">{{ $p->category }}</div>
+                </div>
+                <div class="mt-3 flex gap-2 border-t pt-3">
+                    <a href="{{ route('machine-problems.edit', $p->id) }}"
+                        class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
+                        Edit
+                    </a>
+                    <form action="{{ route('machine-problems.destroy', $p->id) }}" method="POST"
+                        onsubmit="return confirm('Delete this problem?')" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button class="w-full rounded bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @empty
+            <div class="rounded-lg border bg-white p-6 text-center text-sm text-gray-500">
+                No Big Problem data found
+            </div>
+        @endforelse
     </div>
 
 </div>

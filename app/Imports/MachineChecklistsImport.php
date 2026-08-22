@@ -10,13 +10,19 @@ class MachineChecklistsImport implements ToCollection
 {
     public function collection(Collection $rows)
     {
+        $importedCount = 0;
+        $duplicateCount = 0;
+        $skippedCount = 0;
+
         foreach ($rows->skip(1) as $row) {
 
             if (empty($row[0])) {
+                $skippedCount++;
+
                 continue;
             }
 
-            MachineChecklist::updateOrCreate(
+            $checklist = MachineChecklist::updateOrCreate(
                 [
                     'machine_type'   => trim($row[0]),
                     'section'        => trim($row[1]),
@@ -29,6 +35,17 @@ class MachineChecklistsImport implements ToCollection
                 ]
             );
 
+            if ($checklist->wasRecentlyCreated) {
+                $importedCount++;
+            } else {
+                $duplicateCount++;
+            }
         }
+
+        session()->flash('machine_checklists_import_result', [
+            'imported' => $importedCount,
+            'duplicate' => $duplicateCount,
+            'skipped' => $skippedCount,
+        ]);
     }
 }

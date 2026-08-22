@@ -41,6 +41,10 @@ class MachineProblemImport implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
+        $importedCount = 0;
+        $duplicateCount = 0;
+        $skippedCount = 0;
+
         foreach ($rows as $row) {
             $row = $this->normalizeRow($row);
 
@@ -49,10 +53,12 @@ class MachineProblemImport implements ToCollection, WithHeadingRow
             $problem = trim((string) ($row['problem'] ?? $row['Problem'] ?? ''));
 
             if ($machineType === '' || $category === '' || $problem === '') {
+                $skippedCount++;
+
                 continue;
             }
 
-            MachineProblem::updateOrCreate(
+            $machineProblem = MachineProblem::updateOrCreate(
                 [
                     'machine_type' => $machineType,
                     'problem'      => $problem,
@@ -60,6 +66,18 @@ class MachineProblemImport implements ToCollection, WithHeadingRow
                 ],
                 []
             );
+
+            if ($machineProblem->wasRecentlyCreated) {
+                $importedCount++;
+            } else {
+                $duplicateCount++;
+            }
         }
+
+        session()->flash('machine_problems_import_result', [
+            'imported' => $importedCount,
+            'duplicate' => $duplicateCount,
+            'skipped' => $skippedCount,
+        ]);
     }
 }

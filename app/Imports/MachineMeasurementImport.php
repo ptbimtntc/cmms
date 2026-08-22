@@ -41,6 +41,10 @@ class MachineMeasurementImport implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
+        $importedCount = 0;
+        $duplicateCount = 0;
+        $skippedCount = 0;
+
         foreach ($rows as $row) {
             $row = $this->normalizeRow($row);
 
@@ -48,10 +52,12 @@ class MachineMeasurementImport implements ToCollection, WithHeadingRow
             $measurementItem = trim((string) ($row['measurement_item'] ?? $row['measurement'] ?? $row['Measurement Item'] ?? ''));
 
             if ($machineType === '' || $measurementItem === '') {
+                $skippedCount++;
+
                 continue;
             }
 
-            MachineMeasurement::updateOrCreate(
+            $measurement = MachineMeasurement::updateOrCreate(
                 [
                     'machine_type'     => $machineType,
                     'measurement_item' => $measurementItem,
@@ -61,6 +67,18 @@ class MachineMeasurementImport implements ToCollection, WithHeadingRow
                     'unit'     => trim((string) ($row['unit'] ?? $row['Unit'] ?? '')) ?: null,
                 ]
             );
+
+            if ($measurement->wasRecentlyCreated) {
+                $importedCount++;
+            } else {
+                $duplicateCount++;
+            }
         }
+
+        session()->flash('machine_measurements_import_result', [
+            'imported' => $importedCount,
+            'duplicate' => $duplicateCount,
+            'skipped' => $skippedCount,
+        ]);
     }
 }

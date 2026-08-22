@@ -40,6 +40,16 @@
         </div>
     @endif
 
+    <?php if (session('pm_schedules_import_result')): ?>
+        <?php $importResult = session('pm_schedules_import_result'); ?>
+        <div class="mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <span>Import result:</span>
+            <span class="font-semibold text-emerald-700"><?php echo e($importResult['imported']); ?> imported</span>
+            <span class="font-semibold text-amber-700"><?php echo e($importResult['duplicate']); ?> duplicate</span>
+            <span class="font-semibold text-rose-700"><?php echo e($importResult['skipped']); ?> skipped/invalid</span>
+        </div>
+    <?php endif; ?>
+
     <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
         <input title="Search machine / type..." type="text" name="search" value="{{ request('search') }}"
             placeholder="Search..."

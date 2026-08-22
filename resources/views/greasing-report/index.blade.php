@@ -119,7 +119,9 @@
             <div class="border-b border-slate-200 px-4 py-3">
                 <h2 class="text-sm font-semibold text-slate-800">Greasing Report</h2>
             </div>
-            <div class="overflow-x-auto">
+
+            {{-- ============ DESKTOP: Table (md and up) ============ --}}
+            <div class="hidden overflow-x-auto md:block">
                 <table class="min-w-full divide-y divide-slate-200">
                     <thead class="bg-slate-50">
                         <tr>
@@ -170,6 +172,62 @@
                     </tbody>
                 </table>
             </div>
+
+            {{-- ============ MOBILE: Card List (below md) ============ --}}
+            <div class="space-y-3 p-3 md:hidden">
+                @forelse ($greasings as $greasing)
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div class="mb-3 flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="truncate text-sm font-semibold text-slate-800">{{ $greasing->group->name ?? '-' }}</div>
+                                <div class="text-xs text-slate-500">{{ $greasing->cycle }} • {{ $greasing->order_number ?? '-' }}</div>
+                            </div>
+                            <span @class([
+                                'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold',
+                                'bg-amber-100 text-amber-700' => $greasing->status == 'OPEN',
+                                'bg-rose-100 text-rose-700' => $greasing->status == 'FINISH',
+                                'bg-emerald-100 text-emerald-700' => $greasing->status == 'FINISH ON TIME',
+                            ])>
+                                {{ $greasing->status }}
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
+                            <div>
+                                <div class="text-slate-400">Plan Date</div>
+                                <div class="font-medium text-slate-700">{{ $greasing->plan_date->format('d M Y') }}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">Action Date</div>
+                                <div class="font-medium text-slate-700">{{ $greasing->action_date ? $greasing->action_date->format('d M Y') : '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">PIC</div>
+                                <div class="font-medium text-slate-700">{{ $greasing->pic ?? '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">Finding</div>
+                                <div class="mt-0.5">
+                                    @if ($greasing->findings_count > 0)
+                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">[ {{ $greasing->findings_count }} {{ \Illuminate\Support\Str::plural('Finding', $greasing->findings_count) }} ]</span>
+                                    @else
+                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-400">[ No Finding ]</span>
+                                    @endif
+                                </div>
+                            </div>
+                            @if ($greasing->remarks)
+                                <div class="col-span-2">
+                                    <div class="text-slate-400">Remarks</div>
+                                    <div class="font-medium text-slate-700">{{ $greasing->remarks }}</div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No greasing schedule found for this period</p>
+                @endforelse
+            </div>
+
             <div class="border-t border-slate-100 p-3">
                 {{ $greasings->links() }}
             </div>

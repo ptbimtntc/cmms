@@ -22,7 +22,7 @@ class MachineTemplateExport implements FromArray
             [
                 'MC001',
                 'NDE',
-                'KA-WWD',
+                'WWD',
                 'ACTIVE',
                 104,
                 'WEEK',

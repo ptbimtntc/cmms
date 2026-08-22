@@ -37,6 +37,16 @@
         </div>
     @endif
 
+    @if (session('spareparts_import_result'))
+        @php($importResult = session('spareparts_import_result'))
+        <div class="mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <span>Import result:</span>
+            <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
+            <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
+            <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
+        </div>
+    @endif
+
     <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
         <select name="sort" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
             <option value="">Default Sort</option>
@@ -73,7 +83,9 @@
         <a href="{{ route('spareparts.index') }}" class="rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">Reset</a>
     </form>
 
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    {{-- ============ DESKTOP: Table (md and up) ============ --}}
+    <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+        <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200">
             <thead class="bg-slate-50">
                 <tr>
@@ -135,6 +147,70 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
+    </div>
+
+    {{-- ============ MOBILE: Card List (below md) ============ --}}
+    <div class="space-y-3 md:hidden">
+        @forelse ($spareparts as $sparepart)
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <div class="truncate text-sm font-semibold text-slate-800">{{ $sparepart->material_number }}</div>
+                        <div class="truncate text-xs text-slate-500">{{ $sparepart->description }}</div>
+                    </div>
+                    @if ($sparepart->status == 'ACTIVE')
+                        <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">ACTIVE</span>
+                    @else
+                        <span class="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">INACTIVE</span>
+                    @endif
+                </div>
+                <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
+                    <div>
+                        <div class="text-slate-400">Machine Type</div>
+                        <div class="font-medium text-slate-700">{{ $sparepart->machine_type ?: '-' }}</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">Stock</div>
+                        <div class="font-medium text-slate-700">
+                            @if ($sparepart->stock <= $sparepart->rop)
+                                <span class="font-semibold text-red-600">{{ $sparepart->stock }} (LOW)</span>
+                            @else
+                                {{ $sparepart->stock }}
+                            @endif
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">Unit</div>
+                        <div class="font-medium text-slate-700">{{ $sparepart->unit ?: '-' }}</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">ROP</div>
+                        <div class="font-medium text-slate-700">{{ $sparepart->rop }}</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">Location</div>
+                        <div class="font-medium text-slate-700">{{ $sparepart->location ?: '-' }}</div>
+                    </div>
+                    <div>
+                        <div class="text-slate-400">Price</div>
+                        <div class="font-medium text-slate-700">$ {{ number_format($sparepart->price, 0, ',', '.') }}</div>
+                    </div>
+                </div>
+                @if (in_array(auth()->user()->role, ['ADMIN', 'KOORDINATOR WWD', 'KOORDINATOR BUL']))
+                    <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                        <a href="{{ route('spareparts.edit', $sparepart->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">Edit</a>
+                        <form action="{{ route('spareparts.destroy', $sparepart->id) }}" method="POST" class="flex-1">
+                            @csrf
+                            @method('DELETE')
+                            <button onclick="return confirm('Delete sparepart?')" class="w-full rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-rose-700">Delete</button>
+                        </form>
+                    </div>
+                @endif
+            </div>
+        @empty
+            <p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No Data Found</p>
+        @endforelse
     </div>
 
     <div class="mt-4">

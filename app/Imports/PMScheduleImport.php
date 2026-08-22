@@ -14,6 +14,7 @@ class PMScheduleImport implements ToCollection
     {
         $duplicateCount = 0;
         $importedCount = 0;
+        $skippedCount = 0;
 
         foreach ($rows->skip(1) as $row) {
 
@@ -22,11 +23,15 @@ class PMScheduleImport implements ToCollection
 
             // Skip kalau machine number kosong
             if ($machineNumber === '') {
+                $skippedCount++;
+
                 continue;
             }
 
             // Skip kalau order number kosong
             if ($orderNumber === '') {
+                $skippedCount++;
+
                 continue;
             }
 
@@ -37,6 +42,8 @@ class PMScheduleImport implements ToCollection
 
             // Skip kalau machine tidak ada
             if (! $machine) {
+                $skippedCount++;
+
                 continue;
             }
 
@@ -48,6 +55,8 @@ class PMScheduleImport implements ToCollection
                 )->startOfDay();
 
             } catch (\Exception $e) {
+                $skippedCount++;
+
                 continue;
             }
 
@@ -83,12 +92,13 @@ class PMScheduleImport implements ToCollection
             $importedCount++;
         }
 
- 
+
         session()->flash(
-            'import_result',
+            'pm_schedules_import_result',
             [
                 'imported' => $importedCount,
                 'duplicate' => $duplicateCount,
+                'skipped' => $skippedCount,
             ]
         );
     }

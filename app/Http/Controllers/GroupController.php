@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Group;
+use App\Models\Machine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class GroupController extends Controller
 {
@@ -44,18 +46,41 @@ class GroupController extends Controller
 
     public function edit(Group $group)
     {
-        return view('groups.edit', compact('group'));
+        $machines = Machine::with('group')
+            ->orderBy('machine_number')
+            ->get();
+
+        return view('groups.edit', compact('group', 'machines'));
     }
 
     public function update(Request $request, Group $group)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255|unique:groups,name,' . $group->id,
+            'machine_ids' => 'nullable|array',
+            'machine_ids.*' => 'exists:machines,id',
         ]);
 
-        $group->update([
-            'name' => $request->name,
-        ]);
+        $selectedMachineIds = $validated['machine_ids'] ?? [];
+
+        DB::transaction(function () use ($group, $validated, $selectedMachineIds) {
+            $group->update([
+                'name' => $validated['name'],
+            ]);
+
+            // Assign the checked machines to this group (may move them out of
+            // whatever group they previously belonged to — a machine only
+            // ever has one group_id column, never a pivot).
+            if (! empty($selectedMachineIds)) {
+                Machine::whereIn('id', $selectedMachineIds)->update(['group_id' => $group->id]);
+            }
+
+            // Any machine currently in this group that was unchecked is
+            // removed from the group (set back to ungrouped).
+            Machine::where('group_id', $group->id)
+                ->whereNotIn('id', $selectedMachineIds)
+                ->update(['group_id' => null]);
+        });
 
         return redirect()
             ->route('groups.index')

@@ -104,31 +104,34 @@ test('row with an invalid date is skipped, not imported, and does not crash', fu
     expect(session('greasing_import_result')['skipped'])->toBe(1);
 });
 
-test('row with a pic that is not a valid pic user is skipped', function () {
+test('pic is optional and not validated against registered users during import — assignment happens later via koordinator', function () {
     [$admin] = importFixtures();
 
-    $csv = makeCsv('bad-pic.csv', [
+    $csv = makeCsv('free-text-pic.csv', [
         ['order_number', 'plan_date', 'group', 'cycle', 'pic', 'remarks'],
-        ['WO-5001', '2026-08-01', 'Line 1', '4W', 'Nobody Registered', ''],
+        ['WO-5001', '2026-08-01', 'Line 1', '4W', 'Nobody Registered Yet', ''],
     ]);
 
     $this->actingAs($admin)->post(route('greasings.import'), ['file' => $csv]);
 
-    expect(Greasing::where('order_number', 'WO-5001')->exists())->toBeFalse();
+    $greasing = Greasing::where('order_number', 'WO-5001')->first();
+    expect($greasing)->not->toBeNull()
+        ->and($greasing->pic)->toBe('Nobody Registered Yet');
 });
 
-test('row with a koordinator name as pic is skipped because they are not a pic role', function () {
+test('blank pic column imports the row with a null pic', function () {
     [$admin] = importFixtures();
-    User::factory()->create(['role' => User::ROLE_KOORDINATOR_WWD, 'name' => 'Koordinator Andi']);
 
-    $csv = makeCsv('non-pic-role.csv', [
+    $csv = makeCsv('blank-pic.csv', [
         ['order_number', 'plan_date', 'group', 'cycle', 'pic', 'remarks'],
-        ['WO-5002', '2026-08-01', 'Line 1', '4W', 'Koordinator Andi', ''],
+        ['WO-5002', '2026-08-01', 'Line 1', '4W', '', ''],
     ]);
 
     $this->actingAs($admin)->post(route('greasings.import'), ['file' => $csv]);
 
-    expect(Greasing::where('order_number', 'WO-5002')->exists())->toBeFalse();
+    $greasing = Greasing::where('order_number', 'WO-5002')->first();
+    expect($greasing)->not->toBeNull()
+        ->and($greasing->pic)->toBeNull();
 });
 
 test('row with blank cycle is skipped', function () {

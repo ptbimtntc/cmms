@@ -35,6 +35,16 @@
         </div>
     @endif
 
+    @if (session('machines_import_result'))
+        @php($importResult = session('machines_import_result'))
+        <div class="mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <span>Import result:</span>
+            <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
+            <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
+            <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
+        </div>
+    @endif
+
     <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
         <select name="sort" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
             <option value="">Default Sort</option>
@@ -80,7 +90,9 @@
         </a>
     </form>
 
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    {{-- ============ DESKTOP: Table (md and up) ============ --}}
+    <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+        <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200">
             <thead class="bg-slate-50">
                 <tr>
@@ -127,6 +139,45 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
+    </div>
+
+    {{-- ============ MOBILE: Card List (below md) ============ --}}
+    <div class="space-y-3 md:hidden">
+        @forelse($machines as $m)
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="mb-3 flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <div class="truncate text-sm font-semibold text-slate-800">{{ $m->machine_number }}</div>
+                        <div class="text-xs text-slate-500">{{ $m->machine_type }} • {{ $m->area }}</div>
+                    </div>
+                    <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold {{ $m->status == 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
+                        {{ $m->status }}
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
+                    <div class="col-span-2">
+                        <div class="text-slate-400">Group</div>
+                        <div class="font-medium text-slate-700">{{ $m->group->name ?? '-' }}</div>
+                    </div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                    <a href="{{ route('machines.edit', $m->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
+                        Edit
+                    </a>
+                    <form method="POST" action="{{ route('machines.destroy', $m->id) }}" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button class="w-full rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-rose-700"
+                            onclick="return confirm('Delete machine?')">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @empty
+            <p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No machines found</p>
+        @endforelse
     </div>
 
     <div class="mt-4">

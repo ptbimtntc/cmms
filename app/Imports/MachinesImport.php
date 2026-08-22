@@ -13,12 +13,18 @@ class MachinesImport implements ToCollection
 {
     public function collection(Collection $rows)
     {
+        $importedCount = 0;
+        $duplicateCount = 0;
+        $skippedCount = 0;
+
         foreach ($rows->skip(1) as $row) {
 
             $machineNumber = trim($row[0]);
 
             // skip empty row
             if (!$machineNumber) {
+                $skippedCount++;
+
                 continue;
             }
 
@@ -51,7 +57,7 @@ class MachinesImport implements ToCollection
                 $pmCycleUnit = null;
             }
 
-            Machine::updateOrCreate(
+            $machine = Machine::updateOrCreate(
                 [
                     'machine_number'  => $machineNumber
                 ],
@@ -63,6 +69,18 @@ class MachinesImport implements ToCollection
                     'pm_cycle_unit'   => $pmCycleUnit,
                 ]
             );
+
+            if ($machine->wasRecentlyCreated) {
+                $importedCount++;
+            } else {
+                $duplicateCount++;
+            }
         }
+
+        session()->flash('machines_import_result', [
+            'imported' => $importedCount,
+            'duplicate' => $duplicateCount,
+            'skipped' => $skippedCount,
+        ]);
     }
 }
