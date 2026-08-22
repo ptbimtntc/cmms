@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\GreasingController;
+use App\Http\Controllers\GreasingReportController;
+use App\Http\Controllers\GroupController;
 use App\Http\Controllers\ImportTemplateController;
 use App\Http\Controllers\MachineChecklistController;
 use App\Http\Controllers\MachineController;
@@ -9,20 +12,20 @@ use App\Http\Controllers\MachineProblemController;
 use App\Http\Controllers\MachineProblemFindingController;
 use App\Http\Controllers\OilAuditController;
 use App\Http\Controllers\PMScheduleController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrScannerController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SparepartController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
 
 Route::view('/', 'welcome')->name('home');
 
 Route::view('/dashboard-guest', 'dashboard-guest')->name('dashboard-guest');
 
-Route::resource('machine-history', MachineHistoryController::class)->only(['index','show',]);
+Route::resource('machine-history', MachineHistoryController::class)->only(['index', 'show']);
 Route::get('/machine-history/{machineNumber}/detail/{pmSchedule}', [MachineHistoryController::class, 'detail'])->name('machine-history.detail');
-Route::get('/m/{machine}', [MachineHistoryController::class,'show',]);
+Route::get('/m/{machine}', [MachineHistoryController::class, 'show']);
 
 Route::get('/scan', [QrScannerController::class, 'index'])->name('qr.scan');
 
@@ -36,7 +39,6 @@ Route::middleware('auth')->group(function () {
 
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
         ->name('profile.password.update');
-
 });
 
 Route::middleware([
@@ -63,6 +65,11 @@ Route::middleware([
     Route::get('/machines/import', [MachineController::class, 'importForm'])->name('machines.import.form');
     Route::post('/machines/import', [MachineController::class, 'import'])->name('machines.import');
 
+    Route::resource('groups', GroupController::class);
+
+    Route::resource('greasings', GreasingController::class)->except(['index']);
+    Route::post('/greasings/import', [GreasingController::class, 'import'])->name('greasings.import');
+
     Route::resource('spareparts', SparepartController::class);
     Route::post('/spareparts/import', [SparepartController::class, 'import'])->name('spareparts.import');
 
@@ -86,8 +93,6 @@ Route::middleware([
 
     Route::get('/import-templates', [ImportTemplateController::class, 'index'])->name('import-templates');
     Route::get('/import-templates/{type}', [ImportTemplateController::class, 'download'])->name('import-templates.download');
-
-
 });
 
 Route::middleware([
@@ -95,7 +100,7 @@ Route::middleware([
     'role:ADMIN,KOORDINATOR WWD,KOORDINATOR BUL,PIC WWD,PIC BUL',
 ])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
-    
+
     Route::get('spareparts', [SparepartController::class, 'index'])->name('spareparts.index');
 
     Route::resource('pm-schedules', PMScheduleController::class)->except(['create', 'store', 'destroy', 'import']);
@@ -104,6 +109,12 @@ Route::middleware([
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
+    Route::get('/greasings', [GreasingController::class, 'index'])->name('greasings.index');
+    Route::get('/greasings/{greasing}/execute', [GreasingController::class, 'execute'])->name('greasings.execute');
+    Route::post('/greasings/{greasing}/execute', [GreasingController::class, 'storeExecution'])->name('greasings.execute.store');
+    Route::patch('/greasings/{greasing}/findings/{finding}', [GreasingController::class, 'updateFinding'])->name('greasings.findings.update');
+
+    Route::get('/greasing-report', [GreasingReportController::class, 'index'])->name('greasing-report.index');
 });
 
 Route::middleware([
@@ -117,8 +128,6 @@ Route::middleware([
     Route::get('/oil-audit-report/{machineNumber}', [OilAuditController::class, 'history'])->name('oil-audits.history');
     Route::post('/oil-audits/{oilAudit}/follow-up', [OilAuditController::class, 'storeFollowUp'])->name('oil-audits.follow-up.store');
 });
-
-
 
 require __DIR__.'/settings.php';
 // require __DIR__.'/auth.php'; // pastikan ada

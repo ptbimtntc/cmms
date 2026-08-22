@@ -78,6 +78,7 @@ document.addEventListener('alpine:init', () => {
         $userRole = strtoupper(auth()->user()->role);
 
         $machineActive = request()->routeIs('machines.*');
+        $groupActive = request()->routeIs('groups.*');
         $sparepartActive = request()->routeIs('spareparts.*');
         $reportActive = request()->routeIs('reports.*');
         $userActive = request()->routeIs('users.*');
@@ -90,6 +91,8 @@ document.addEventListener('alpine:init', () => {
         $problemFindingsActive = request()->routeIs('machine-problem-findings.*');
         $oilAuditActive = request()->routeIs('oil-audits.scan');
         $oilAuditReportActive = request()->routeIs('oil-audits.report');
+        $greasingActive = request()->routeIs('greasings.*');
+        $greasingReportActive = request()->routeIs('greasing-report.*');
         $profileActive = request()->routeIs('profile.*');
 
         @endphp
@@ -97,9 +100,9 @@ document.addEventListener('alpine:init', () => {
         $machineHistoryActive = request()->routeIs('machine-history.*');
         @endphp
         <nav class="flex-1 overflow-hidden px-3 py-4 text-sm" x-data="{
-            openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive ? 'main' : 
-                        ($machineActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' : 
-                        ($machineHistoryActive || $reportActive || $oilAuditReportActive ? 'report' : 'system')) }}'
+            openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $greasingActive ? 'main' :
+                        ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
+                        ($machineHistoryActive || $reportActive || $oilAuditReportActive || $greasingReportActive ? 'report' : 'system')) }}'
         }">
             @php
             $groups = [
@@ -151,6 +154,22 @@ document.addEventListener('alpine:init', () => {
             $userRole === 'PIC WWD' ||
             $userRole === 'KOORDINATOR WWD',
             ],
+            [
+            'route' => route('greasings.index'),
+            'label' => 'Greasing',
+            'active' => $greasingActive,
+            'icon' => '
+            <circle cx="12" cy="7" r="3" />
+            <path d="M12 10v6" />
+            <path d="M9 19h6" />
+            <path d="M9 16h6" />',
+            'visible' =>
+            $userRole === 'ADMIN' ||
+            $userRole === 'KOORDINATOR WWD'||
+            $userRole === 'KOORDINATOR BUL'||
+            $userRole === 'PIC WWD'||
+            $userRole === 'PIC BUL',
+            ],
             ],
             ],
             [
@@ -198,6 +217,22 @@ document.addEventListener('alpine:init', () => {
             $userRole === 'PIC WWD' ||
             $userRole === 'KOORDINATOR WWD',
             ],
+            [
+            'route' => route('greasing-report.index'),
+            'label' => 'Greasing Report',
+            'active' => $greasingReportActive,
+            'icon' => '
+            <path d="M4 19V9" />
+            <path d="M10 19V5" />
+            <path d="M16 19v-11" />
+            <path d="M22 19V13" />',
+            'visible' =>
+            $userRole === 'ADMIN' ||
+            $userRole === 'KOORDINATOR WWD'||
+            $userRole === 'KOORDINATOR BUL'||
+            $userRole === 'PIC WWD'||
+            $userRole === 'PIC BUL',
+            ],
             ],
             ],
             [
@@ -221,6 +256,20 @@ document.addEventListener('alpine:init', () => {
             <path d="M17 7v10" />
             <path d="M4 17h16" />
             <rect x="6" y="4" width="12" height="4" rx="1" />',
+            'visible' =>
+            $userRole === 'ADMIN' ||
+            $userRole === 'KOORDINATOR WWD'||
+            $userRole === 'KOORDINATOR BUL',
+            ],
+            [
+            'route' => route('groups.index'),
+            'label' => 'Group',
+            'active' => $groupActive,
+            'icon' => '
+            <circle cx="9" cy="8" r="3" />
+            <circle cx="17" cy="9" r="2.5" />
+            <path d="M4 19v-1a5 5 0 0 1 5-5h0a5 5 0 0 1 5 5v1" />
+            <path d="M15 13.5a4 4 0 0 1 4 4v1.5" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||

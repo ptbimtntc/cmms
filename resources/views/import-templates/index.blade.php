@@ -153,6 +153,26 @@
 
             </div>
 
+            <div class="bg-white shadow rounded-lg p-6">
+
+                <h2 class="font-semibold text-lg">
+                    Greasing Schedule
+                </h2>
+
+                <p class="text-sm text-gray-500 mt-2">
+                    Template untuk import greasing schedule
+                </p>
+
+
+                <a href="{{ route('import-templates.download', 'greasing-schedule') }}"
+                    class="inline-block mt-4 bg-green-600 text-white px-4 py-2 rounded">
+
+                    Download Template
+
+                </a>
+
+            </div>
+
 
         </div>
 

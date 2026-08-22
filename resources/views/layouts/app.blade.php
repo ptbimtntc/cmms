@@ -19,6 +19,9 @@
         $defaultPageTitle = match (true) {
             str_contains($routeName, 'pm-schedules') => 'PM Schedules',
             str_contains($routeName, 'machines') => 'Machines',
+            str_contains($routeName, 'groups') => 'Groups',
+            str_contains($routeName, 'greasing-report') => 'Greasing Report',
+            str_contains($routeName, 'greasings') => 'Greasing Schedule',
             str_contains($routeName, 'spareparts') => 'Spareparts',
             str_contains($routeName, 'machine-measurements') => 'Measurements',
             str_contains($routeName, 'machine-checklists') => 'Checklists',

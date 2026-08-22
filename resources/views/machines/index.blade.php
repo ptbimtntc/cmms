@@ -87,6 +87,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Area</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Type</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Number</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Group</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
                 </tr>
@@ -97,6 +98,7 @@
                         <td class="px-4 py-3 text-sm text-slate-700">{{ $m->area }}</td>
                         <td class="px-4 py-3 text-sm text-slate-700">{{ $m->machine_type }}</td>
                         <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $m->machine_number }}</td>
+                        <td class="px-4 py-3 text-sm text-slate-700">{{ $m->group->name ?? '-' }}</td>
                         <td class="px-4 py-3">
                             <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $m->status == 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
                                 {{ $m->status }}
@@ -120,7 +122,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No machines found</td>
+                        <td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No machines found</td>
                     </tr>
                 @endforelse
             </tbody>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -10,6 +11,7 @@ class Machine extends Model
 {
     protected $fillable = [
         'machine_number',
+        'group_id',
         'area',
         'machine_type',
         'description',
@@ -20,6 +22,11 @@ class Machine extends Model
         'pm_cycle_value',
         'pm_cycle_unit',
     ];
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(Group::class);
+    }
 
     public function oilAudits(): HasMany
     {

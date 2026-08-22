@@ -11,6 +11,7 @@ use App\Exports\MachineProblemTemplateExport;
 use App\Exports\MachineProblemFindingTemplateExport;
 use App\Exports\MachineMeasurementTemplateExport;
 use App\Exports\MachineChecklistTemplateExport;
+use App\Exports\GreasingScheduleTemplateExport;
 
 class ImportTemplateController extends Controller
 {
@@ -74,6 +75,13 @@ class ImportTemplateController extends Controller
                 return Excel::download(
                     new MachineChecklistTemplateExport(),
                     'machine_checklist_import_template.xlsx'
+                );
+
+            case 'greasing-schedule':
+
+                return Excel::download(
+                    new GreasingScheduleTemplateExport(),
+                    'greasing_schedule_import_template.xlsx'
                 );
 
 

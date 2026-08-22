@@ -35,6 +35,16 @@
                         <option value="INACTIVE" {{ $machine->status == 'INACTIVE' ? 'selected' : '' }}>INACTIVE</option>
                     </select>
                 </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">Group</label>
+                    <select name="group_id" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
+                        <option value="">-- No Group --</option>
+                        @foreach ($groups as $group)
+                            <option value="{{ $group->id }}" {{ old('group_id', $machine->group_id) == $group->id ? 'selected' : '' }}>{{ $group->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">

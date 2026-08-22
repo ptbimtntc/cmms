@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Group;
 use App\Models\Machine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,7 +15,7 @@ class MachineController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Machine::query();
+        $query = Machine::with('group');
 
         // SEARCH
         if ($request->filled('search')) {
@@ -140,7 +141,9 @@ class MachineController extends Controller
 
     public function create()
     {
-        return view('machines.create');
+        $groups = Group::orderBy('name')->get();
+
+        return view('machines.create', compact('groups'));
     }
 
     public function store(Request $request)
@@ -151,6 +154,7 @@ class MachineController extends Controller
             'machine_number' => 'required|unique:machines',
             'description' => 'nullable',
             'status' => 'required',
+            'group_id' => 'nullable|exists:groups,id',
         ]);
 
         Machine::create($request->all());
@@ -162,9 +166,11 @@ class MachineController extends Controller
 
     public function edit(Machine $machine)
     {
+        $groups = Group::orderBy('name')->get();
+
         return view(
             'machines.edit',
-            compact('machine')
+            compact('machine', 'groups')
         );
     }
 
@@ -178,6 +184,7 @@ class MachineController extends Controller
             'status' => 'required',
             'pm_cycle_value' => 'nullable|integer|min:1',
             'pm_cycle_unit' => 'nullable|in:DAY,WEEK,MONTH,HOUR',
+            'group_id' => 'nullable|exists:groups,id',
         ]);
 
         $machine->update($request->all());
