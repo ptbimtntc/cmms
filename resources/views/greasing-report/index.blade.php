@@ -42,10 +42,24 @@
             </select>
         </div>
 
+        @if (auth()->user()->isAdmin())
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Area</label>
+                <select name="area" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                    <option value="" {{ $area ? '' : 'selected' }}>All</option>
+                    <option value="WWD" {{ $area === 'WWD' ? 'selected' : '' }}>WWD</option>
+                    <option value="BUL" {{ $area === 'BUL' ? 'selected' : '' }}>BUL</option>
+                </select>
+            </div>
+        @endif
+
         <div class="ml-auto text-sm text-slate-500">
             Showing:
             <span class="font-semibold text-slate-800">
                 {{ $periodType === 'monthly' ? \Carbon\Carbon::create(null, $month, 1)->format('F').' '.$year : $year }}
+                @if ($area)
+                    &middot; {{ $area }}
+                @endif
             </span>
         </div>
     </form>
@@ -71,10 +85,16 @@
             </div>
 
             @if ($periodType === 'yearly' && $monthlyTrend)
-                <div class="mt-4 flex h-24 items-end gap-1 border-t border-slate-100 pt-3">
+                <div class="mt-4 flex items-end gap-1.5 border-t border-slate-100 pt-6">
                     @foreach ($monthlyTrend as $m)
-                        <div class="flex flex-1 flex-col items-center gap-1" title="{{ $m['label'] }}: {{ $m['closing_percent'] }}%">
-                            <div class="w-full rounded-t bg-emerald-500" style="height: {{ max($m['closing_percent'], 2) }}%"></div>
+                        <div class="flex flex-1 flex-col items-center gap-1" title="{{ $m['label'] }}: {{ $m['total'] > 0 ? $m['closing_percent'].'%' : 'No schedule' }}">
+                            <span class="text-[10px] font-medium {{ $m['total'] > 0 ? 'text-emerald-700' : 'text-slate-300' }}">
+                                {{ $m['total'] > 0 ? $m['closing_percent'].'%' : '–' }}
+                            </span>
+                            {{-- Fixed-height track so the percentage bar below has a definite height to resolve against (a % height inside an auto-height flex item never renders). --}}
+                            <div class="relative h-20 w-full">
+                                <div class="absolute bottom-0 w-full rounded-t {{ $m['total'] > 0 ? 'bg-emerald-500' : 'bg-slate-100' }}" style="height: {{ $m['total'] > 0 ? max($m['closing_percent'], 4) : 4 }}%"></div>
+                            </div>
                             <span class="text-[10px] text-slate-400">{{ $m['label'] }}</span>
                         </div>
                     @endforeach
@@ -101,10 +121,15 @@
             </div>
 
             @if ($periodType === 'yearly' && $monthlyTrend)
-                <div class="mt-4 flex h-24 items-end gap-1 border-t border-slate-100 pt-3">
+                <div class="mt-4 flex items-end gap-1.5 border-t border-slate-100 pt-6">
                     @foreach ($monthlyTrend as $m)
-                        <div class="flex flex-1 flex-col items-center gap-1" title="{{ $m['label'] }}: {{ $m['completion_percent'] }}%">
-                            <div class="w-full rounded-t bg-sky-500" style="height: {{ max($m['completion_percent'], 2) }}%"></div>
+                        <div class="flex flex-1 flex-col items-center gap-1" title="{{ $m['label'] }}: {{ $m['total'] > 0 ? $m['completion_percent'].'%' : 'No schedule' }}">
+                            <span class="text-[10px] font-medium {{ $m['total'] > 0 ? 'text-sky-700' : 'text-slate-300' }}">
+                                {{ $m['total'] > 0 ? $m['completion_percent'].'%' : '–' }}
+                            </span>
+                            <div class="relative h-20 w-full">
+                                <div class="absolute bottom-0 w-full rounded-t {{ $m['total'] > 0 ? 'bg-sky-500' : 'bg-slate-100' }}" style="height: {{ $m['total'] > 0 ? max($m['completion_percent'], 4) : 4 }}%"></div>
+                            </div>
                             <span class="text-[10px] text-slate-400">{{ $m['label'] }}</span>
                         </div>
                     @endforeach

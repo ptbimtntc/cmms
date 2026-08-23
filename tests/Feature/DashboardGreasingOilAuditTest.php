@@ -37,13 +37,75 @@ test('dashboard shows real greasing KPI matching the GreasingKpiCalculator formu
     $response->assertSee('50%', false);
 });
 
+test('greasing card year and month filter scope the KPI independently of the PM filters', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $group = Group::create(['name' => 'WWD 1']);
+
+    makeDashboardGreasing($group, ['status' => 'FINISH ON TIME', 'plan_date' => '2020-05-10']);
+    makeDashboardGreasing($group, ['status' => 'OPEN', 'plan_date' => '2020-05-11']);
+    // Different month, same year — must be excluded once a specific month is chosen.
+    makeDashboardGreasing($group, ['status' => 'FINISH', 'plan_date' => '2020-06-01']);
+    // Different year entirely — must never be included.
+    makeDashboardGreasing($group, ['status' => 'FINISH ON TIME', 'plan_date' => '2021-05-10']);
+
+    $response = $this->actingAs($admin)->get(route('dashboard', [
+        'greasing_year' => 2020,
+        'greasing_month' => 5,
+    ]));
+
+    $response->assertOk();
+    // Closing = 1 finish_on_time / 2 total = 50%
+    expect($response->viewData('greasing')['total'])->toBe(2)
+        ->and($response->viewData('greasing')['closing_percent'])->toBe(50.0);
+});
+
+test('greasing card follows the global page area filter, admin-only', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $wwdGroup = Group::create(['name' => 'WWD 1']);
+    $bulGroup = Group::create(['name' => 'BUL 1']);
+
+    makeDashboardGreasing($wwdGroup, ['status' => 'OPEN', 'plan_date' => '2026-06-01']);
+    makeDashboardGreasing($bulGroup, ['status' => 'OPEN', 'plan_date' => '2026-06-01']);
+    makeDashboardGreasing($bulGroup, ['status' => 'OPEN', 'plan_date' => '2026-06-02']);
+
+    $response = $this->actingAs($admin)->get(route('dashboard', [
+        'greasing_year' => 2026,
+        'greasing_month' => 6,
+        'area' => 'BUL',
+    ]));
+
+    $response->assertOk();
+    expect($response->viewData('greasing')['total'])->toBe(2);
+});
+
+test('greasing card global area filter is admin-only', function () {
+    $koordinator = User::factory()->create(['role' => User::ROLE_KOORDINATOR_BUL]);
+    $wwdGroup = Group::create(['name' => 'WWD 1']);
+    $bulGroup = Group::create(['name' => 'BUL 1']);
+
+    makeDashboardGreasing($wwdGroup, ['status' => 'OPEN', 'plan_date' => '2026-06-01']);
+    makeDashboardGreasing($bulGroup, ['status' => 'OPEN', 'plan_date' => '2026-06-02']);
+
+    // Koordinator BUL tries to force area=WWD via query string — since the
+    // global area filter is admin-only, this must be ignored and both
+    // schedules (regardless of group) must still be counted.
+    $response = $this->actingAs($koordinator)->get(route('dashboard', [
+        'greasing_year' => 2026,
+        'greasing_month' => 6,
+        'area' => 'WWD',
+    ]));
+
+    $response->assertOk();
+    expect($response->viewData('greasing')['total'])->toBe(2);
+});
+
 test('greasing card shows empty state gracefully when there is no data this month', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
     $response = $this->actingAs($admin)->get(route('dashboard'));
 
     $response->assertOk();
-    $response->assertSee('No greasing schedule this month');
+    $response->assertSee('No greasing schedule for this period');
 });
 
 test('oil audit section is visible to admin', function () {

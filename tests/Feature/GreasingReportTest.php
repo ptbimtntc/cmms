@@ -184,3 +184,64 @@ test('yearly trend has twelve months and each month kpi uses the same formula', 
     $response->assertSee('Jan');
     $response->assertSee('Dec');
 });
+
+test('yearly chart marks months with no schedule as no-data instead of a colored zero bar', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    reportGreasing(['plan_date' => '2026-03-01', 'status' => 'FINISH ON TIME', 'action_date' => '2026-03-05']);
+
+    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+        'period_type' => 'yearly',
+        'year' => 2026,
+    ]));
+
+    $response->assertOk();
+    // January has no schedule at all this year -> rendered as a dash, not "0%".
+    $response->assertSee('bg-slate-100', false);
+});
+
+test('admin can filter the greasing report by area', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $wwdGroup = Group::create(['name' => 'WWD 1']);
+    $bulGroup = Group::create(['name' => 'BUL 1']);
+
+    $wwd = Greasing::create([
+        'group_id' => $wwdGroup->id, 'order_number' => 'WO-WWD', 'cycle' => '4W',
+        'plan_date' => '2026-08-01', 'due_date' => Greasing::calculateDueDate('2026-08-01'), 'status' => 'OPEN',
+    ]);
+    $bul = Greasing::create([
+        'group_id' => $bulGroup->id, 'order_number' => 'WO-BUL', 'cycle' => '52W',
+        'plan_date' => '2026-08-01', 'due_date' => Greasing::calculateDueDate('2026-08-01'), 'status' => 'OPEN',
+    ]);
+
+    $wwdOnly = $this->actingAs($admin)->get(route('greasing-report.index', [
+        'period_type' => 'monthly', 'month' => 8, 'year' => 2026, 'area' => 'WWD',
+    ]));
+    $wwdOnly->assertOk();
+    $wwdOnly->assertSee($wwd->order_number);
+    $wwdOnly->assertDontSee($bul->order_number);
+
+    $bulOnly = $this->actingAs($admin)->get(route('greasing-report.index', [
+        'period_type' => 'monthly', 'month' => 8, 'year' => 2026, 'area' => 'BUL',
+    ]));
+    $bulOnly->assertOk();
+    $bulOnly->assertSee($bul->order_number);
+    $bulOnly->assertDontSee($wwd->order_number);
+
+    $all = $this->actingAs($admin)->get(route('greasing-report.index', [
+        'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
+    ]));
+    $all->assertOk();
+    $all->assertSee($wwd->order_number);
+    $all->assertSee($bul->order_number);
+});
+
+test('area filter on the greasing report is admin-only', function () {
+    $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
+
+    $response = $this->actingAs($pic)->get(route('greasing-report.index'));
+
+    $response->assertOk();
+    $response->assertDontSee('name="area"', false);
+});

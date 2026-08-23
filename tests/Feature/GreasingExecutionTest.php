@@ -44,7 +44,7 @@ test('pic owner can execute their own schedule and add multiple findings', funct
         'findings' => ['Finding 1', 'Finding 2', 'Finding 3'],
     ]);
 
-    $response->assertRedirect(route('greasings.execute', $greasing));
+    $response->assertRedirect(route('greasings.index'));
     $greasing->refresh();
 
     expect($greasing->status)->toBe('FINISH ON TIME')
@@ -56,12 +56,37 @@ test('new finding defaults to OPEN status', function () {
     $greasing = makeGreasing(['pic' => $pic->name]);
 
     $this->actingAs($pic)->post(route('greasings.execute.store', $greasing), [
+        'action_date' => $greasing->due_date->format('Y-m-d'),
         'findings' => ['Grease point blocked'],
     ]);
 
     $finding = $greasing->findings()->first();
 
     expect($finding->status)->toBe('OPEN');
+});
+
+test('execution without an action date fails validation and does not save', function () {
+    $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
+    $greasing = makeGreasing(['pic' => $pic->name]);
+
+    $response = $this->actingAs($pic)->post(route('greasings.execute.store', $greasing), [
+        'remarks' => 'trying to save without a date',
+    ]);
+
+    $response->assertSessionHasErrors('action_date');
+    expect($greasing->fresh()->status)->toBe('OPEN')
+        ->and($greasing->fresh()->action_date)->toBeNull();
+});
+
+test('saving a valid execution redirects to the greasing index, not back to the execute page', function () {
+    $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
+    $greasing = makeGreasing(['pic' => $pic->name]);
+
+    $response = $this->actingAs($pic)->post(route('greasings.execute.store', $greasing), [
+        'action_date' => $greasing->due_date->format('Y-m-d'),
+    ]);
+
+    $response->assertRedirect(route('greasings.index'));
 });
 
 test('a finding can be updated to COMPLETED', function () {
@@ -221,4 +246,42 @@ test('pic index only shows their own schedules', function () {
     $response->assertOk();
     $response->assertSee($mine->cycle);
     $response->assertDontSee('greasings/'.$notMine->id.'/execute');
+});
+
+test('non-admin sees the Execute button relabeled to Edit once a schedule is no longer OPEN', function () {
+    $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
+    $finished = makeGreasing([
+        'pic' => $pic->name,
+        'action_date' => '2026-08-10',
+        'status' => 'FINISH ON TIME',
+    ]);
+
+    $response = $this->actingAs($pic)->get(route('greasings.index'));
+
+    $response->assertOk();
+    $response->assertSeeInOrder(['Edit'], false);
+});
+
+test('non-admin still sees Execute label while a schedule is OPEN', function () {
+    $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
+    makeGreasing(['pic' => $pic->name, 'status' => 'OPEN']);
+
+    $response = $this->actingAs($pic)->get(route('greasings.index'));
+
+    $response->assertOk();
+    $response->assertSee('Execute');
+});
+
+test('admin always sees Execute label on the execute link regardless of status', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $greasing = makeGreasing(['status' => 'FINISH ON TIME', 'action_date' => '2026-08-10']);
+
+    $response = $this->actingAs($admin)->get(route('greasings.index'));
+
+    $response->assertOk();
+    // Admin also has a separate real "Edit" link (route('greasings.edit'))
+    // regardless of status, so we check the execute link specifically
+    // rather than asserting "Edit" is absent from the page entirely.
+    preg_match('/href="[^"]*'.$greasing->id.'\/execute"[^>]*>\s*(\w+)\s*</', $response->getContent(), $matches);
+    expect($matches[1] ?? null)->toBe('Execute');
 });

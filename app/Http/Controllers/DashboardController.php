@@ -85,8 +85,18 @@ class DashboardController extends Controller
         // --- Year options for every "year" filter on the page ---
         $years = $this->availableYears($user, $year);
 
-        // --- Greasing (current month snapshot, same KPI formula as Greasing Report) ---
-        $greasing = $this->greasingSummary($user, $now);
+        // --- Greasing (own independent Year/Month filter; Area follows the
+        // same global page filter as the PM cards, not its own dropdown) ---
+        $greasingYear = (int) $request->input('greasing_year', $now->year);
+        $greasingMonth = $request->filled('greasing_month') ? (int) $request->input('greasing_month') : null;
+
+        $greasing = $this->greasingSummary($user, $greasingYear, $greasingMonth, $area);
+        $greasingYears = $this->availableGreasingYears($user, $greasingYear);
+        $greasingSubtitle = collect([
+            $greasingYear,
+            $greasingMonth ? Carbon::create(null, $greasingMonth, 1)->format('F') : 'All Months',
+            $area ?: ($user->isAdmin() ? 'All Areas' : null),
+        ])->filter()->implode(' · ');
 
         // --- Oil Audit (WWD-only module; null hides the section entirely) ---
         $oilAudit = $this->oilAuditSummary($user, $area);
@@ -109,6 +119,10 @@ class DashboardController extends Controller
             'isAdmin' => $user->isAdmin(),
             'pmTargetPercent' => self::PM_TARGET_PERCENT,
             'greasing' => $greasing,
+            'greasingYears' => $greasingYears,
+            'selectedGreasingYear' => $greasingYear,
+            'selectedGreasingMonth' => $greasingMonth,
+            'greasingSubtitle' => $greasingSubtitle,
             'oilAudit' => $oilAudit,
         ]);
     }
@@ -373,24 +387,47 @@ class DashboardController extends Controller
     }
 
     /**
-     * Current-month Greasing KPI, using the exact same formula/visibility
-     * rule as GreasingReportController::index() (GreasingKpiCalculator +
-     * PIC-name scoping) so the dashboard can never disagree with the
-     * Greasing Report page. Koordinator/Admin see all groups, same as the
-     * report — Greasing has no area-based scoping today.
+     * Greasing KPI for the selected Year/Month/Area, using the exact same
+     * formula, PIC-name scoping, and group-name area matching as
+     * GreasingReportController::scopePeriod(), so the dashboard can never
+     * disagree with the Greasing Report page.
      */
-    private function greasingSummary(User $user, Carbon $now): array
+    private function greasingSummary(User $user, int $year, ?int $month, ?string $area): array
     {
         $statusCounts = Greasing::query()
-            ->whereYear('plan_date', $now->year)
-            ->whereMonth('plan_date', $now->month)
+            ->whereYear('plan_date', $year)
+            ->when($month, fn ($q) => $q->whereMonth('plan_date', $month))
             ->when($user->isPic(), fn ($q) => $q->where('pic', $user->name))
+            ->when($area, fn ($q) => $q->whereHas('group', fn ($g) => $g->whereRaw('UPPER(name) LIKE ?', ['%'.$area.'%'])))
             ->select('status')
             ->selectRaw('count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
 
         return GreasingKpiCalculator::fromStatusCounts($statusCounts);
+    }
+
+    /**
+     * Same MIN/MAX-based year range technique as availableYears(), scoped
+     * to the Greasing table's own plan_date range instead of PMSchedule's.
+     */
+    private function availableGreasingYears(User $user, int $selectedYear): array
+    {
+        $scope = Greasing::query()->when($user->isPic(), fn ($q) => $q->where('pic', $user->name));
+        $minPlanDate = (clone $scope)->min('plan_date');
+        $maxPlanDate = (clone $scope)->max('plan_date');
+
+        $years = $minPlanDate && $maxPlanDate
+            ? range((int) Carbon::parse($maxPlanDate)->format('Y'), (int) Carbon::parse($minPlanDate)->format('Y'))
+            : [];
+
+        if (! in_array($selectedYear, $years, true)) {
+            $years[] = $selectedYear;
+        }
+
+        rsort($years);
+
+        return $years;
     }
 
     /**

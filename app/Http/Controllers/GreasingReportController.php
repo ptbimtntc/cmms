@@ -24,8 +24,14 @@ class GreasingReportController extends Controller
             $month = now()->month;
         }
 
+        // Area filter is ADMIN-only — every other role has no established
+        // per-area scoping for Greasing (matches the dashboard's pattern).
+        $area = $user->isAdmin() && in_array($request->input('area'), ['WWD', 'BUL'], true)
+            ? $request->input('area')
+            : null;
+
         // --- KPI (single source of truth: GreasingKpiCalculator) ---
-        $statusCounts = $this->scopePeriod(Greasing::query(), $user, $periodType, $year, $month)
+        $statusCounts = $this->scopePeriod(Greasing::query(), $user, $periodType, $year, $month, $area)
             ->select('status')
             ->selectRaw('count(*) as total')
             ->groupBy('status')
@@ -37,7 +43,7 @@ class GreasingReportController extends Controller
         $monthlyTrend = null;
 
         if ($periodType === 'yearly') {
-            $yearRecords = $this->scopePeriod(Greasing::query(), $user, 'yearly', $year, $month)
+            $yearRecords = $this->scopePeriod(Greasing::query(), $user, 'yearly', $year, $month, $area)
                 ->get(['plan_date', 'status']);
 
             $monthlyTrend = collect(range(1, 12))->map(function (int $m) use ($yearRecords) {
@@ -56,7 +62,7 @@ class GreasingReportController extends Controller
         }
 
         // --- Greasing Report table ---
-        $greasings = $this->scopePeriod(Greasing::query(), $user, $periodType, $year, $month)
+        $greasings = $this->scopePeriod(Greasing::query(), $user, $periodType, $year, $month, $area)
             ->with('group')
             ->withCount('findings')
             ->orderBy('plan_date')
@@ -65,8 +71,8 @@ class GreasingReportController extends Controller
 
         // --- Finding Report table (from greasing_findings, same period/scope) ---
         $findings = GreasingFinding::query()
-            ->whereHas('greasing', function (Builder $query) use ($user, $periodType, $year, $month) {
-                $this->scopePeriod($query, $user, $periodType, $year, $month);
+            ->whereHas('greasing', function (Builder $query) use ($user, $periodType, $year, $month, $area) {
+                $this->scopePeriod($query, $user, $periodType, $year, $month, $area);
             })
             ->with('greasing.group')
             ->orderByDesc('id')
@@ -100,7 +106,8 @@ class GreasingReportController extends Controller
             'year',
             'month',
             'years',
-            'months'
+            'months',
+            'area'
         ));
     }
 
@@ -108,9 +115,11 @@ class GreasingReportController extends Controller
      * Applies the same Monthly/Yearly period filter (and PIC visibility
      * scope) to a Greasing query builder. Used by the KPI, the chart, the
      * Greasing table, and the Finding table so all four always agree on
-     * what "the selected period" means.
+     * what "the selected period" means. $area is the ADMIN-only filter;
+     * Greasing has no area column, so it matches via the same group-name
+     * convention Group::inferredArea() already uses (e.g. "WWD 1" => WWD).
      */
-    private function scopePeriod(Builder $query, User $user, string $periodType, int $year, int $month): Builder
+    private function scopePeriod(Builder $query, User $user, string $periodType, int $year, int $month, ?string $area = null): Builder
     {
         $query->whereYear('plan_date', $year);
 
@@ -120,6 +129,10 @@ class GreasingReportController extends Controller
 
         if ($user->isPic()) {
             $query->where('pic', $user->name);
+        }
+
+        if ($area) {
+            $query->whereHas('group', fn ($q) => $q->whereRaw('UPPER(name) LIKE ?', ['%'.$area.'%']));
         }
 
         return $query;

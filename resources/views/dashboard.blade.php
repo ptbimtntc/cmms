@@ -74,6 +74,10 @@
             <div class="space-y-4">
                 @include('partials.dashboard-greasing-card', [
                     'greasing' => $greasing,
+                    'subtitle' => $greasingSubtitle,
+                    'years' => $greasingYears,
+                    'selectedYear' => $selectedGreasingYear,
+                    'selectedMonth' => $selectedGreasingMonth,
                 ])
 
                 {{-- Quick Actions --}}

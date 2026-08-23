@@ -296,7 +296,7 @@ class GreasingController extends Controller
         $this->authorizeGreasingAccess($greasing);
 
         $validated = $request->validate([
-            'action_date' => 'nullable|date',
+            'action_date' => 'required|date',
             'remarks' => 'nullable|string',
             'findings' => 'nullable|array',
             'findings.*' => 'nullable|string|max:1000',
@@ -304,10 +304,10 @@ class GreasingController extends Controller
 
         // due_date/status are never trusted from the request — always
         // recomputed server-side from the schedule's own plan_date/due_date.
-        $status = Greasing::resolveStatus($validated['action_date'] ?? null, $greasing->due_date);
+        $status = Greasing::resolveStatus($validated['action_date'], $greasing->due_date);
 
         $greasing->update([
-            'action_date' => $validated['action_date'] ?? null,
+            'action_date' => $validated['action_date'],
             'remarks' => $validated['remarks'] ?? null,
             'status' => $status,
         ]);
@@ -325,7 +325,7 @@ class GreasingController extends Controller
         }
 
         return redirect()
-            ->route('greasings.execute', $greasing)
+            ->route('greasings.index')
             ->with('success', 'Greasing execution saved successfully');
     }
 

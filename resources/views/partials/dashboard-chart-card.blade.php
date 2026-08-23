@@ -1,4 +1,4 @@
-<div class="bg-white rounded-xl shadow-sm p-4">
+<div class="bg-white rounded-xl shadow-sm p-4 flex flex-col {{ $height ?? 'h-56 md:h-64' }}">
     <div class="flex items-start justify-between mb-1">
         <div>
             <div class="text-sm font-medium text-gray-700">{{ $title }}</div>
@@ -12,7 +12,7 @@
             </div>
         @endif
     </div>
-    <div class="{{ $height ?? 'h-56 md:h-64' }} mt-3">
-        <canvas id="{{ $id }}"></canvas>
+    <div class="flex-1 min-h-0 mt-3">
+        <canvas id="{{ $id }}" class="block h-full w-full"></canvas>
     </div>
 </div>

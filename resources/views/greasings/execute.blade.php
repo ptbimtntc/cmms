@@ -43,9 +43,9 @@
             <div class="grid gap-5 md:grid-cols-2">
                 <div>
                     <label class="mb-2 block text-sm font-medium text-slate-700">Action Date</label>
-                    <input type="date" name="action_date" value="{{ old('action_date', optional($greasing->action_date)->format('Y-m-d')) }}"
+                    <input type="date" name="action_date" required value="{{ old('action_date', optional($greasing->action_date)->format('Y-m-d')) }}"
                         class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                    <p class="mt-1 text-xs text-slate-400">Leaving this empty keeps the status as OPEN.</p>
+                    <p class="mt-1 text-xs text-slate-400">Action date is required to save this execution.</p>
                     @error('action_date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
