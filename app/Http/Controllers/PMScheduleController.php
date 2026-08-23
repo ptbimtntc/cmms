@@ -15,11 +15,14 @@ use App\Models\PMSchedule;
 use App\Models\PMSparepart;
 use App\Models\Sparepart;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
+use Throwable;
 
 class PMScheduleController extends Controller
 {
@@ -773,6 +776,82 @@ class PMScheduleController extends Controller
             ->route('pm-schedules.index')
             ->with('success', 'PM Checklist saved successfully');
 
+    }
+
+    public function exportPdf(PMSchedule $pmSchedule)
+    {
+        $this->authorizeScheduleAccess($pmSchedule);
+
+        $pmSchedule->load([
+            'measurements',
+            'problems.machineProblem',
+            'problems.machineProblemFinding',
+            'spareparts.sparepart',
+            'checklists.machineChecklist',
+        ]);
+
+        $totalCost = $pmSchedule->spareparts->sum(
+            fn ($item) => ($item->qty ?? 0) * ($item->sparepart->price ?? 0)
+        );
+
+        $checklistSections = $pmSchedule->checklists->groupBy(
+            fn ($item) => $item->machineChecklist->section ?? 'Others'
+        );
+
+        $statusLabel = $pmSchedule->status
+            ? ucwords(strtolower(str_replace('_', ' ', $pmSchedule->status)))
+            : '-';
+
+        $formatDate = fn ($date) => $date ? Carbon::parse($date)->format('d-m-Y') : '-';
+
+        try {
+            $pdf = Pdf::loadView('pm-schedules.pdf', [
+                'pmSchedule' => $pmSchedule,
+                'totalCost' => $totalCost,
+                'checklistSections' => $checklistSections,
+                'statusLabel' => $statusLabel,
+                'planDate' => $formatDate($pmSchedule->plan_date),
+                'dueDate' => $formatDate($pmSchedule->due_date),
+                'actionDate' => $formatDate($pmSchedule->actual_date),
+                'generatedAt' => Carbon::now()->format('d-m-Y H:i'),
+            ])->setPaper('a4', 'portrait');
+
+            // Returned as base64 inside a JSON payload (not a raw
+            // application/pdf/attachment response) so that download
+            // managers with aggressive browser integration (e.g. IDM),
+            // which hook network responses by content-type/extension
+            // rather than only link clicks, never recognize this as a
+            // downloadable file and hijack it. The real PDF Blob is
+            // reconstructed client-side with no further network request.
+            return response()->json([
+                'filename' => $this->pdfFilename($pmSchedule),
+                'content' => base64_encode($pdf->output()),
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Failed to generate PM Schedule PDF', [
+                'pm_schedule_id' => $pmSchedule->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            abort(500, 'Failed to generate PDF. Please try again later.');
+        }
+    }
+
+    private function pdfFilename(PMSchedule $pmSchedule): string
+    {
+        $machine = $pmSchedule->machine_number
+            ? preg_replace('/[^A-Za-z0-9_-]/', '', $pmSchedule->machine_number)
+            : 'machine';
+
+        $order = $pmSchedule->order_number
+            ? preg_replace('/[^A-Za-z0-9_-]/', '', $pmSchedule->order_number)
+            : 'NA';
+
+        $date = $pmSchedule->plan_date
+            ? Carbon::parse($pmSchedule->plan_date)->format('Y-m-d')
+            : Carbon::now()->format('Y-m-d');
+
+        return "PM_{$machine}_{$order}_{$date}.pdf";
     }
 
     public function assignPic(Request $request, PMSchedule $pmSchedule)

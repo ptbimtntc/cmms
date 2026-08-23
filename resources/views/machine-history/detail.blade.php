@@ -3,7 +3,7 @@
 @section('content')
 
     {{-- ============ Header ============ --}}
-    <div class="mb-6 flex flex-row items-center justify-between gap-3">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
             <h1 class="text-2xl font-bold">
                 PM Record
@@ -12,13 +12,66 @@
                 {{ $machine->machine_number }}
             </p>
         </div>
-        <div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="exportPmSchedulePdf(this, '{{ route('pm-schedules.pdf', $pmSchedule->id) }}')"
+                class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                </svg>
+                Export PDF
+            </button>
             <a href="{{ route('machine-history.show', $pmSchedule->machine_number) }}"
                 class="inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-white">
                 ← Back
             </a>
         </div>
     </div>
+
+    <script>
+        async function exportPmSchedulePdf(button, url) {
+            const originalHtml = button.innerHTML;
+            button.disabled = true;
+            button.textContent = 'Generating...';
+
+            try {
+                const response = await fetch(url, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                });
+
+                if (!response.ok) {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return;
+                    }
+                    throw new Error('PDF generation failed');
+                }
+
+                const data = await response.json();
+                const byteChars = atob(data.content);
+                const byteNumbers = new Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) {
+                    byteNumbers[i] = byteChars.charCodeAt(i);
+                }
+                const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
+
+                const blobUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = data.filename || 'PM_Record.pdf';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                alert('Failed to export PDF. Please try again.');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+            }
+        }
+    </script>
 
     {{-- ============ PM Information ============ --}}
     <div class="mb-6 rounded-2xl border bg-white shadow-sm p-6">

@@ -109,6 +109,7 @@ Route::middleware([
     Route::resource('pm-schedules', PMScheduleController::class)->except(['create', 'store', 'destroy', 'import']);
     Route::get('/pm-schedules/{pmSchedule}/checklist', [PMScheduleController::class, 'checklist'])->name('pm-schedules.checklist');
     Route::post('/pm-schedules/{pmSchedule}/checklist', [PMScheduleController::class, 'saveChecklist'])->name('pm-schedules.checklist.save');
+    Route::get('/pm-schedules/{pmSchedule}/pdf', [PMScheduleController::class, 'exportPdf'])->name('pm-schedules.pdf');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
