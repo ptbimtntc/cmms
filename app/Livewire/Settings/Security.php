@@ -39,6 +39,8 @@ class Security extends Component
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
 
+            Flux::toast(variant: 'danger', text: __('Failed to update password. Please check the errors below.'));
+
             throw $e;
         }
 

@@ -12,7 +12,7 @@
             </tr>
         </thead>
         <tbody class="divide-y">
-            @foreach($schedules as $s)
+            @forelse($schedules as $s)
                 <tr class="h-12">
                     <td class="py-2">{{ $s['machine'] }}</td>
                     <td class="py-2">{{ $s['area'] }}</td>
@@ -28,7 +28,11 @@
                         @endif
                     </td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="5" class="py-4 text-center text-gray-400">No data available</td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 </div>

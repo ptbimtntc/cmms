@@ -56,6 +56,7 @@ test('password can be updated', function () {
         ->call('updatePassword');
 
     $response->assertHasNoErrors();
+    $response->assertDispatched('toast-show');
 
     expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
 });
@@ -74,4 +75,7 @@ test('correct password must be provided to update password', function () {
         ->call('updatePassword');
 
     $response->assertHasErrors(['current_password']);
+    $response->assertDispatched('toast-show');
+
+    expect(Hash::check('password', $user->refresh()->password))->toBeTrue();
 });

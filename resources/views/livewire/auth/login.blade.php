@@ -48,17 +48,5 @@
                 {{ __('Log in') }}
             </flux:button>
         </form>
-
-        {{-- Divider --}}
-        <div class="flex items-center gap-3 text-xs text-slate-400">
-            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
-            <span>{{ __('or') }}</span>
-            <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
-        </div>
-
-        <div class="space-x-1 text-sm text-center rtl:space-x-reverse text-slate-600 dark:text-slate-400">
-            <span>{{ __('Don\'t have an account?') }}</span>
-            <flux:link :href="route('register')" wire:navigate>{{ __('Sign up') }}</flux:link>
-        </div>
     </div>
 </x-layouts::auth>

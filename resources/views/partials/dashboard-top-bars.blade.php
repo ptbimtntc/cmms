@@ -7,7 +7,7 @@
     </div>
 
     <div class="space-y-3">
-        @foreach($items as $it)
+        @forelse($items as $it)
             <div>
                 <div class="flex justify-between text-sm text-gray-600 mb-1">
                     <div class="truncate">{{ $it['label'] }}</div>
@@ -17,6 +17,8 @@
                     <div class="h-3 bg-indigo-500 rounded-full" style="width: {{ $it['percent'] }}%"></div>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <p class="text-sm text-gray-400">No data available</p>
+        @endforelse
     </div>
 </div>

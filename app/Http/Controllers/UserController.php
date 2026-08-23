@@ -148,9 +148,13 @@ class UserController extends Controller
 
         $user->update($data);
 
+        $message = ! empty($validated['password'])
+            ? 'User updated successfully. Password has been changed.'
+            : 'User updated successfully.';
+
         return redirect()
             ->route('users.index')
-            ->with('success', 'User updated successfully.');
+            ->with('success', $message);
     }
 
     public function destroy(User $user)

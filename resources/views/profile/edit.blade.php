@@ -2,6 +2,31 @@
 
 @section('content')
 
+@if (session('success') || session('password_success') || $errors->any())
+    <div
+        x-data="{ show: true }"
+        x-show="show"
+        x-init="setTimeout(() => show = false, 5000)"
+        x-transition
+        class="fixed right-4 top-4 z-50 w-full max-w-sm rounded-xl border px-4 py-3 text-sm shadow-lg {{ $errors->any() ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700' }}"
+    >
+        <div class="flex items-start justify-between gap-3">
+            <p>
+                @if (session('success'))
+                    {{ session('success') }}
+                @elseif (session('password_success'))
+                    {{ session('password_success') }}
+                @elseif ($errors->any())
+                    Please fix the errors below and try again.
+                @endif
+            </p>
+            <button type="button" @click="show = false" class="shrink-0 text-current opacity-60 hover:opacity-100">
+                &times;
+            </button>
+        </div>
+    </div>
+@endif
+
 <div class="mx-auto max-w-4xl space-y-6">
 
     {{-- Profile Information --}}

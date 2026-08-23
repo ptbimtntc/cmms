@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GreasingController;
 use App\Http\Controllers\GreasingReportController;
 use App\Http\Controllers\GroupController;
@@ -101,7 +102,7 @@ Route::middleware([
     'auth',
     'role:ADMIN,KOORDINATOR WWD,KOORDINATOR BUL,PIC WWD,PIC BUL',
 ])->group(function () {
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('spareparts', [SparepartController::class, 'index'])->name('spareparts.index');
 
