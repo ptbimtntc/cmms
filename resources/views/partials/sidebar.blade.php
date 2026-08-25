@@ -100,9 +100,9 @@ document.addEventListener('alpine:init', () => {
         $machineHistoryActive = request()->routeIs('machine-history.*');
         @endphp
         <nav class="flex-1 overflow-hidden px-3 py-4 text-sm" x-data="{
-            openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $greasingActive ? 'main' :
+            openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
                         ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
-                        ($machineHistoryActive || $reportActive || $oilAuditActionActive || $greasingReportActive ? 'report' : 'system')) }}'
+                        ($machineHistoryActive || $reportActive || $greasingReportActive ? 'report' : 'system')) }}'
         }">
             @php
             $groups = [
@@ -149,6 +149,20 @@ document.addEventListener('alpine:init', () => {
             'icon' => '
             <path d="M12 3s-5 5.5-5 10a5 5 0 0 0 10 0c0-4.5-5-10-5-10Z" />
             <path d="M9.5 15.5c.7.8 1.5 1.2 2.5 1.2" />',
+            'visible' =>
+            $userRole === 'ADMIN' ||
+            $userRole === 'PIC WWD' ||
+            $userRole === 'KOORDINATOR WWD',
+            ],
+            [
+            'route' => route('oil-audits.report'),
+            'label' => 'Action Audit Oli',
+            'active' => $oilAuditActionActive,
+            'icon' => '
+            <path d="M4 19V9" />
+            <path d="M10 19V5" />
+            <path d="M16 19v-7" />
+            <path d="M22 19V3" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'PIC WWD' ||
@@ -202,20 +216,6 @@ document.addEventListener('alpine:init', () => {
             $userRole === 'PIC BUL' ||
             $userRole === 'KOORDINATOR WWD'||
             $userRole === 'KOORDINATOR BUL',
-            ],
-            [
-            'route' => route('oil-audits.report'),
-            'label' => 'Action Audit Oli',
-            'active' => $oilAuditActionActive,
-            'icon' => '
-            <path d="M4 19V9" />
-            <path d="M10 19V5" />
-            <path d="M16 19v-7" />
-            <path d="M22 19V3" />',
-            'visible' =>
-            $userRole === 'ADMIN' ||
-            $userRole === 'PIC WWD' ||
-            $userRole === 'KOORDINATOR WWD',
             ],
             [
             'route' => route('reports.greasing'),
