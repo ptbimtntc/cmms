@@ -8,6 +8,10 @@
 
     <title>FreeDOMS</title>
 
+    <link rel="icon" href="{{ asset('FreeDOMS.ico') }}" sizes="any">
+    <link rel="icon" href="{{ asset('FreeDOMS.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
