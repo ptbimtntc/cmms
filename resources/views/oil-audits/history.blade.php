@@ -1,5 +1,10 @@
 @extends('layouts.app')
 
+@php
+    $hideSidebar = true;
+    $hideTopbar = true;
+@endphp
+
 @section('title', 'Riwayat Audit Oli')
 
 @section('content')
@@ -17,7 +22,7 @@
     @endphp
 
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <a href="{{ route('oil-audits.report') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"><span aria-hidden="true">←</span> Kembali ke Report Audit Oli</a>
+        <a href="{{ $backUrl }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"><span aria-hidden="true"></span> {{ $backLabel }}</a>
     </div>
 
     @if (session('success'))

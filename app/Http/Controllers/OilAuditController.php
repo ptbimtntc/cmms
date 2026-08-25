@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Machine;
 use App\Models\OilAudit;
 use App\Models\OilAuditFollowUp;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
 class OilAuditController extends Controller
@@ -63,41 +66,57 @@ class OilAuditController extends Controller
             ->with('success', "Audit oli {$machine->machine_number} berhasil disimpan. Siap scan mesin berikutnya.");
     }
 
-    public function report(Request $request): View
+    /**
+     * Oil Audit Action — follow-up monitoring page. AUDIT-CENTRIC: 1 row =
+     * 1 audit record. A machine audited 5 times legitimately produces 5
+     * rows here — this is the whole point of the page (every audit event
+     * needs its own follow-up decision), unlike OilAuditReportController
+     * (machine-centric, 1 row = 1 machine, latest audit only).
+     *
+     * The query starts FROM OilAudit, not Machine: a machine with zero
+     * audits has no OilAudit row to join back from, so it is naturally
+     * absent — no whereHas/whereDoesntHave needed for that exclusion.
+     *
+     * Sort: audited_at DESC (newest first) with `id` DESC as a
+     * deterministic tie-breaker for same-timestamp audits.
+     */
+    public function action(Request $request): View
     {
-        $machines = Machine::query()
-            ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
-            ->with(['latestOilAudit.followUp.problems'])
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $search = $request->string('search')->trim()->toString();
+        $query = $this->filteredAuditQuery($request);
 
-                $query->where(function ($machineQuery) use ($search) {
-                    $machineQuery->where('machine_number', 'like', "%{$search}%")
-                        ->orWhere('machine_type', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
-                });
-            })
-            ->when(
-                $request->filled('area'),
-                fn ($query) => $query->where('area', $request->input('area'))
-            )
-            ->when(
-                $request->filled('machine_type'),
-                fn ($query) => $query->where('machine_type', $request->input('machine_type'))
-            )
-            ->when($request->filled('condition'), function ($query) use ($request) {
-                $query->whereHas(
-                    'latestOilAudit',
-                    fn ($auditQuery) => $auditQuery->where('condition', $request->input('condition'))
-                );
-            })
-            ->when($request->boolean('follow_up'), function ($query) {
-                $query->whereHas('latestOilAudit', function ($auditQuery) {
-                    $auditQuery->requiringFollowUp()->whereDoesntHave('followUp');
-                });
-            })
-            ->orderBy('machine_number')
+        // --- Summary — audit-centric, same filtered scope as the table.
+        // Never counts machines as if they were audits. ---
+        $totalAudit = (clone $query)->count();
+        $findingsQuery = (clone $query)->whereIn('condition', OilAudit::followUpConditions());
+        $totalFinding = (clone $findingsQuery)->count();
+        $findingsWithAction = (clone $findingsQuery)->whereHas('followUp')->count();
+
+        $durations = (clone $findingsQuery)
+            ->whereHas('followUp')
+            ->with('followUp')
+            ->get()
+            ->map(fn (OilAudit $audit) => abs(Carbon::parse($audit->audited_at)
+                ->diffInDays(Carbon::parse($audit->followUp->actioned_at))));
+        $averageActionDuration = $durations->isNotEmpty() ? round($durations->avg(), 1) : null;
+
+        $pending = (clone $query)->requiringFollowUp()->whereDoesntHave('followUp')->count();
+        $critical = (clone $query)->where('condition', 'KRITIS')->whereDoesntHave('followUp')->count();
+        $today = (clone $query)->whereDate('audited_at', today())->count();
+
+        $summary = [
+            'total_audit' => $totalAudit,
+            'total_finding' => $totalFinding,
+            'findings_with_action' => $findingsWithAction,
+            'average_action_duration' => $averageActionDuration,
+            'pending' => $pending,
+            'critical' => $critical,
+            'today' => $today,
+        ];
+
+        $audits = (clone $query)
+            ->with(['followUp.problems'])
+            ->orderByDesc('audited_at')
+            ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
 
@@ -115,23 +134,13 @@ class OilAuditController extends Controller
             ->distinct()
             ->orderBy('machine_type')
             ->pluck('machine_type');
-
-        $summary = [
-            'today' => OilAudit::where('area', self::AUDIT_AREA)
-                ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
-                ->whereDate('audited_at', today())
-                ->count(),
-            'pending' => OilAudit::where('area', self::AUDIT_AREA)
-                ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
-                ->requiringFollowUp()
-                ->whereDoesntHave('followUp')
-                ->count(),
-            'critical' => OilAudit::where('area', self::AUDIT_AREA)
-                ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
-                ->where('condition', 'KRITIS')
-                ->whereDoesntHave('followUp')
-                ->count(),
-        ];
+        $pics = OilAudit::where('area', self::AUDIT_AREA)
+            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereNotNull('audited_by_name')
+            ->select('audited_by_name')
+            ->distinct()
+            ->orderBy('audited_by_name')
+            ->pluck('audited_by_name');
 
         $pendingAudits = OilAudit::query()
             ->where('area', self::AUDIT_AREA)
@@ -143,16 +152,97 @@ class OilAuditController extends Controller
             ->limit(8)
             ->get();
 
-        return view('oil-audits.report', compact(
-            'machines',
+        return view('oil-audits.action', compact(
+            'audits',
             'areas',
             'machineTypes',
+            'pics',
             'summary',
             'pendingAudits'
         ));
     }
 
-    public function history(string $machineNumber): View
+    /**
+     * Base + filters for the audit-centric Action query. Every filter here
+     * operates directly on oil_audits columns (or its own followUp/
+     * followUp.problems relations) — never on Machine — since the base
+     * model is OilAudit itself.
+     */
+    private function filteredAuditQuery(Request $request): Builder
+    {
+        return OilAudit::query()
+            ->where('area', self::AUDIT_AREA)
+            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->when($request->filled('search'), function (Builder $query) use ($request) {
+                $search = $request->string('search')->trim()->toString();
+
+                $query->where(function (Builder $q) use ($search) {
+                    $q->where('machine_number', 'like', "%{$search}%")
+                        ->orWhere('machine_type', 'like', "%{$search}%")
+                        ->orWhereHas('followUp', function (Builder $followUpQuery) use ($search) {
+                            $followUpQuery->where('problem', 'like', "%{$search}%")
+                                ->orWhereHas(
+                                    'problems',
+                                    fn (Builder $problemQuery) => $problemQuery->where('problem', 'like', "%{$search}%")
+                                );
+                        });
+                });
+            })
+            ->when(
+                $request->filled('area'),
+                fn (Builder $query) => $query->where('area', $request->input('area'))
+            )
+            ->when(
+                $request->filled('machine_type'),
+                fn (Builder $query) => $query->where('machine_type', $request->input('machine_type'))
+            )
+            ->when(
+                $request->filled('year'),
+                fn (Builder $query) => $query->whereYear('audited_at', (int) $request->input('year'))
+            )
+            ->when(
+                $request->filled('month'),
+                fn (Builder $query) => $query->whereMonth('audited_at', (int) $request->input('month'))
+            )
+            ->when(
+                $request->filled('condition'),
+                fn (Builder $query) => $query->where('condition', $request->input('condition'))
+            )
+            ->when(
+                $request->filled('pic'),
+                fn (Builder $query) => $query->where('audited_by_name', $request->input('pic'))
+            )
+            ->when($request->filled('finding_status'), function (Builder $query) use ($request) {
+                $status = $request->input('finding_status');
+
+                if ($status === 'NO_FINDING') {
+                    $query->whereNotIn('condition', OilAudit::followUpConditions());
+                } elseif ($status === 'OPEN') {
+                    $query->whereIn('condition', OilAudit::followUpConditions())->whereDoesntHave('followUp');
+                } elseif ($status === 'COMPLETED') {
+                    $query->whereIn('condition', OilAudit::followUpConditions())->whereHas('followUp');
+                }
+            })
+            ->when($request->boolean('follow_up'), function (Builder $query) {
+                $query->requiringFollowUp()->whereDoesntHave('followUp');
+            });
+    }
+
+    /**
+     * History can be opened from two places: Oil Audit Report
+     * (reports.oil-audit) or Oil Audit Action (oil-audits.report — the
+     * route name was kept during the earlier rename). The Back button
+     * needs to return to whichever one the user actually came from, with
+     * its filters intact.
+     *
+     * Only an explicit, whitelisted `from` value (report|action) is ever
+     * trusted — never an arbitrary redirect target — and the back URL is
+     * always built via route() against a known route name, never from a
+     * raw user-supplied URL. `return` only supplies the query string to
+     * re-attach to that known route, and only whitelisted filter keys are
+     * read out of it.
+     */
+    public function history(Request $request, string $machineNumber): View
     {
         $machine = Machine::where('machine_number', trim($machineNumber))
             ->where('area', self::AUDIT_AREA)
@@ -171,13 +261,41 @@ class OilAuditController extends Controller
             ->reverse()
             ->values();
 
+        $from = in_array($request->query('from'), ['report', 'action'], true)
+            ? $request->query('from')
+            : 'report';
+
         return view('oil-audits.history', [
             'machine' => $machine,
             'audits' => $audits,
             'latestAudit' => $latestAudit,
             'recentAudits' => $recentAudits,
             'problemOptions' => OilAudit::PROBLEM_OPTIONS,
+            'from' => $from,
+            'backUrl' => $this->backUrl($from, $request),
+            'backLabel' => $from === 'action' ? '← Back to Oil Audit Action' : '← Back to Oil Audit Report',
         ]);
+    }
+
+    /**
+     * Builds the Back destination from a fixed, known route (never a raw
+     * user-supplied URL) plus whatever whitelisted filter keys were active
+     * on the originating page, so returning from history doesn't drop the
+     * user's filters.
+     */
+    private function backUrl(string $from, Request $request): string
+    {
+        parse_str((string) $request->query('return', ''), $returnParams);
+
+        if ($from === 'action') {
+            $allowed = ['area', 'machine_type', 'year', 'month', 'condition', 'finding_status', 'pic', 'search', 'page'];
+
+            return route('oil-audits.report', Arr::only($returnParams, $allowed));
+        }
+
+        $allowed = ['area', 'machine_type', 'condition', 'year', 'month', 'search', 'page'];
+
+        return route('reports.oil-audit', Arr::only($returnParams, $allowed));
     }
 
     public function storeFollowUp(Request $request, OilAudit $oilAudit): RedirectResponse

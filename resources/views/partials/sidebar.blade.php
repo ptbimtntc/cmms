@@ -90,7 +90,7 @@ document.addEventListener('alpine:init', () => {
         $problemCategoryActive = request()->routeIs('machine-problems.*');
         $problemFindingsActive = request()->routeIs('machine-problem-findings.*');
         $oilAuditActive = request()->routeIs('oil-audits.scan');
-        $oilAuditReportActive = request()->routeIs('oil-audits.report');
+        $oilAuditActionActive = request()->routeIs('oil-audits.report');
         $greasingActive = request()->routeIs('greasings.*');
         $greasingReportActive = request()->routeIs('reports.greasing');
         $profileActive = request()->routeIs('profile.*');
@@ -102,7 +102,7 @@ document.addEventListener('alpine:init', () => {
         <nav class="flex-1 overflow-hidden px-3 py-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $greasingActive ? 'main' :
                         ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
-                        ($machineHistoryActive || $reportActive || $oilAuditReportActive || $greasingReportActive ? 'report' : 'system')) }}'
+                        ($machineHistoryActive || $reportActive || $oilAuditActionActive || $greasingReportActive ? 'report' : 'system')) }}'
         }">
             @php
             $groups = [
@@ -205,8 +205,8 @@ document.addEventListener('alpine:init', () => {
             ],
             [
             'route' => route('oil-audits.report'),
-            'label' => 'Report Audit Oli',
-            'active' => $oilAuditReportActive,
+            'label' => 'Action Audit Oli',
+            'active' => $oilAuditActionActive,
             'icon' => '
             <path d="M4 19V9" />
             <path d="M10 19V5" />

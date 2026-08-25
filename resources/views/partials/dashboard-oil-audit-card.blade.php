@@ -4,7 +4,7 @@
             <div class="text-sm font-medium text-gray-700">Oil Audit</div>
             <div class="text-xs text-gray-400">WWD &middot; NDE/NDB machines</div>
         </div>
-        <a href="{{ route('oil-audits.report') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-700">View Report &rarr;</a>
+        <a href="{{ route('oil-audits.report') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-700">View Action &rarr;</a>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">

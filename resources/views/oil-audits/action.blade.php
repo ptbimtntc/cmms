@@ -52,7 +52,7 @@
             <div class="grid gap-2 md:grid-cols-2">
                 @foreach ($pendingAudits as $audit)
                     @php($colors = $audit->conditionColor())
-                    <a href="{{ route('oil-audits.history', $audit->machine_number) }}" class="flex items-center justify-between gap-3 rounded-xl border border-white bg-white px-3 py-3 transition hover:border-orange-300 hover:shadow-sm">
+                    <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="flex items-center justify-between gap-3 rounded-xl border border-white bg-white px-3 py-3 transition hover:border-orange-300 hover:shadow-sm">
                         <div class="min-w-0">
                             <p class="font-mono text-sm font-bold text-slate-900">{{ $audit->machine_number }}</p>
                             <p class="truncate text-xs text-slate-500">Dicek {{ $audit->audited_at->format('d M Y, H:i') }} · {{ $audit->audited_by_name }}</p>
@@ -167,7 +167,7 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <a href="{{ route('oil-audits.history', $audit->machine_number) }}" class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">View</a>
+                                    <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">View</a>
                                 </td>
                             </tr>
                         @endforeach
@@ -216,7 +216,7 @@
                         @else
                             <span class="text-xs text-slate-400">&nbsp;</span>
                         @endif
-                        <a href="{{ route('oil-audits.history', $audit->machine_number) }}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Buka riwayat</a>
+                        <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Buka riwayat</a>
                     </div>
                 </article>
             @endforeach
