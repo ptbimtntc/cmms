@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Greasing;
-use App\Models\GreasingFinding;
 use App\Models\Group;
 use App\Models\User;
 
@@ -25,7 +24,7 @@ test('open finding shows a follow-up form on the finding report', function () {
     $greasing = followUpGreasing();
     $finding = $greasing->findings()->create(['finding' => 'Grease point blocked', 'status' => 'OPEN']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
     ]));
 
@@ -44,7 +43,7 @@ test('completed finding does not show a follow-up form', function () {
         'action_date' => '2026-08-05',
     ]);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
     ]));
 

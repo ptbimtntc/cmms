@@ -5,8 +5,10 @@ use App\Models\GreasingFinding;
 use App\Models\Group;
 use App\Models\User;
 use App\Services\GreasingKpiCalculator;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
+use Maatwebsite\Excel\Facades\Excel;
 
 function allowedMasterRoles(): array
 {
@@ -218,11 +220,11 @@ describe('Audit 1: Finding follow-up authorization', function () {
 
 describe('Audit 1: Greasing report authorization', function () {
     test('report is reachable for every role except GUEST', function (string $role) {
-        $this->actingAs(auditUser($role))->get(route('greasing-report.index'))->assertOk();
+        $this->actingAs(auditUser($role))->get(route('reports.greasing'))->assertOk();
     })->with(broadRoles());
 
     test('GUEST cannot reach the report', function () {
-        $this->actingAs(auditUser('GUEST'))->get(route('greasing-report.index'))->assertForbidden();
+        $this->actingAs(auditUser('GUEST'))->get(route('reports.greasing'))->assertForbidden();
     });
 
     test('pic only sees their own schedule on the report, not another pic\'s', function (string $picRole) {
@@ -231,7 +233,7 @@ describe('Audit 1: Greasing report authorization', function () {
         $myGreasing = auditGreasing(['pic' => $mine->name, 'plan_date' => '2026-08-01', 'cycle' => '4W']);
         $otherGreasing = auditGreasing(['pic' => $other->name, 'plan_date' => '2026-08-02', 'cycle' => '52W']);
 
-        $response = $this->actingAs($mine)->get(route('greasing-report.index', [
+        $response = $this->actingAs($mine)->get(route('reports.greasing', [
             'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
         ]));
 
@@ -602,7 +604,7 @@ describe('Audit 4: KPI formula end-to-end', function () {
 
         expect(Greasing::count())->toBe(100);
 
-        $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+        $response = $this->actingAs($admin)->get(route('reports.greasing', [
             'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
         ]));
 
@@ -622,7 +624,7 @@ describe('Audit 4: KPI formula end-to-end', function () {
         // Different month, must not leak into the August monthly KPI.
         auditGreasing(['plan_date' => '2026-09-01', 'action_date' => '2026-09-05', 'status' => 'FINISH ON TIME']);
 
-        $monthly = $this->actingAs($admin)->get(route('greasing-report.index', [
+        $monthly = $this->actingAs($admin)->get(route('reports.greasing', [
             'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
         ]));
         $monthly->assertOk();
@@ -631,7 +633,7 @@ describe('Audit 4: KPI formula end-to-end', function () {
         $monthly->assertSee($expected['closing_percent'].'%');
         $monthly->assertSee($expected['completion_percent'].'%');
 
-        $yearly = $this->actingAs($admin)->get(route('greasing-report.index', [
+        $yearly = $this->actingAs($admin)->get(route('reports.greasing', [
             'period_type' => 'yearly', 'year' => 2026,
         ]));
         $yearly->assertOk();
@@ -663,7 +665,7 @@ describe('Audit 5: Finding relationship and independence', function () {
 
         $this->actingAs($admin)->get(route('greasings.execute', $greasing))->assertOk();
 
-        $report = $this->actingAs($admin)->get(route('greasing-report.index', [
+        $report = $this->actingAs($admin)->get(route('reports.greasing', [
             'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
         ]));
         $report->assertOk();
@@ -687,7 +689,7 @@ describe('Audit 5: Finding relationship and independence', function () {
         $greasing = auditGreasing(['plan_date' => '2026-08-01']);
         $greasing->findings()->create(['finding' => 'unique finding text xyz', 'status' => 'OPEN']);
 
-        $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+        $response = $this->actingAs($admin)->get(route('reports.greasing', [
             'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
         ]));
 
@@ -724,7 +726,7 @@ describe('Audit 6: Data integrity', function () {
             'plan_date' => '2026-08-01',
             'due_date' => '2026-08-15',
             'status' => 'OPEN',
-        ]))->toThrow(\Illuminate\Database\QueryException::class);
+        ]))->toThrow(QueryException::class);
     });
 
     test('greasing_finding.greasing_id foreign key rejects a non-existent greasing at the database level', function () {
@@ -732,7 +734,7 @@ describe('Audit 6: Data integrity', function () {
             'greasing_id' => 999999,
             'finding' => 'orphan',
             'status' => 'OPEN',
-        ]))->toThrow(\Illuminate\Database\QueryException::class);
+        ]))->toThrow(QueryException::class);
     });
 
     test('deleting a greasing cascades to delete its findings', function () {
@@ -778,9 +780,9 @@ describe('Audit 7: Security and error disclosure', function () {
     test('import exception is logged and never exposes SQLSTATE or stack trace text to the browser', function () {
         $admin = auditUser('ADMIN');
 
-        \Maatwebsite\Excel\Facades\Excel::shouldReceive('import')
+        Excel::shouldReceive('import')
             ->once()
-            ->andThrow(new \RuntimeException('SQLSTATE[23000]: at /var/www/cmms/app/Imports/GreasingScheduleImport.php'));
+            ->andThrow(new RuntimeException('SQLSTATE[23000]: at /var/www/cmms/app/Imports/GreasingScheduleImport.php'));
 
         $path = storage_path('framework/testing/boom-audit.csv');
         if (! is_dir(dirname($path))) {

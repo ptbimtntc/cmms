@@ -141,6 +141,15 @@
                     {{ $pmSchedule->wo_zsbp }}
                 </div>
             </div>
+
+            @if ($pmSchedule->isGearboxApplicable())
+                <div>
+                    <label class="mb-2 block text-sm font-medium">Gearbox Problem</label>
+                    <div class="mt-1 rounded-lg border bg-slate-50 p-3 font-semibold">
+                        {{ $pmSchedule->gearbox_problem }}
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div class="mt-5 gap-3">

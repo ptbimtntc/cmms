@@ -18,7 +18,7 @@
                     @endforeach
                 </select>
             </div>
-            <a href="{{ route('greasing-report.index') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-700 whitespace-nowrap">View Report &rarr;</a>
+            <a href="{{ route('reports.greasing') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-700 whitespace-nowrap">View Report &rarr;</a>
         </div>
     </div>
 

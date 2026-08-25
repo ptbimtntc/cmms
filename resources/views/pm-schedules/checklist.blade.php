@@ -53,6 +53,12 @@
                 <label class="text-sm text-gray-500">Next PM</label>
                 <div class="font-semibold">{{ $nextPm ? $nextPm->format('d-m-Y') : '-' }}</div>
             </div>
+            @if ($pmSchedule->isGearboxApplicable())
+                <div>
+                    <label class="text-sm text-gray-500">Gearbox Problem</label>
+                    <div class="font-semibold">{{ $pmSchedule->gearbox_problem }}</div>
+                </div>
+            @endif
             <div>
                 <label class="text-sm text-gray-500">Sparepart Cost</label>
                 <div class="font-semibold

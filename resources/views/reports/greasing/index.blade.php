@@ -1,9 +1,15 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-slate-800">Greasing Report</h1>
-        <p class="text-sm text-slate-500">Closing &amp; Completion KPI, trend, and greasing/finding detail for the selected period.</p>
+    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-800">Greasing Report</h1>
+            <p class="text-sm text-slate-500">Closing &amp; Completion KPI, trend, and greasing/finding detail for the selected period.</p>
+        </div>
+        <a href="{{ route('reports.index') }}"
+            class="inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+            ← Report Center
+        </a>
     </div>
 
     {{-- Filter --}}
@@ -42,7 +48,7 @@
             </select>
         </div>
 
-        @if (auth()->user()->isAdmin())
+        @if ($isAdmin)
             <div>
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Area</label>
                 <select name="area" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -52,6 +58,64 @@
                 </select>
             </div>
         @endif
+
+        <div>
+            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Group</label>
+            <select name="group_id" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <option value="">All Groups</option>
+                @foreach ($groups as $g)
+                    <option value="{{ $g->id }}" {{ (int) $groupId === $g->id ? 'selected' : '' }}>{{ $g->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div>
+            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cycle</label>
+            <select name="cycle" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <option value="">All Cycles</option>
+                @foreach ($cycles as $c)
+                    <option value="{{ $c }}" {{ $cycle === $c ? 'selected' : '' }}>{{ $c }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        @unless ($isPic)
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">PIC</label>
+                <select name="pic" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                    <option value="">All PIC</option>
+                    @foreach ($pics as $p)
+                        <option value="{{ $p }}" {{ $pic === $p ? 'selected' : '' }}>{{ \Illuminate\Support\Str::title(strtolower($p)) }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @endunless
+
+        <div>
+            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
+            <select name="status" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <option value="">All Status</option>
+                @foreach (\App\Models\Greasing::STATUSES as $s)
+                    <option value="{{ $s }}" {{ $status === $s ? 'selected' : '' }}>{{ $s }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div>
+            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
+            <input type="text" name="search" value="{{ $search }}" placeholder="Order Number / Group..."
+                class="w-52 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+        </div>
+
+        <div class="flex gap-2">
+            <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
+                Filter
+            </button>
+            <a href="{{ route('reports.greasing') }}"
+                class="rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">
+                Reset
+            </a>
+        </div>
 
         <div class="ml-auto text-sm text-slate-500">
             Showing:
@@ -150,11 +214,12 @@
                 <table class="min-w-full divide-y divide-slate-200">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Order Number</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Plan Date</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action Date</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Area</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Group</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Cycle</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Order Number</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">PIC</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Remarks</th>
@@ -164,11 +229,12 @@
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse ($greasings as $greasing)
                             <tr class="hover:bg-slate-50">
-                                <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->order_number ?? '-' }}</td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->plan_date->format('d M Y') }}</td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->action_date ? $greasing->action_date->format('d M Y') : '-' }}</td>
+                                <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->group?->inferredArea() ?? '-' }}</td>
                                 <td class="px-3 py-2 text-sm font-semibold text-slate-800">{{ $greasing->group->name ?? '-' }}</td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->cycle }}</td>
+                                <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->order_number ?? '-' }}</td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->pic ?? '-' }}</td>
                                 <td class="px-3 py-2">
                                     <span @class([
@@ -191,7 +257,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-3 py-8 text-center text-sm text-slate-500">No greasing schedule found for this period</td>
+                                <td colspan="10" class="px-3 py-8 text-center text-sm text-slate-500">No greasing schedule found for this period</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -218,6 +284,10 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
+                            <div>
+                                <div class="text-slate-400">Area</div>
+                                <div class="font-medium text-slate-700">{{ $greasing->group?->inferredArea() ?? '-' }}</div>
+                            </div>
                             <div>
                                 <div class="text-slate-400">Plan Date</div>
                                 <div class="font-medium text-slate-700">{{ $greasing->plan_date->format('d M Y') }}</div>
@@ -280,6 +350,7 @@
                             </span>
                         </div>
                         <p class="text-slate-500">Cycle: {{ $finding->greasing->cycle }}</p>
+                        <p class="text-slate-500">Order Number: {{ $finding->greasing->order_number ?? '-' }}</p>
                         <p class="text-slate-500">PIC: {{ $finding->greasing->pic ?? '-' }}</p>
                         <p class="text-slate-500">Plan Date: {{ $finding->greasing->plan_date->format('d M Y') }}</p>
                         <p class="text-slate-700">Finding: {{ $finding->finding }}</p>

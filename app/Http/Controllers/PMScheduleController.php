@@ -502,6 +502,19 @@ class PMScheduleController extends Controller
 
             }
 
+            $gearboxProblem = 'NO';
+
+            if ($pmSchedule->isGearboxApplicable()) {
+                $hasGearboxProblem = PMProblem::with('machineProblem')
+                    ->where('pm_schedule_id', $pmSchedule->id)
+                    ->get()
+                    ->contains(fn ($p) => PMSchedule::matchesGearboxKeyword($p->machineProblem->problem ?? null));
+
+                $gearboxProblem = $hasGearboxProblem ? 'YES' : 'NO';
+            }
+
+            $pmSchedule->update(['gearbox_problem' => $gearboxProblem]);
+
             PMSparepart::where(
                 'pm_schedule_id',
                 $pmSchedule->id

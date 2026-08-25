@@ -92,7 +92,7 @@ document.addEventListener('alpine:init', () => {
         $oilAuditActive = request()->routeIs('oil-audits.scan');
         $oilAuditReportActive = request()->routeIs('oil-audits.report');
         $greasingActive = request()->routeIs('greasings.*');
-        $greasingReportActive = request()->routeIs('greasing-report.*');
+        $greasingReportActive = request()->routeIs('reports.greasing');
         $profileActive = request()->routeIs('profile.*');
 
         @endphp
@@ -218,7 +218,7 @@ document.addEventListener('alpine:init', () => {
             $userRole === 'KOORDINATOR WWD',
             ],
             [
-            'route' => route('greasing-report.index'),
+            'route' => route('reports.greasing'),
             'label' => 'Greasing Report',
             'active' => $greasingReportActive,
             'icon' => '

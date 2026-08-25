@@ -160,8 +160,13 @@
                 <td class="value">{{ $dueDate }}</td>
             </tr>
             <tr>
-                <td class="label"></td>
-                <td class="value"></td>
+                @if ($pmSchedule->isGearboxApplicable())
+                    <td class="label">Gearbox Problem</td>
+                    <td class="value">{{ $pmSchedule->gearbox_problem ?: '-' }}</td>
+                @else
+                    <td class="label"></td>
+                    <td class="value"></td>
+                @endif
                 <td class="label">Action Date</td>
                 <td class="value">{{ $actionDate }}</td>
             </tr>

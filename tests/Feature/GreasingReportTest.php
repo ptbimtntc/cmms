@@ -36,13 +36,13 @@ test('kpi calculator handles zero total without division error', function () {
 });
 
 test('report page requires authentication', function () {
-    $this->get(route('greasing-report.index'))->assertRedirect(route('login'));
+    $this->get(route('reports.greasing'))->assertRedirect(route('login'));
 });
 
 test('guest role cannot access the greasing report', function () {
     $guest = User::factory()->create(['role' => User::ROLE_GUEST]);
 
-    $this->actingAs($guest)->get(route('greasing-report.index'))->assertForbidden();
+    $this->actingAs($guest)->get(route('reports.greasing'))->assertForbidden();
 });
 
 test('monthly filter only includes schedules from the selected month', function () {
@@ -51,7 +51,7 @@ test('monthly filter only includes schedules from the selected month', function 
     $inAugust = reportGreasing(['plan_date' => '2026-08-05', 'cycle' => '4W']);
     $inSeptember = reportGreasing(['plan_date' => '2026-09-05', 'cycle' => '16W']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly',
         'month' => 8,
         'year' => 2026,
@@ -69,7 +69,7 @@ test('yearly filter includes schedules across the whole year but not other years
     $inDecember = reportGreasing(['plan_date' => '2026-12-15', 'cycle' => '52W']);
     $otherYear = reportGreasing(['plan_date' => '2025-06-15', 'cycle' => '16W']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'yearly',
         'year' => 2026,
     ]));
@@ -89,7 +89,7 @@ test('kpi on the report page matches the calculator for the filtered period', fu
     // outside the filtered month, must not affect KPI
     reportGreasing(['plan_date' => '2026-09-01', 'status' => 'FINISH ON TIME', 'action_date' => '2026-09-10']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly',
         'month' => 8,
         'year' => 2026,
@@ -113,7 +113,7 @@ test('finding count badge reflects the actual number of findings', function () {
     ]);
     $withoutFindings = reportGreasing(['plan_date' => '2026-08-02']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly',
         'month' => 8,
         'year' => 2026,
@@ -133,7 +133,7 @@ test('finding table only shows findings whose schedule falls in the selected per
     $inSeptember = reportGreasing(['plan_date' => '2026-09-01']);
     $inSeptember->findings()->create(['finding' => 'September finding text', 'status' => 'OPEN']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly',
         'month' => 8,
         'year' => 2026,
@@ -151,7 +151,7 @@ test('pic only sees their own schedules and findings on the report', function ()
     $mine = reportGreasing(['plan_date' => '2026-08-01', 'pic' => $pic->name, 'cycle' => '4W']);
     $notMine = reportGreasing(['plan_date' => '2026-08-02', 'pic' => $other->name, 'cycle' => '52W']);
 
-    $response = $this->actingAs($pic)->get(route('greasing-report.index', [
+    $response = $this->actingAs($pic)->get(route('reports.greasing', [
         'period_type' => 'monthly',
         'month' => 8,
         'year' => 2026,
@@ -168,7 +168,7 @@ test('yearly trend has twelve months and each month kpi uses the same formula', 
     reportGreasing(['plan_date' => '2026-03-01', 'status' => 'FINISH ON TIME', 'action_date' => '2026-03-05']);
     reportGreasing(['plan_date' => '2026-03-02', 'status' => 'OPEN']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'yearly',
         'year' => 2026,
     ]));
@@ -190,7 +190,7 @@ test('yearly chart marks months with no schedule as no-data instead of a colored
 
     reportGreasing(['plan_date' => '2026-03-01', 'status' => 'FINISH ON TIME', 'action_date' => '2026-03-05']);
 
-    $response = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'yearly',
         'year' => 2026,
     ]));
@@ -215,21 +215,21 @@ test('admin can filter the greasing report by area', function () {
         'plan_date' => '2026-08-01', 'due_date' => Greasing::calculateDueDate('2026-08-01'), 'status' => 'OPEN',
     ]);
 
-    $wwdOnly = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $wwdOnly = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly', 'month' => 8, 'year' => 2026, 'area' => 'WWD',
     ]));
     $wwdOnly->assertOk();
     $wwdOnly->assertSee($wwd->order_number);
     $wwdOnly->assertDontSee($bul->order_number);
 
-    $bulOnly = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $bulOnly = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly', 'month' => 8, 'year' => 2026, 'area' => 'BUL',
     ]));
     $bulOnly->assertOk();
     $bulOnly->assertSee($bul->order_number);
     $bulOnly->assertDontSee($wwd->order_number);
 
-    $all = $this->actingAs($admin)->get(route('greasing-report.index', [
+    $all = $this->actingAs($admin)->get(route('reports.greasing', [
         'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
     ]));
     $all->assertOk();
@@ -240,7 +240,7 @@ test('admin can filter the greasing report by area', function () {
 test('area filter on the greasing report is admin-only', function () {
     $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
 
-    $response = $this->actingAs($pic)->get(route('greasing-report.index'));
+    $response = $this->actingAs($pic)->get(route('reports.greasing'));
 
     $response->assertOk();
     $response->assertDontSee('name="area"', false);

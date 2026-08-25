@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class PMSchedule extends Model
 {
     protected $table = 'pm_schedules';
+
     protected $fillable = [
         'machine_id',
         'machine_number',
@@ -27,6 +29,7 @@ class PMSchedule extends Model
         'oil_change',
         'greasing',
         'wo_zsbp',
+        'gearbox_problem',
         'remarks',
         'next_pm',
         'status',
@@ -47,7 +50,7 @@ class PMSchedule extends Model
     {
         return Attribute::make(
             get: fn () => $this->pic
-                ? \Illuminate\Support\Str::title(strtolower($this->pic))
+                ? Str::title(strtolower($this->pic))
                 : '-'
         );
     }
@@ -61,6 +64,30 @@ class PMSchedule extends Model
         ]);
     }
 
+    public function isGearboxApplicable(): bool
+    {
+        return $this->area === 'WWD';
+    }
+
+    public const GEARBOX_KEYWORDS = ['mainshaft', 'innershaft'];
+
+    public static function matchesGearboxKeyword(?string $problemText): bool
+    {
+        if (! $problemText) {
+            return false;
+        }
+
+        $problemText = strtolower($problemText);
+
+        foreach (self::GEARBOX_KEYWORDS as $keyword) {
+            if (str_contains($problemText, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function getDurationFormattedAttribute()
     {
         // Prefer aggregated work session duration when available (multi-day)
@@ -72,7 +99,7 @@ class PMSchedule extends Model
             $total = $this->duration;
         }
 
-        if (!$total) {
+        if (! $total) {
             return '';
         }
 
@@ -99,7 +126,6 @@ class PMSchedule extends Model
             'pm_schedule_id'
         );
     }
-
 
     public function problems()
     {

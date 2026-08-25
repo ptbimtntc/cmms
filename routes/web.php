@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CostReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GreasingController;
 use App\Http\Controllers\GreasingReportController;
@@ -11,12 +12,17 @@ use App\Http\Controllers\MachineHistoryController;
 use App\Http\Controllers\MachineMeasurementController;
 use App\Http\Controllers\MachineProblemController;
 use App\Http\Controllers\MachineProblemFindingController;
+use App\Http\Controllers\MachineReportController;
 use App\Http\Controllers\OilAuditController;
+use App\Http\Controllers\OilAuditReportController;
+use App\Http\Controllers\PMReportController;
 use App\Http\Controllers\PMScheduleController;
+use App\Http\Controllers\ProblemReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrScannerController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SparepartController;
+use App\Http\Controllers\SparepartReportController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -112,13 +118,17 @@ Route::middleware([
     Route::get('/pm-schedules/{pmSchedule}/pdf', [PMScheduleController::class, 'exportPdf'])->name('pm-schedules.pdf');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/pm', [PMReportController::class, 'index'])->name('reports.pm');
+    Route::get('/reports/greasing', [GreasingReportController::class, 'index'])->name('reports.greasing');
+    Route::get('/reports/sparepart', [SparepartReportController::class, 'index'])->name('reports.sparepart');
+    Route::get('/reports/machine', [MachineReportController::class, 'index'])->name('reports.machine');
+    Route::get('/reports/problem', [ProblemReportController::class, 'index'])->name('reports.problem');
+    Route::get('/reports/cost', [CostReportController::class, 'index'])->name('reports.cost');
 
     Route::get('/greasings', [GreasingController::class, 'index'])->name('greasings.index');
     Route::get('/greasings/{greasing}/execute', [GreasingController::class, 'execute'])->name('greasings.execute');
     Route::post('/greasings/{greasing}/execute', [GreasingController::class, 'storeExecution'])->name('greasings.execute.store');
     Route::patch('/greasings/{greasing}/findings/{finding}', [GreasingController::class, 'updateFinding'])->name('greasings.findings.update');
-
-    Route::get('/greasing-report', [GreasingReportController::class, 'index'])->name('greasing-report.index');
 });
 
 Route::middleware([
@@ -131,6 +141,8 @@ Route::middleware([
     Route::get('/oil-audit-report', [OilAuditController::class, 'report'])->name('oil-audits.report');
     Route::get('/oil-audit-report/{machineNumber}', [OilAuditController::class, 'history'])->name('oil-audits.history');
     Route::post('/oil-audits/{oilAudit}/follow-up', [OilAuditController::class, 'storeFollowUp'])->name('oil-audits.follow-up.store');
+
+    Route::get('/reports/oil-audit', [OilAuditReportController::class, 'index'])->name('reports.oil-audit');
 });
 
 require __DIR__.'/settings.php';
