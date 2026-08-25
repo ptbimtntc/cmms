@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\MachinesImport;
 use App\Models\Group;
 use App\Models\Machine;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use App\Imports\MachinesImport;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Http\Controllers\PMScheduleController;
-use App\Http\Controllers\SparepartController;
 
 class MachineController extends Controller
 {
@@ -20,9 +17,9 @@ class MachineController extends Controller
         // SEARCH
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('machine_number', 'like', '%' . $request->search . '%')
-                  ->orWhere('machine_type', 'like', '%' . $request->search . '%')
-                  ->orWhere('area', 'like', '%' . $request->search . '%');
+                $q->where('machine_number', 'like', '%'.$request->search.'%')
+                    ->orWhere('machine_type', 'like', '%'.$request->search.'%')
+                    ->orWhere('area', 'like', '%'.$request->search.'%');
             });
         }
 
@@ -117,7 +114,7 @@ class MachineController extends Controller
 
         try {
             Excel::import(
-                new MachinesImport(),
+                new MachinesImport,
                 $request->file('file')
             );
         } catch (\Throwable $e) {
@@ -148,7 +145,7 @@ class MachineController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'area' => 'required',
             'machine_type' => 'required',
             'machine_number' => 'required|unique:machines',
@@ -157,7 +154,14 @@ class MachineController extends Controller
             'group_id' => 'nullable|exists:groups,id',
         ]);
 
-        Machine::create($request->all());
+        Machine::create([
+            'machine_number' => $validated['machine_number'],
+            'machine_type' => $validated['machine_type'],
+            'area' => $validated['area'],
+            'description' => $validated['description'] ?? null,
+            'status' => $validated['status'],
+            'group_id' => $validated['group_id'] ?? null,
+        ]);
 
         return redirect()
             ->route('machines.index')
@@ -176,10 +180,10 @@ class MachineController extends Controller
 
     public function update(Request $request, Machine $machine)
     {
-        $request->validate([
+        $validated = $request->validate([
             'area' => 'required',
             'machine_type' => 'required',
-            'machine_number' => 'required|unique:machines,machine_number,' . $machine->id,
+            'machine_number' => 'required|unique:machines,machine_number,'.$machine->id,
             'description' => 'nullable',
             'status' => 'required',
             'pm_cycle_value' => 'nullable|integer|min:1',
@@ -187,11 +191,20 @@ class MachineController extends Controller
             'group_id' => 'nullable|exists:groups,id',
         ]);
 
-        $machine->update($request->all());
+        $machine->update([
+            'machine_number' => $validated['machine_number'],
+            'machine_type' => $validated['machine_type'],
+            'area' => $validated['area'],
+            'description' => $validated['description'] ?? null,
+            'status' => $validated['status'],
+            'pm_cycle_value' => $validated['pm_cycle_value'] ?? null,
+            'pm_cycle_unit' => $validated['pm_cycle_unit'] ?? null,
+            'group_id' => $validated['group_id'] ?? null,
+        ]);
 
         return redirect()
-        ->route('machines.index')
-        ->with('success', 'Machine updated successfully.');
+            ->route('machines.index')
+            ->with('success', 'Machine updated successfully.');
     }
 
     public function destroy(Machine $machine)

@@ -17,6 +17,7 @@ class MachineTemplateExport implements FromArray
                 'status',
                 'pm_cycle_value',
                 'pm_cycle_unit',
+                'group',
             ],
 
             [
@@ -26,6 +27,7 @@ class MachineTemplateExport implements FromArray
                 'ACTIVE',
                 104,
                 'WEEK',
+                '',
             ],
 
         ];

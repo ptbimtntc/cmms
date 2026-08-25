@@ -37,11 +37,23 @@
 
     @if (session('machines_import_result'))
         @php($importResult = session('machines_import_result'))
-        <div class="mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            <span>Import result:</span>
-            <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
-            <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
-            <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
+        <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div class="flex flex-wrap gap-3">
+                <span>Import result:</span>
+                <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
+                <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
+                <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
+            </div>
+            @if (! empty($importResult['errors']))
+                <div class="mt-2 border-t border-slate-200 pt-2">
+                    <p class="font-medium text-slate-600">Details:</p>
+                    <ul class="mt-1 list-inside list-disc space-y-0.5 text-rose-700">
+                        @foreach ($importResult['errors'] as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
         </div>
     @endif
 
