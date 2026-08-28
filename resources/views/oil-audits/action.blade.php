@@ -49,7 +49,7 @@
                 </div>
                 <a href="{{ route('oil-audits.report', ['follow_up' => 1]) }}" class="text-sm font-semibold text-orange-700 hover:text-orange-900">Lihat semua</a>
             </div>
-            <div class="grid gap-2 md:grid-cols-2">
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
                 @foreach ($pendingAudits as $audit)
                     @php($colors = $audit->conditionColor())
                     <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="flex items-center justify-between gap-3 rounded-xl border border-white bg-white px-3 py-3 transition hover:border-orange-300 hover:shadow-sm">
@@ -57,7 +57,7 @@
                             <p class="truncate font-mono text-sm font-bold text-slate-900">{{ $audit->machine_number }}</p>
                             <p class="truncate text-xs text-slate-500">Dicek {{ $audit->audited_at->format('d M Y, H:i') }} · {{ $audit->audited_by_name }}</p>
                         </div>
-                        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold {{ $colors['badge'] }}">{{ $audit->conditionLabel() }}</span>
+                        <span class="shrink-0 wrap-anywhere rounded-full px-2.5 py-1 text-xs font-bold {{ $colors['badge'] }}">{{ $audit->conditionLabel() }}</span>
                     </a>
                 @endforeach
             </div>
@@ -186,7 +186,7 @@
                             <p class="truncate font-mono text-base font-bold text-slate-900">{{ $audit->machine_number }}</p>
                             <p class="mt-0.5 truncate text-xs text-slate-500">{{ $audit->machine_type }} · {{ $audit->area }} · {{ $audit->audited_at->format('d M Y, H:i') }}</p>
                         </div>
-                        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold {{ $colors['badge'] }}">{{ $audit->conditionLabel() }}</span>
+                        <span class="shrink-0 wrap-anywhere rounded-full px-2.5 py-1 text-xs font-bold {{ $colors['badge'] }}">{{ $audit->conditionLabel() }}</span>
                     </div>
 
                     <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-100 pt-3 text-xs">
@@ -196,7 +196,7 @@
                         </div>
                         <div class="min-w-0">
                             <p class="text-slate-400">Finding</p>
-                            <p class="mt-0.5 break-words font-medium text-slate-700">
+                            <p class="mt-0.5 wrap-anywhere font-medium text-slate-700">
                                 @if (! $audit->needsFollowUp())
                                     No Finding
                                 @elseif ($audit->followUp)
