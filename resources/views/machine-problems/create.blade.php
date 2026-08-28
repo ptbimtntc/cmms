@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="min-h-screen bg-gray-100 p-4 md:p-6">
+    <div class="bg-gray-100 p-4 md:p-6">
 
         {{-- PAGE HEADER --}}
         <div class="mb-6">

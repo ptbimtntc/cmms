@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="p-6 bg-gray-50 min-h-screen">
+    <div class="p-6 bg-gray-50">
 
         {{-- HEADER --}}
         <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">

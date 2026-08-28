@@ -17,7 +17,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
-<body class="h-screen overflow-hidden bg-slate-100 text-slate-800">
+<body class="h-dvh overflow-hidden bg-slate-100 text-slate-800">
     @php
         $routeName = Route::currentRouteName() ?? 'dashboard';
         $defaultPageTitle = match (true) {
@@ -46,7 +46,7 @@
         $pageTitle = View::hasSection('title') ? View::getSection('title') : $defaultPageTitle;
     @endphp
 
-    <div x-data class="flex h-screen overflow-hidden">
+    <div x-data class="flex h-dvh overflow-hidden">
 
         @if (!($hideSidebar ?? false))
             @include('partials.sidebar')

@@ -10,7 +10,7 @@ document.addEventListener('alpine:init', () => {
 
     <aside x-cloak :class="$store.sidebar.open ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0
        z-40 w-72
-       flex h-screen flex-col
+       flex h-dvh flex-col
        border-r border-slate-800
        bg-slate-900 text-white
        transition-transform duration-300
@@ -99,7 +99,7 @@ document.addEventListener('alpine:init', () => {
         @php
         $machineHistoryActive = request()->routeIs('machine-history.*');
         @endphp
-        <nav class="flex-1 overflow-hidden px-3 py-4 text-sm" x-data="{
+        <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
                         ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
                         ($machineHistoryActive || $reportActive || $greasingReportActive ? 'report' : 'system')) }}'
