@@ -19,6 +19,7 @@
             method="POST"
             enctype="multipart/form-data"
             class="space-y-5 p-6"
+            novalidate
         >
             @csrf
             @method('PUT')
@@ -44,7 +45,21 @@
                         const file = e.target.files[0];
                         if (! file) return;
                         const image = new Image();
+                        const objectUrl = URL.createObjectURL(file);
+                        const reset = () => {
+                            URL.revokeObjectURL(objectUrl);
+                            this.$refs.avatarInput.value = '';
+                        };
                         image.onload = () => {
+                            // Guard against a corrupt/non-image file slipping past
+                            // the accept filter with zero intrinsic dimensions —
+                            // without this, minScale/maxScale become Infinity and
+                            // the zoom slider ends up in an invalid, unsubmittable state.
+                            if (! image.width || ! image.height) {
+                                reset();
+                                alert('This file could not be read as an image. Please choose a different file.');
+                                return;
+                            }
                             this.img = image;
                             this.minScale = this.editorSize / Math.min(image.width, image.height);
                             this.maxScale = this.minScale * 3;
@@ -54,7 +69,11 @@
                             this.cropOpen = true;
                             this.$nextTick(() => this.draw());
                         };
-                        image.src = URL.createObjectURL(file);
+                        image.onerror = () => {
+                            reset();
+                            alert('This file could not be read as an image. Please choose a different file.');
+                        };
+                        image.src = objectUrl;
                     },
                     draw() {
                         if (! this.img || ! this.$refs.canvas) return;

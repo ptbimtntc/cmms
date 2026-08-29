@@ -48,13 +48,6 @@
             @endforeach
         </select>
 
-        <select name="period" title="Periode analisa problem"
-            class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            @foreach ($periodOptions as $value => $label)
-                <option value="{{ $value }}" {{ (string) $value === $selectedPeriod ? 'selected' : '' }}>Analisa: {{ $label }}</option>
-            @endforeach
-        </select>
-
         <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
             Filter
         </button>
@@ -80,15 +73,17 @@
         </div>
     </div>
 
-    {{-- ============ Problem analysis (confirmed via follow-up, scoped by `period`) ============ --}}
+    {{-- ============ Oil Audit Analysis (confirmed via follow-up, scoped by the report filters) ============ --}}
+    <h2 class="mb-3 text-lg font-semibold text-slate-800">Oil Audit Analysis</h2>
+    <p class="mb-4 text-xs text-slate-500">Mengikuti filter Area / Machine Type / Year / Month di atas. Search tidak memengaruhi analisa.</p>
     <div class="mb-6 grid gap-4 lg:grid-cols-2">
-        {{-- Problem Paling Sering Muncul --}}
+        {{-- Problem & Finding Paling Sering Muncul --}}
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div class="mb-4 flex items-start justify-between gap-3">
                 <div>
-                    <h2 class="text-sm font-semibold text-slate-800">Problem Paling Sering Muncul</h2>
+                    <h2 class="text-sm font-semibold text-slate-800">Problem &amp; Finding Paling Sering Muncul</h2>
                     <p class="mt-0.5 text-xs text-slate-500">
-                        Top 10 problem dari hasil follow-up &middot; {{ $periodOptions[$selectedPeriod] }}
+                        Top 10 kombinasi problem + finding dari hasil follow-up
                     </p>
                 </div>
                 <span class="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
@@ -98,7 +93,7 @@
 
             @if ($problemFrequency->isEmpty())
                 <p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
-                    Belum ada problem follow-up pada periode ini.
+                    Belum ada problem follow-up pada scope filter ini.
                 </p>
             @else
                 @php
@@ -110,7 +105,7 @@
                             <div class="mb-1 flex items-center justify-between gap-3 text-sm">
                                 <span class="flex min-w-0 items-center gap-2">
                                     <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500">{{ $index + 1 }}</span>
-                                    <span class="truncate font-medium text-slate-700">{{ $row->problem }}</span>
+                                    <span class="truncate font-medium text-slate-700">{{ $row->problem }} <span class="text-slate-400">&mdash;</span> {{ $row->finding }}</span>
                                 </span>
                                 <span class="shrink-0 font-semibold text-slate-800">{{ $row->total }}</span>
                             </div>
@@ -130,7 +125,7 @@
                 <div>
                     <h2 class="text-sm font-semibold text-slate-800">Mesin dengan Temuan Berulang</h2>
                     <p class="mt-0.5 text-xs text-slate-500">
-                        Top 10 mesin dengan &ge; {{ $repeatFindingMin }} follow-up &middot; {{ $periodOptions[$selectedPeriod] }}
+                        Top 10 mesin dengan &ge; {{ $repeatFindingMin }} follow-up pada audit berbeda
                     </p>
                 </div>
                 <span class="shrink-0 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700">
@@ -140,7 +135,7 @@
 
             @if ($repeatFindingMachines->isEmpty())
                 <p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
-                    Belum ada mesin dengan temuan berulang pada periode ini.
+                    Belum ada mesin dengan temuan berulang pada scope filter ini.
                 </p>
             @else
                 <ol class="space-y-2">

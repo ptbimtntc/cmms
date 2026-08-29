@@ -7,7 +7,6 @@ use App\Models\OilAudit;
 use App\Models\OilAuditFollowUp;
 use App\Models\OilAuditFollowUpProblem;
 use Carbon\Carbon;
-use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -16,31 +15,26 @@ use Illuminate\Support\Facades\DB;
 class OilAuditReportController extends Controller
 {
     /**
-     * Analysis period presets for the two problem-analysis panels, keyed by
-     * the `period` query param value. Default is '90'. 'all' disables the
-     * date cut-off entirely.
-     */
-    public const PERIOD_OPTIONS = [
-        '30' => '30 hari terakhir',
-        '90' => '90 hari terakhir',
-        '365' => '1 tahun terakhir',
-        'all' => 'Semua waktu',
-    ];
-
-    private const DEFAULT_PERIOD = '90';
-
-    /**
      * Minimum follow-up events for a machine to count as having a *recurring*
      * finding at all — i.e. to appear in the "Mesin dengan Temuan Berulang"
-     * panel. A machine with a single follow-up is not "berulang".
+     * panel, and the minimum occurrence for a Machine + Problem + Finding
+     * combination to appear in the "Problem Berulang per Mesin" panel. A
+     * single occurrence is not "berulang".
      */
     private const REPEAT_FINDING_MIN = 2;
 
     /**
-     * A machine with this many follow-up events (or more) inside the
-     * selected period is additionally flagged with the "Berulang" badge.
+     * A machine with this many follow-up events (or more) inside the current
+     * report scope is additionally flagged with the "Berulang" badge.
      */
     private const REPEAT_FINDING_THRESHOLD = 3;
+
+    /**
+     * Placeholder shown for legacy follow-up problems recorded before the
+     * Problem → Finding structure existed (they have no finding rows). They
+     * still count towards the analysis; the finding is just unknown.
+     */
+    private const MISSING_FINDING_LABEL = '(tanpa detail)';
 
     /**
      * Oil Audit is a WWD-only module — this is an unconditional business
@@ -76,14 +70,6 @@ class OilAuditReportController extends Controller
         $month = $request->filled('month') ? (int) $request->input('month') : null;
         $search = trim((string) $request->input('search', ''));
 
-        // Analysis-only filter: scopes the two problem panels below, never
-        // the machine list / summary above (those keep their year/month
-        // filters). Falls back to the 90-day default on any unknown value.
-        $period = array_key_exists((string) $request->input('period'), self::PERIOD_OPTIONS)
-            ? (string) $request->input('period')
-            : self::DEFAULT_PERIOD;
-        $periodStart = $this->periodStart($period);
-
         $query = $this->filteredQuery($area, $machineType, $condition, $year, $month, $search);
 
         // --- Summary — machine-centric, same filtered scope as the table.
@@ -108,7 +94,7 @@ class OilAuditReportController extends Controller
         // single extra query for the whole page — never N+1, never a
         // "fetch all audits then group in PHP" approach.
         $machines = (clone $query)
-            ->with(['latestOilAudit.followUp.problems'])
+            ->with(['latestOilAudit.followUp.problems.findings'])
             ->orderBy('machine_number')
             ->paginate(20)
             ->withQueryString();
@@ -127,6 +113,13 @@ class OilAuditReportController extends Controller
         }
         rsort($years);
 
+        // The analysis panels share ONE scope: the report filters
+        // Area / Machine Type / Year / Month (anchored to the finding's
+        // parent audit). `search` and `condition` intentionally do NOT
+        // touch the analysis — it stays a stable view of the whole
+        // filtered period, not the current text query.
+        $analysisFilters = [$area, $machineType, $year, $month];
+
         return view('reports.oil-audit.index', [
             'summary' => $summary,
             'machines' => $machines,
@@ -139,12 +132,10 @@ class OilAuditReportController extends Controller
             'selectedYear' => $year,
             'selectedMonth' => $month,
             'search' => $search,
-            'periodOptions' => self::PERIOD_OPTIONS,
-            'selectedPeriod' => $period,
             'repeatFindingMin' => self::REPEAT_FINDING_MIN,
             'repeatFindingThreshold' => self::REPEAT_FINDING_THRESHOLD,
-            'problemFrequency' => $this->problemFrequency($periodStart),
-            'repeatFindingMachines' => $this->repeatFindingMachines($periodStart),
+            'problemFrequency' => $this->problemFrequency(...$analysisFilters),
+            'repeatFindingMachines' => $this->repeatFindingMachines(...$analysisFilters),
         ]);
     }
 
@@ -219,44 +210,62 @@ class OilAuditReportController extends Controller
     }
 
     /**
-     * Rolling cut-off timestamp for the selected analysis period, or null
-     * for "Semua waktu". Anchored to the parent audit's audited_at (the
-     * date the finding actually occurred), consistent with the year/month
-     * filters used elsewhere on this page.
+     * Base query for the three analysis panels: every confirmed follow-up
+     * problem, LEFT JOINed to its findings so legacy problems with no
+     * finding rows still contribute (as MISSING_FINDING_LABEL). Locked to
+     * the WWD + NDE/NDB scope, then narrowed by the shared report filters
+     * (Area / Machine Type / Year / Month on the parent audit).
      */
-    private function periodStart(string $period): ?CarbonInterface
-    {
-        return match ($period) {
-            '30' => now()->subDays(30),
-            '90' => now()->subDays(90),
-            '365' => now()->subYear(),
-            default => null,
-        };
-    }
-
-    /**
-     * "Problem Paling Sering Muncul" — top 10 problems by raw occurrence.
-     *
-     * Source is ONLY oil_audit_follow_up_problems (problems confirmed via a
-     * follow-up), never raw audit conditions. Counted per problem row, so a
-     * single follow-up listing 3 problems contributes 3 to the totals. The
-     * join back to oil_audits enforces the WWD + NDE/NDB scope and applies
-     * the period cut-off on audited_at.
-     *
-     * @return Collection<int, object{problem: string, total: int}>
-     */
-    private function problemFrequency(?CarbonInterface $periodStart): Collection
+    private function analysisBase(?string $area, ?string $machineType, ?int $year, ?int $month): Builder
     {
         return OilAuditFollowUpProblem::query()
             ->join('oil_audit_follow_ups', 'oil_audit_follow_ups.id', '=', 'oil_audit_follow_up_problems.oil_audit_follow_up_id')
             ->join('oil_audits', 'oil_audits.id', '=', 'oil_audit_follow_ups.oil_audit_id')
+            ->leftJoin(
+                'oil_audit_follow_up_findings',
+                'oil_audit_follow_up_findings.oil_audit_follow_up_problem_id',
+                '=',
+                'oil_audit_follow_up_problems.id'
+            )
             ->where('oil_audits.area', self::AUDIT_AREA)
             ->whereIn('oil_audits.machine_type', self::AUDIT_MACHINE_TYPES)
-            ->when($periodStart, fn (Builder $q) => $q->where('oil_audits.audited_at', '>=', $periodStart))
-            ->groupBy('oil_audit_follow_up_problems.problem')
-            ->select('oil_audit_follow_up_problems.problem', DB::raw('COUNT(*) as total'))
+            ->when($area, fn (Builder $q) => $q->where('oil_audits.area', $area))
+            ->when($machineType, fn (Builder $q) => $q->where('oil_audits.machine_type', $machineType))
+            ->when($year, fn (Builder $q) => $q->whereYear('oil_audits.audited_at', $year))
+            ->when($month, fn (Builder $q) => $q->whereMonth('oil_audits.audited_at', $month));
+    }
+
+    /**
+     * Raw SQL for "the finding text, or the legacy placeholder when the
+     * problem predates the Problem → Finding structure". No user input goes
+     * in — MISSING_FINDING_LABEL is a fixed class constant — so a plain
+     * string is safe to reuse in select / group by / order by.
+     */
+    private function findingSql(): string
+    {
+        return "COALESCE(oil_audit_follow_up_findings.finding, '".self::MISSING_FINDING_LABEL."')";
+    }
+
+    /**
+     * "Problem & Finding Paling Sering Muncul" — top 10 Problem + Finding
+     * pairs by raw occurrence. One finding row counts once, so the same
+     * Problem + Finding recorded on two different audits totals 2. Legacy
+     * problems without findings are grouped under MISSING_FINDING_LABEL.
+     *
+     * @return Collection<int, object{problem: string, finding: string, total: int}>
+     */
+    private function problemFrequency(?string $area, ?string $machineType, ?int $year, ?int $month): Collection
+    {
+        return $this->analysisBase($area, $machineType, $year, $month)
+            ->groupBy('oil_audit_follow_up_problems.problem', DB::raw($this->findingSql()))
+            ->select(
+                'oil_audit_follow_up_problems.problem',
+                DB::raw($this->findingSql().' as finding'),
+                DB::raw('COUNT(*) as total')
+            )
             ->orderByDesc('total')
             ->orderBy('oil_audit_follow_up_problems.problem')
+            ->orderByRaw($this->findingSql())
             ->limit(10)
             ->get();
     }
@@ -264,20 +273,24 @@ class OilAuditReportController extends Controller
     /**
      * "Mesin dengan Temuan Berulang" — top 10 machines whose findings
      * actually recurred: at least REPEAT_FINDING_MIN follow-up events
-     * (audits that produced a follow-up) inside the selected period. A
-     * machine with a single follow-up is not "berulang" and is excluded.
+     * (audits that produced a follow-up) inside the current report scope.
+     * Problem/Finding content is irrelevant here — this answers "which
+     * machine keeps coming back", not "with the same problem".
      * oil_audit_follow_ups.oil_audit_id is unique, so one row here == one
-     * audit-with-follow-up. Same WWD + NDE/NDB scope.
+     * audit-with-follow-up.
      *
      * @return Collection<int, object{machine_number: string, events: int}>
      */
-    private function repeatFindingMachines(?CarbonInterface $periodStart): Collection
+    private function repeatFindingMachines(?string $area, ?string $machineType, ?int $year, ?int $month): Collection
     {
         return OilAuditFollowUp::query()
             ->join('oil_audits', 'oil_audits.id', '=', 'oil_audit_follow_ups.oil_audit_id')
             ->where('oil_audits.area', self::AUDIT_AREA)
             ->whereIn('oil_audits.machine_type', self::AUDIT_MACHINE_TYPES)
-            ->when($periodStart, fn (Builder $q) => $q->where('oil_audits.audited_at', '>=', $periodStart))
+            ->when($area, fn (Builder $q) => $q->where('oil_audits.area', $area))
+            ->when($machineType, fn (Builder $q) => $q->where('oil_audits.machine_type', $machineType))
+            ->when($year, fn (Builder $q) => $q->whereYear('oil_audits.audited_at', $year))
+            ->when($month, fn (Builder $q) => $q->whereMonth('oil_audits.audited_at', $month))
             ->groupBy('oil_audits.machine_number')
             ->havingRaw('COUNT(*) >= ?', [self::REPEAT_FINDING_MIN])
             ->select('oil_audits.machine_number', DB::raw('COUNT(*) as events'))

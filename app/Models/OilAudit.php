@@ -19,17 +19,56 @@ class OilAudit extends Model
         'GLASS_BUREM' => 'Level Glass Burem',
     ];
 
+    /**
+     * Follow-up Problem dropdown — "apa yang rusak".
+     */
     public const PROBLEM_OPTIONS = [
+        'Bocor Oli',
+        'Bearing Oblak',
+        'Baut Kendor',
+        'Oli Keruh/Hitam',
+        'Level Glass Burem',
+        'Lainnya',
+    ];
+
+    /**
+     * Follow-up Finding dropdown — "di bagian mana problem ditemukan".
+     */
+    public const FINDING_OPTIONS = [
         'Kapstan 1',
         'Kapstan 2',
         'Kapstan 3',
         'Kapstan 4',
         'Mainshaft',
         'Innershaft',
+        'Lainnya',
+    ];
+
+    /**
+     * Problems that describe the oil / sight-glass condition itself rather
+     * than a mechanical part. For these the Finding is not a machine
+     * location, so only the generic option is offered.
+     */
+    public const GENERIC_FINDING_PROBLEMS = [
         'Oli Keruh/Hitam',
         'Level Glass Burem',
         'Lainnya',
     ];
+
+    public const GENERIC_FINDING = 'Lainnya';
+
+    /**
+     * Allowed Finding options for a given Problem selection: the full list,
+     * or just the generic option for a GENERIC_FINDING_PROBLEMS problem.
+     *
+     * @return array<int, string>
+     */
+    public static function findingOptionsFor(?string $problem): array
+    {
+        return in_array($problem, self::GENERIC_FINDING_PROBLEMS, true)
+            ? [self::GENERIC_FINDING]
+            : self::FINDING_OPTIONS;
+    }
 
     protected $fillable = [
         'machine_id',

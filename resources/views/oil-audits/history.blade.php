@@ -108,108 +108,67 @@
                             @endif
                         </div>
 
-                        @if ($audit->needsFollowUp() && $audit->followUp)
-                            <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
-                                <div class="grid gap-3 text-sm sm:grid-cols-2">
-                                    <div>
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Problem ditemukan</p>
-                                        @if ($audit->followUp->problems->isNotEmpty())
-                                            <ul class="mt-2 space-y-1.5">
-                                                @foreach ($audit->followUp->problems as $problem)
-                                                    <li class="flex items-start gap-2 font-medium text-slate-800">
-                                                        <span class="mt-0.5 text-emerald-600">•</span>
-                                                        <span>{{ $problem->problem }}</span>
+                        @if ($audit->needsFollowUp())
+                            @php($fu = $audit->followUp)
+                            @php($fuIsOld = old('_followup_audit') !== null && (int) old('_followup_audit') === $audit->id)
+                            @php($canDeleteFollowUp = in_array(auth()->user()->role, ['ADMIN', 'KOORDINATOR WWD'], true))
+
+                            @if ($fu)
+                                <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4" data-followup-view="{{ $audit->id }}">
+                                    <div class="grid gap-3 text-sm sm:grid-cols-2">
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Problem &amp; finding</p>
+                                            <ul class="mt-2 space-y-2">
+                                                @forelse ($fu->problems as $problem)
+                                                    <li class="font-medium text-slate-800">
+                                                        <div class="flex items-start gap-2">
+                                                            <span class="mt-0.5 text-emerald-600">•</span>
+                                                            <span>{{ $problem->problem }}</span>
+                                                        </div>
+                                                        @if ($problem->findings->isNotEmpty())
+                                                            <ul class="mt-1 ml-5 space-y-0.5 text-xs font-normal text-slate-600">
+                                                                @foreach ($problem->findings as $finding)
+                                                                    <li>– {{ $finding->finding }}</li>
+                                                                @endforeach
+                                                            </ul>
+                                                        @endif
                                                     </li>
-                                                @endforeach
+                                                @empty
+                                                    <li class="font-medium text-slate-800">{{ $fu->problem }}</li>
+                                                @endforelse
                                             </ul>
-                                        @else
-                                            <p class="mt-1 font-medium text-slate-800">{{ $audit->followUp->problem }}</p>
-                                        @endif
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Tindakan dilakukan</p>
+                                            <p class="mt-1 whitespace-pre-line text-slate-700">{{ $fu->action_taken }}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Tindakan dilakukan</p>
-                                        <p class="mt-1 whitespace-pre-line text-slate-700">{{ $audit->followUp->action_taken }}</p>
-                                    </div>
-                                </div>
-                                <p class="mt-3 border-t border-emerald-100 pt-3 text-xs text-slate-600">Ditindaklanjuti oleh <span class="font-semibold text-slate-800">{{ $audit->followUp->pic_name }}</span> · {{ $audit->followUp->actioned_at->format('d M Y, H:i') }}</p>
-                            </div>
-                        @endif
-
-                        @if ($audit->needsFollowUp() && !$audit->followUp)
-                            <form method="POST" action="{{ route('oil-audits.follow-up.store', $audit) }}" class="mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4">
-                                @csrf
-                                <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <h3 class="font-bold text-slate-900">Catat tindak lanjut</h3>
-                                        <p class="text-xs text-slate-600">Tambahkan semua problem yang ditemukan. PIC akan tercatat otomatis sebagai {{ auth()->user()->name }}.</p>
-                                    </div>
-                                    <button type="button" id="add-problem-{{ $audit->id }}" class="w-fit rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">+ Add Problem</button>
-                                </div>
-
-                                <div id="problem-list-{{ $audit->id }}" class="space-y-2">
-                                    <div class="problem-row flex items-start gap-2">
-                                        <div class="min-w-0 flex-1">
-                                            <label class="mb-1.5 block text-xs font-semibold text-slate-700">Problem #1</label>
-                                            <select name="problems[]" required class="problem-select w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
-                                                <option value="">Pilih problem</option>
-                                                @foreach ($problemOptions as $problem)
-                                                    <option value="{{ $problem }}">{{ $problem }}</option>
-                                                @endforeach
-                                            </select>
+                                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100 pt-3">
+                                        <p class="text-xs text-slate-600">Ditindaklanjuti oleh <span class="font-semibold text-slate-800">{{ $fu->pic_name }}</span> · {{ $fu->actioned_at->format('d M Y, H:i') }}</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button type="button" class="js-followup-edit-toggle rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" data-target="{{ $audit->id }}">Edit tindak lanjut</button>
+                                            @if ($canDeleteFollowUp)
+                                                <form method="POST" action="{{ route('oil-audits.follow-up.destroy', $audit) }}" onsubmit="return confirm('Hapus tindak lanjut ini beserta seluruh problem &amp; finding-nya?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50">Hapus</button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="mt-3">
-                                    <label for="action-{{ $audit->id }}" class="mb-1.5 block text-xs font-semibold text-slate-700">Tindakan yang dilakukan</label>
-                                    <textarea id="action-{{ $audit->id }}" name="action_taken" required rows="3" maxlength="2000" placeholder="Contoh: Repair kapstan dan tambah oli hingga batas aman." class="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"></textarea>
-                                </div>
-                                <div class="mt-3 flex justify-end">
-                                    <button class="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 sm:w-auto">Simpan & tandai selesai</button>
-                                </div>
-                            </form>
-
-                            <script>
-                                document.addEventListener('DOMContentLoaded', function () {
-                                    const addButton = document.getElementById('add-problem-{{ $audit->id }}');
-                                    const list = document.getElementById('problem-list-{{ $audit->id }}');
-                                    if (!addButton || !list) return;
-
-                                    const options = @json($problemOptions);
-
-                                    addButton.addEventListener('click', function () {
-                                        const count = list.querySelectorAll('.problem-row').length + 1;
-                                        const row = document.createElement('div');
-                                        row.className = 'problem-row flex items-start gap-2';
-                                        row.innerHTML = `
-                                            <div class="min-w-0 flex-1">
-                                                <label class="mb-1.5 block text-xs font-semibold text-slate-700">Problem #${count}</label>
-                                                <select name="problems[]" required class="problem-select w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
-                                                    <option value="">Pilih problem</option>
-                                                    ${options.map(problem => `<option value="${problem.replace(/"/g, '&quot;')}">${problem}</option>`).join('')}
-                                                </select>
-                                            </div>
-                                            <button type="button" class="remove-problem mt-6 rounded-lg border border-red-200 px-3 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50">Hapus</button>
-                                        `;
-                                        list.appendChild(row);
-                                        refreshRows();
-                                    });
-
-                                    function refreshRows() {
-                                        list.querySelectorAll('.problem-row').forEach((row, index) => {
-                                            const label = row.querySelector('label');
-                                            if (label) label.textContent = `Problem #${index + 1}`;
-                                        });
-                                        list.querySelectorAll('.remove-problem').forEach(button => {
-                                            button.onclick = function () {
-                                                if (list.querySelectorAll('.problem-row').length <= 1) return;
-                                                button.closest('.problem-row').remove();
-                                                refreshRows();
-                                            };
-                                        });
-                                    }
-                                });
-                            </script>
+                                <form method="POST" action="{{ route('oil-audits.follow-up.update', $audit) }}" class="js-followup-form mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4" data-followup-form="{{ $audit->id }}" {{ $fuIsOld ? '' : 'hidden' }}>
+                                    @csrf
+                                    @method('PUT')
+                                    @include('oil-audits.partials.follow-up-fields', ['mode' => 'edit'])
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('oil-audits.follow-up.store', $audit) }}" class="js-followup-form mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4" data-followup-form="{{ $audit->id }}">
+                                    @csrf
+                                    @include('oil-audits.partials.follow-up-fields', ['mode' => 'create'])
+                                </form>
+                            @endif
                         @endif
                     </div>
                 </article>
@@ -220,4 +179,6 @@
 
         <div class="mt-5">{{ $audits->links() }}</div>
     </section>
+
+    @include('oil-audits.partials.follow-up-scripts')
 @endsection

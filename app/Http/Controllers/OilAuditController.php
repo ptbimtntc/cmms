@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OilAuditController extends Controller
@@ -114,7 +117,7 @@ class OilAuditController extends Controller
         ];
 
         $audits = (clone $query)
-            ->with(['followUp.problems'])
+            ->with(['followUp.problems.findings'])
             ->orderByDesc('audited_at')
             ->orderByDesc('id')
             ->paginate(20)
@@ -184,6 +187,10 @@ class OilAuditController extends Controller
                                 ->orWhereHas(
                                     'problems',
                                     fn (Builder $problemQuery) => $problemQuery->where('problem', 'like', "%{$search}%")
+                                )
+                                ->orWhereHas(
+                                    'problems.findings',
+                                    fn (Builder $findingQuery) => $findingQuery->where('finding', 'like', "%{$search}%")
                                 );
                         });
                 });
@@ -249,11 +256,11 @@ class OilAuditController extends Controller
             ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
             ->firstOrFail();
         $audits = $machine->oilAudits()
-            ->with('followUp.problems')
+            ->with('followUp.problems.findings')
             ->latest('audited_at')
             ->paginate(15);
 
-        $latestAudit = $machine->latestOilAudit()->with('followUp.problems')->first();
+        $latestAudit = $machine->latestOilAudit()->with('followUp.problems.findings')->first();
         $recentAudits = $machine->oilAudits()
             ->latest('audited_at')
             ->limit(8)
@@ -271,6 +278,7 @@ class OilAuditController extends Controller
             'latestAudit' => $latestAudit,
             'recentAudits' => $recentAudits,
             'problemOptions' => OilAudit::PROBLEM_OPTIONS,
+            'findingOptions' => OilAudit::FINDING_OPTIONS,
             'from' => $from,
             'backUrl' => $this->backUrl($from, $request),
             'backLabel' => $from === 'action' ? '← Back to Oil Audit Action' : '← Back to Oil Audit Report',
@@ -300,6 +308,75 @@ class OilAuditController extends Controller
 
     public function storeFollowUp(Request $request, OilAudit $oilAudit): RedirectResponse
     {
+        $this->assertFollowUpAllowed($oilAudit);
+
+        if ($oilAudit->followUp()->exists()) {
+            return back()->with('warning', 'Follow up untuk audit ini sudah disimpan.');
+        }
+
+        $validated = $this->validateFollowUp($request);
+        $user = $request->user();
+
+        DB::transaction(function () use ($oilAudit, $validated, $user) {
+            $followUp = OilAuditFollowUp::create([
+                'oil_audit_id' => $oilAudit->id,
+                // Keep the legacy column populated for backward compatibility.
+                'problem' => $validated['problems'][0]['problem'],
+                'action_taken' => $validated['action_taken'],
+                'pic_user_id' => $user->id,
+                'pic_name' => $user->name,
+                'actioned_at' => now(),
+            ]);
+
+            $this->syncFollowUpProblems($followUp, $validated['problems']);
+        });
+
+        return back()->with('success', 'Tindak lanjut berhasil disimpan dan tercatat pada riwayat mesin.');
+    }
+
+    public function updateFollowUp(Request $request, OilAudit $oilAudit): RedirectResponse
+    {
+        $this->assertFollowUpAllowed($oilAudit);
+
+        $followUp = $oilAudit->followUp;
+        abort_unless($followUp !== null, 404);
+
+        $validated = $this->validateFollowUp($request);
+
+        DB::transaction(function () use ($followUp, $validated) {
+            // pic_* / actioned_at are intentionally left untouched: they record
+            // who first actioned the finding and when, not who last edited it.
+            $followUp->update([
+                'problem' => $validated['problems'][0]['problem'],
+                'action_taken' => $validated['action_taken'],
+            ]);
+
+            $this->syncFollowUpProblems($followUp, $validated['problems']);
+        });
+
+        return back()->with('success', 'Tindak lanjut berhasil diperbarui.');
+    }
+
+    public function destroyFollowUp(Request $request, OilAudit $oilAudit): RedirectResponse
+    {
+        abort_unless(
+            in_array($request->user()->role, ['ADMIN', 'KOORDINATOR WWD'], true),
+            403,
+            'Hanya Admin atau Koordinator WWD yang dapat menghapus tindak lanjut.'
+        );
+
+        // Problems + findings are removed by the FK cascade chain.
+        $oilAudit->followUp?->delete();
+
+        return back()->with('success', 'Tindak lanjut berhasil dihapus.');
+    }
+
+    /**
+     * WWD + NDE/NDB scope guard shared by every follow-up write endpoint,
+     * plus the "condition actually needs a follow-up" business rule.
+     */
+    private function assertFollowUpAllowed(OilAudit $oilAudit): void
+    {
         abort_unless(
             $oilAudit->area === self::AUDIT_AREA
                 && in_array($oilAudit->machine_type, self::AUDIT_MACHINE_TYPES, true),
@@ -310,38 +387,111 @@ class OilAuditController extends Controller
             422,
             'Follow up hanya diperlukan untuk kondisi oli yang tidak oke.'
         );
+    }
 
-        if ($oilAudit->followUp()->exists()) {
-            return back()->with('warning', 'Follow up untuk audit ini sudah disimpan.');
-        }
-
-        $validated = $request->validate([
+    /**
+     * Nested validation for the follow-up form:
+     *   problems[i][problem]              — required, one of PROBLEM_OPTIONS
+     *   problems[i][findings][j][finding] — required, one of FINDING_OPTIONS
+     *   action_taken                     — single field for the whole follow-up
+     */
+    private function followUpRules(): array
+    {
+        return [
             'problems' => ['required', 'array', 'min:1'],
-            'problems.*' => [
-                'required',
-                'in:'.implode(',', OilAudit::PROBLEM_OPTIONS),
-            ],
+            'problems.*.problem' => ['required', Rule::in(OilAudit::PROBLEM_OPTIONS)],
+            'problems.*.findings' => ['required', 'array', 'min:1'],
+            'problems.*.findings.*.finding' => ['required', Rule::in(OilAudit::FINDING_OPTIONS)],
             'action_taken' => ['required', 'string', 'max:2000'],
-        ]);
+        ];
+    }
 
-        $user = $request->user();
+    /**
+     * Runs followUpRules() plus two uniqueness checks:
+     *  - the same Problem must not be selected on more than one problem row;
+     *  - the same Finding must not repeat inside a single problem (it may
+     *    still be used by a different problem).
+     * Throws ValidationException on failure, so the caller gets the same
+     * redirect-back-with-errors behaviour as $request->validate().
+     */
+    private function validateFollowUp(Request $request): array
+    {
+        $validator = Validator::make($request->all(), $this->followUpRules());
 
-        $followUp = OilAuditFollowUp::create([
-            'oil_audit_id' => $oilAudit->id,
-            // Keep the legacy column populated for backward compatibility.
-            'problem' => $validated['problems'][0],
-            'action_taken' => $validated['action_taken'],
-            'pic_user_id' => $user->id,
-            'pic_name' => $user->name,
-            'actioned_at' => now(),
-        ]);
+        $validator->after(function ($validator) use ($request) {
+            $problemRows = (array) $request->input('problems', []);
 
-        $followUp->problems()->createMany(
-            collect($validated['problems'])
-                ->map(fn (string $problem) => ['problem' => $problem])
-                ->all()
-        );
+            $problems = collect($problemRows)
+                ->map(fn ($problem) => trim((string) ($problem['problem'] ?? '')))
+                ->filter();
 
-        return back()->with('success', 'Tindak lanjut berhasil disimpan dan tercatat pada riwayat mesin.');
+            if ($problems->count() !== $problems->unique()->count()) {
+                $validator->errors()->add('problems', 'Setiap problem hanya boleh dipilih satu kali.');
+            }
+
+            foreach ($problemRows as $i => $problem) {
+                $problemText = trim((string) ($problem['problem'] ?? ''));
+                $allowedFindings = OilAudit::findingOptionsFor($problemText);
+
+                $findings = collect($problem['findings'] ?? [])
+                    ->map(fn ($finding) => trim((string) ($finding['finding'] ?? '')))
+                    ->filter();
+
+                if ($findings->count() !== $findings->unique()->count()) {
+                    $validator->errors()->add(
+                        "problems.{$i}.findings",
+                        'Setiap finding dalam satu problem harus berbeda.'
+                    );
+                }
+
+                foreach ((array) ($problem['findings'] ?? []) as $j => $finding) {
+                    $value = trim((string) ($finding['finding'] ?? ''));
+
+                    if ($value !== '' && ! in_array($value, $allowedFindings, true)) {
+                        $validator->errors()->add(
+                            "problems.{$i}.findings.{$j}.finding",
+                            in_array($problemText, OilAudit::GENERIC_FINDING_PROBLEMS, true)
+                                ? 'Untuk problem "'.$problemText.'", finding hanya bisa "'.OilAudit::GENERIC_FINDING.'".'
+                                : 'Finding tidak valid untuk problem yang dipilih.'
+                        );
+                    }
+                }
+            }
+        });
+
+        return $validator->validate();
+    }
+
+    /**
+     * Delete-and-recreate the nested problem/finding tree, mirroring
+     * PMScheduleController::update(). Deleting a problem row cascades its
+     * findings via the FK, so a full replace stays consistent. Blank rows
+     * are skipped defensively even though validation already rejects them.
+     */
+    private function syncFollowUpProblems(OilAuditFollowUp $followUp, array $problems): void
+    {
+        $followUp->problems()->delete();
+
+        foreach ($problems as $problem) {
+            $problemText = trim((string) ($problem['problem'] ?? ''));
+
+            if ($problemText === '') {
+                continue;
+            }
+
+            $findings = collect($problem['findings'] ?? [])
+                ->map(fn ($finding) => trim((string) ($finding['finding'] ?? '')))
+                ->filter()
+                ->values();
+
+            if ($findings->isEmpty()) {
+                continue;
+            }
+
+            $created = $followUp->problems()->create(['problem' => $problemText]);
+            $created->findings()->createMany(
+                $findings->map(fn (string $finding) => ['finding' => $finding])->all()
+            );
+        }
     }
 }

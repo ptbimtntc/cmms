@@ -3,15 +3,19 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory;
+
     use Notifiable;
 
     /**
@@ -20,9 +24,11 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'ADMIN';
 
     public const ROLE_KOORDINATOR_WWD = 'KOORDINATOR WWD';
+
     public const ROLE_KOORDINATOR_BUL = 'KOORDINATOR BUL';
 
     public const ROLE_PIC_WWD = 'PIC WWD';
+
     public const ROLE_PIC_BUL = 'PIC BUL';
 
     public const ROLE_GUEST = 'GUEST';
@@ -130,15 +136,22 @@ class User extends Authenticatable
     protected function nameFormatted(): Attribute
     {
         return Attribute::make(
-            get: fn () => \Illuminate\Support\Str::title(strtolower($this->name))
+            get: fn () => Str::title(strtolower($this->name))
         );
     }
 
+    /**
+     * Returns null (falling back to the initials placeholder in the UI)
+     * whenever avatar_path is empty OR points to a file that no longer
+     * exists on disk — e.g. deleted outside the app, or lost during a
+     * storage reset — instead of emitting a URL that 404s as a broken
+     * image icon.
+     */
     protected function photoUrl(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->avatar_path
-                ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->avatar_path)
+            get: fn () => $this->avatar_path && Storage::disk('public')->exists($this->avatar_path)
+                ? Storage::disk('public')->url($this->avatar_path)
                 : null,
         );
     }
@@ -153,12 +166,12 @@ class User extends Authenticatable
         }
 
         if (count($words) === 1) {
-            return \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($words[0], 0, 2));
+            return Str::upper(Str::substr($words[0], 0, 2));
         }
 
-        $first = \Illuminate\Support\Str::substr(reset($words), 0, 1);
-        $last = \Illuminate\Support\Str::substr(end($words), 0, 1);
+        $first = Str::substr(reset($words), 0, 1);
+        $last = Str::substr(end($words), 0, 1);
 
-        return \Illuminate\Support\Str::upper($first . $last);
+        return Str::upper($first.$last);
     }
 }
