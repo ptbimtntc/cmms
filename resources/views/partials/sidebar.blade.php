@@ -91,7 +91,6 @@ document.addEventListener('alpine:init', () => {
         $oilAuditActive = request()->routeIs('oil-audits.scan');
         $oilAuditActionActive = request()->routeIs('oil-audits.report');
         $greasingActive = request()->routeIs('greasings.*');
-        $greasingReportActive = request()->routeIs('reports.greasing');
         $profileActive = request()->routeIs('profile.*');
 
         @endphp
@@ -101,37 +100,40 @@ document.addEventListener('alpine:init', () => {
         <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
                         ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
-                        ($machineHistoryActive || $reportActive || $greasingReportActive ? 'report' : 'system')) }}'
+                        ($machineHistoryActive || $reportActive ? 'report' : 'system')) }}'
         }">
             @php
             $groups = [
             [
             'key' => 'main',
             'title' => 'Main',
+            // layout-dashboard
             'icon' => '
-            <path d="M3 10.5 12 3l9 7.5" />
-            <path d="M5 10.5V21h5v-6h4v6h5V10.5" />',
+            <rect width="7" height="9" x="3" y="3" rx="1" />
+            <rect width="7" height="5" x="14" y="3" rx="1" />
+            <rect width="7" height="9" x="14" y="12" rx="1" />
+            <rect width="7" height="5" x="3" y="16" rx="1" />',
             'items' => [
             [
             'route' => route('dashboard'),
             'label' => 'Dashboard',
             'active' => $dashboardActive,
+            // gauge
             'icon' => '
-            <path d="M3 10.5 12 3l9 7.5" />
-            <path d="M5 10.5V21h5v-6h4v6h5V10.5" />',
+            <path d="m12 14 4-4" />
+            <path d="M3.34 19a10 10 0 1 1 17.32 0" />',
             ],
             [
             'route' => route('pm-schedules.index'),
             'label' => 'PM Schedule',
             'active' => $pmScheduleActive,
+            // calendar-check
             'icon' => '
-            <path d="M7 2v2" />
-            <path d="M17 2v2" />
-            <rect x="4" y="4" width="16" height="16" rx="2" />
-            <path d="M4 8h16" />
-            <path d="M8 12h.01" />
-            <path d="M12 12h.01" />
-            <path d="M16 12h.01" />',
+            <path d="M8 2v4" />
+            <path d="M16 2v4" />
+            <rect width="18" height="18" x="3" y="4" rx="2" />
+            <path d="M3 10h18" />
+            <path d="m9 16 2 2 4-4" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'PIC WWD' ||
@@ -144,9 +146,9 @@ document.addEventListener('alpine:init', () => {
             'label' => 'Audit Oli',
             'active' =>
             $oilAuditActive && !request()->routeIs('oil-audits.report', 'oil-audits.history'),
+            // droplet
             'icon' => '
-            <path d="M12 3s-5 5.5-5 10a5 5 0 0 0 10 0c0-4.5-5-10-5-10Z" />
-            <path d="M9.5 15.5c.7.8 1.5 1.2 2.5 1.2" />',
+            <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C4 11.1 3 13 3 15a7 7 0 0 0 7 7z" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'PIC WWD' ||
@@ -156,11 +158,11 @@ document.addEventListener('alpine:init', () => {
             'route' => route('oil-audits.report'),
             'label' => 'Action Audit Oli',
             'active' => $oilAuditActionActive,
+            // clipboard-check
             'icon' => '
-            <path d="M4 19V9" />
-            <path d="M10 19V5" />
-            <path d="M16 19v-7" />
-            <path d="M22 19V3" />',
+            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <path d="m9 14 2 2 4-4" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'PIC WWD' ||
@@ -170,11 +172,14 @@ document.addEventListener('alpine:init', () => {
             'route' => route('greasings.index'),
             'label' => 'Greasing',
             'active' => $greasingActive,
+            // syringe (grease application)
             'icon' => '
-            <circle cx="12" cy="7" r="3" />
-            <path d="M12 10v6" />
-            <path d="M9 19h6" />
-            <path d="M9 16h6" />',
+            <path d="m18 2 4 4" />
+            <path d="m17 7 3-3" />
+            <path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" />
+            <path d="m9 11 4 4" />
+            <path d="m5 19-3 3" />
+            <path d="m14 4 6 6" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -187,26 +192,34 @@ document.addEventListener('alpine:init', () => {
             [
             'key' => 'report',
             'title' => 'Report',
+            // chart-column
             'icon' => '
-            <path d="M3 10.5 12 3l9 7.5" />
-            <path d="M5 10.5V21h5v-6h4v6h5V10.5" />',
+            <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+            <path d="M18 17V9" />
+            <path d="M13 17V5" />
+            <path d="M8 17v-3" />',
             'items' => [
             [
             'route' => route('machine-history.index'),
             'label' => 'Machine History',
             'active' => $machineHistoryActive,
+            // history (clock + rewind)
             'icon' => '
-            <path d="M3 10.5 12 3l9 7.5" />
-            <path d="M5 10.5V21h5v-6h4v6h5V10.5" />',
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M12 7v5l4 2" />',
             ],
             [
             'route' => route('reports.index'),
             'label' => 'Reports',
             'active' => $reportActive,
+            // file-chart-column
             'icon' => '
-            <path d="M4 19V9" />
-            <path d="M20 19V5" />
-            <path d="M12 19V13" />',
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            <path d="M8 18v-1" />
+            <path d="M12 18v-6" />
+            <path d="M16 18v-3" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'PIC WWD' ||
@@ -214,44 +227,37 @@ document.addEventListener('alpine:init', () => {
             $userRole === 'KOORDINATOR WWD'||
             $userRole === 'KOORDINATOR BUL',
             ],
-            [
-            'route' => route('reports.greasing'),
-            'label' => 'Greasing Report',
-            'active' => $greasingReportActive,
-            'icon' => '
-            <path d="M4 19V9" />
-            <path d="M10 19V5" />
-            <path d="M16 19v-11" />
-            <path d="M22 19V13" />',
-            'visible' =>
-            $userRole === 'ADMIN' ||
-            $userRole === 'KOORDINATOR WWD'||
-            $userRole === 'KOORDINATOR BUL'||
-            $userRole === 'PIC WWD'||
-            $userRole === 'PIC BUL',
-            ],
             ],
             ],
             [
             'key' => 'master',
             'title' => 'Master Data',
+            // database
             'icon' => '
-            <path d="M4 7h16" />
-            <path d="M7 7v10" />
-            <path d="M17 7v10" />
-            <path d="M4 17h16" />
-            <rect x="6" y="4" width="12" height="4" rx="1" />',
+            <ellipse cx="12" cy="5" rx="9" ry="3" />
+            <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+            <path d="M3 12a9 3 0 0 0 18 0" />',
             'items' => [
             [
             'route' => route('machines.index'),
             'label' => 'Machine',
             'active' => $machineActive,
+            // cpu (equipment unit)
             'icon' => '
-            <path d="M4 7h16" />
-            <path d="M7 7v10" />
-            <path d="M17 7v10" />
-            <path d="M4 17h16" />
-            <rect x="6" y="4" width="12" height="4" rx="1" />',
+            <path d="M12 20v2" />
+            <path d="M12 2v2" />
+            <path d="M17 20v2" />
+            <path d="M17 2v2" />
+            <path d="M2 12h2" />
+            <path d="M2 17h2" />
+            <path d="M2 7h2" />
+            <path d="M20 12h2" />
+            <path d="M20 17h2" />
+            <path d="M20 7h2" />
+            <path d="M7 20v2" />
+            <path d="M7 2v2" />
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <rect x="9" y="9" width="6" height="6" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -261,11 +267,11 @@ document.addEventListener('alpine:init', () => {
             'route' => route('groups.index'),
             'label' => 'Group',
             'active' => $groupActive,
+            // layers (machine groupings)
             'icon' => '
-            <circle cx="9" cy="8" r="3" />
-            <circle cx="17" cy="9" r="2.5" />
-            <path d="M4 19v-1a5 5 0 0 1 5-5h0a5 5 0 0 1 5 5v1" />
-            <path d="M15 13.5a4 4 0 0 1 4 4v1.5" />',
+            <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+            <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+            <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -275,21 +281,24 @@ document.addEventListener('alpine:init', () => {
             'route' => route('spareparts.index'),
             'label' => 'Sparepart',
             'active' => $sparepartActive,
+            // package (parts inventory)
             'icon' => '
-            <path d="M6 8h12" />
-            <path d="M7 8v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V8" />
-            <path d="M9 5h6" />
-            <path d="M10 5V3h4v2" />',
+            <path d="m7.5 4.27 9 5.15" />
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+            <path d="M3.3 7 12 12l8.7-5" />
+            <path d="M12 22V12" />',
             ],
             [
             'route' => route('machine-measurements.index'),
             'label' => 'Measurement',
             'active' => $measurementActive,
+            // ruler
             'icon' => '
-            <path d="M4 12h16" />
-            <path d="M7 12V7" />
-            <path d="M12 12v-3" />
-            <path d="M17 12v-6" />',
+            <path d="M21.3 8.7 8.7 21.3c-1 1-2.5 1-3.4 0l-2.6-2.6c-1-1-1-2.5 0-3.4L15.3 2.7c1-1 2.5-1 3.4 0l2.6 2.6c1 1 1 2.5 0 3.4Z" />
+            <path d="m7.5 10.5 2 2" />
+            <path d="m10.5 7.5 2 2" />
+            <path d="m13.5 4.5 2 2" />
+            <path d="m4.5 13.5 2 2" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -299,9 +308,13 @@ document.addEventListener('alpine:init', () => {
             'route' => route('machine-checklists.index'),
             'label' => 'Checklist',
             'active' => $checklistActive,
+            // list-checks
             'icon' => '
-            <path d="M9 11 11 13l4-4" />
-            <rect x="4" y="4" width="16" height="16" rx="2" />',
+            <path d="m3 17 2 2 4-4" />
+            <path d="m3 7 2 2 4-4" />
+            <path d="M13 6h8" />
+            <path d="M13 12h8" />
+            <path d="M13 18h8" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -311,10 +324,11 @@ document.addEventListener('alpine:init', () => {
             'route' => route('machine-problems.index'),
             'label' => 'Problem Category',
             'active' => $problemCategoryActive,
+            // triangle-alert
             'icon' => '
-            <path d="M12 3 2 19h20L12 3Z" />
-            <path d="M12 8v5" />
-            <path d="M12 16h.01" />',
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -324,9 +338,14 @@ document.addEventListener('alpine:init', () => {
             'route' => route('machine-problem-findings.index'),
             'label' => 'Problem Finding',
             'active' => $problemFindingsActive,
+            // scan-search
             'icon' => '
-            <circle cx="11" cy="11" r="6" />
-            <path d="m20 20-4.2-4.2" />',
+            <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+            <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+            <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="m16 16-1.9-1.9" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -337,18 +356,21 @@ document.addEventListener('alpine:init', () => {
             [
             'key' => 'system',
             'title' => 'System',
+            // shield-check
             'icon' => '
-            <path d="M12 3l7 4v5c0 5-3.5 7.5-7 9-3.5-1.5-7-4-7-9V7l7-4Z" />
-            <path d="M9.5 12.5l1.8 1.8 3.2-3.4" />',
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+            <path d="m9 12 2 2 4-4" />',
             'items' => [
             [
             'route' => route('import-templates'),
             'label' => 'Import Template',
             'active' => $importTemplateActive,
+            // file-down
             'icon' => '
-            <path d="M12 3v12" />
-            <path d="m6 9 6 6 6-6" />
-            <path d="M5 19h14" />',
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            <path d="M12 18v-6" />
+            <path d="m9 15 3 3 3-3" />',
             'visible' =>
             $userRole === 'ADMIN' ||
             $userRole === 'KOORDINATOR WWD'||
@@ -358,11 +380,12 @@ document.addEventListener('alpine:init', () => {
             'route' => route('users.index'),
             'label' => 'Users',
             'active' => $userActive,
+            // users (people / accounts)
             'icon' => '
-            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-            <circle cx="9.5" cy="7" r="3" />
-            <path d="M17 8h4" />
-            <path d="M19 6v4" />',
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />',
             'visible' =>
             $userRole === 'ADMIN',
             ],
