@@ -4,8 +4,8 @@
     <div class="space-y-6">
         @if ($isAdmin)
             <div class="flex items-center justify-end gap-2">
-                <label for="dashAreaFilter" class="text-xs font-medium text-gray-500">Area</label>
-                <select id="dashAreaFilter" onchange="dashFilter('area', this.value)" class="border rounded px-2 py-1 text-sm">
+                <label for="dashAreaFilter" class="text-xs font-medium text-text-muted">Area</label>
+                <select id="dashAreaFilter" onchange="dashFilter('area', this.value)" class="border border-border-strong bg-surface text-text rounded px-2 py-1 text-sm">
                     <option value="" {{ $selectedArea ? '' : 'selected' }}>ALL</option>
                     <option value="WWD" {{ $selectedArea === 'WWD' ? 'selected' : '' }}>WWD</option>
                     <option value="BUL" {{ $selectedArea === 'BUL' ? 'selected' : '' }}>BUL</option>

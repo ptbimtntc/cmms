@@ -11,18 +11,17 @@ document.addEventListener('alpine:init', () => {
     <aside x-cloak :class="$store.sidebar.open ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0
        z-40 w-72
        flex h-dvh flex-col
-       border-r border-slate-800
-       bg-slate-900 text-white
+       border-r border-sidebar-border
+       bg-sidebar text-sidebar-foreground
        transition-transform duration-300
        lg:translate-x-0">
 
-        <div class="border-b border-slate-800 px-4 py-5">
+        <div class="border-b border-sidebar-border px-4 py-5">
             <div class="flex items-center justify-between gap-3">
 
                 <div class="flex min-w-0 items-center gap-3">
                     <div class="flex h-12 w-12 items-center justify-center rounded-2xl
-                bg-gradient-to-br from-emerald-400 to-cyan-500
-                text-slate-950 shadow-lg shadow-emerald-500/20">
+                bg-primary text-white shadow-sm">
 
                         <svg viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg" fill="none">
                             <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -56,14 +55,14 @@ document.addEventListener('alpine:init', () => {
                         </svg>
                     </div>
                     <div class="min-w-0">
-                        <div class="text-base font-semibold tracking-wide text-white">FreeDOMS</div>
-                        <div class="mt-0.5 text-xs text-slate-400">Preventive Maintenance System</div>
+                        <div class="text-base font-semibold tracking-wide text-sidebar-foreground">FreeDOMS</div>
+                        <div class="mt-0.5 text-xs text-sidebar-muted">Preventive Maintenance System</div>
                     </div>
                 </div>
 
                 {{-- Tombol Close (X) --}}
                 <button @click="$store.sidebar.open = false"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-800 hover:text-white lg:hidden"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-sidebar-muted transition hover:bg-sidebar-hover hover:text-sidebar-foreground lg:hidden"
                     title="Close Sidebar">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
@@ -109,7 +108,6 @@ document.addEventListener('alpine:init', () => {
             [
             'key' => 'main',
             'title' => 'Main',
-            'accent' => 'from-blue-500 to-cyan-500',
             'icon' => '
             <path d="M3 10.5 12 3l9 7.5" />
             <path d="M5 10.5V21h5v-6h4v6h5V10.5" />',
@@ -189,7 +187,6 @@ document.addEventListener('alpine:init', () => {
             [
             'key' => 'report',
             'title' => 'Report',
-            'accent' => 'from-green-500 to-cyan-500',
             'icon' => '
             <path d="M3 10.5 12 3l9 7.5" />
             <path d="M5 10.5V21h5v-6h4v6h5V10.5" />',
@@ -238,7 +235,6 @@ document.addEventListener('alpine:init', () => {
             [
             'key' => 'master',
             'title' => 'Master Data',
-            'accent' => 'from-violet-500 to-fuchsia-500',
             'icon' => '
             <path d="M4 7h16" />
             <path d="M7 7v10" />
@@ -341,7 +337,6 @@ document.addEventListener('alpine:init', () => {
             [
             'key' => 'system',
             'title' => 'System',
-            'accent' => 'from-amber-500 to-orange-500',
             'icon' => '
             <path d="M12 3l7 4v5c0 5-3.5 7.5-7 9-3.5-1.5-7-4-7-9V7l7-4Z" />
             <path d="M9.5 12.5l1.8 1.8 3.2-3.4" />',
@@ -382,13 +377,13 @@ document.addEventListener('alpine:init', () => {
 
             @foreach ($groups as $group)
             @if (!isset($group['visible']) || $group['visible'])
-            <div class="mb-3 rounded-2xl border border-slate-800/70 bg-slate-900/70">
+            <div class="mb-3 rounded-2xl border border-sidebar-border bg-sidebar-elevated">
                 <button type="button"
                     @click="openGroup = (openGroup === '{{ $group['key'] }}') ? '' : '{{ $group['key'] }}'"
                     class="flex w-full items-center justify-between px-3 py-2.5 text-left">
                     <div class="flex items-center gap-2">
                         <span
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br {{ $group['accent'] }} text-white shadow-sm">
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-hover text-sidebar-foreground">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
                                 class="h-4 w-4">
@@ -396,19 +391,19 @@ document.addEventListener('alpine:init', () => {
                             </svg>
                         </span>
                         <span
-                            class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{{ $group['title'] }}</span>
+                            class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-muted">{{ $group['title'] }}</span>
                     </div>
-                    <span class="text-sm text-slate-400" x-show="openGroup !== '{{ $group['key'] }}'">+</span>
-                    <span class="text-sm text-slate-400" x-show="openGroup === '{{ $group['key'] }}'">−</span>
+                    <span class="text-sm text-sidebar-muted" x-show="openGroup !== '{{ $group['key'] }}'">+</span>
+                    <span class="text-sm text-sidebar-muted" x-show="openGroup === '{{ $group['key'] }}'">−</span>
                 </button>
 
                 <div x-show="openGroup === '{{ $group['key'] }}'" class="space-y-1 px-2 pb-2">
                     @foreach ($group['items'] as $item)
                     @if (!isset($item['visible']) || $item['visible'])
                     <a href="{{ $item['route'] }}"
-                        class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all {{ $item['active'] ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                        class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all {{ $item['active'] ? 'bg-sidebar-active text-white shadow-sm' : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground' }}">
                         <span
-                            class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800/80 text-sm text-slate-100">
+                            class="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-hover text-sm text-sidebar-foreground">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
                                 class="h-4 w-4">
@@ -425,7 +420,7 @@ document.addEventListener('alpine:init', () => {
             @endforeach
         </nav>
 
-        <div class="border-t border-slate-800 px-4 py-3 text-xs text-slate-500">
+        <div class="border-t border-sidebar-border px-4 py-3 text-xs text-sidebar-muted">
             v1.0 PM System
         </div>
     </aside>

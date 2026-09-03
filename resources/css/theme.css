@@ -1,0 +1,496 @@
+/* ============================================================================
+   FreeDOMS — Design Tokens  (SINGLE SOURCE OF TRUTH FOR THE VISUAL LANGUAGE)
+   ----------------------------------------------------------------------------
+   Change a value here → it propagates everywhere:
+   buttons, links, active navigation, focus rings, badges, cards, forms,
+   tables, alerts, the sidebar, and every legacy Tailwind colour utility
+   (bg-blue-*, text-slate-*, border-emerald-*, …) already in the markup.
+
+   LAYERS
+     1. :root  --brand-*   raw colour ramps  (the ONLY place hex literals live)
+     2. @theme --color-*    semantic tokens   (primary, surface, text, border …)
+                            + remap of the stock Tailwind palette scales
+   ========================================================================== */
+
+:root {
+    /* ---------------------------------------------------------------------
+       1. RAW BRAND RAMPS — edit these to re-skin the whole application
+       ------------------------------------------------------------------- */
+
+    /* Primary — Industrial Blue (#1565C0 / dark #0D47A1 / light #E3F2FD) */
+    --brand-primary-50:  #e8f1fb;
+    --brand-primary-100: #cfe1f6;
+    --brand-primary-200: #9fc3ec;
+    --brand-primary-300: #6fa5e2;
+    --brand-primary-400: #3f86d8;
+    --brand-primary-500: #1e6ecb;
+    --brand-primary-600: #1565c0;
+    --brand-primary-700: #0d47a1;
+    --brand-primary-800: #0b3b85;
+    --brand-primary-900: #0a2e66;
+    --brand-primary-950: #061c3f;
+
+    /* Secondary / Accent — Amber (#F59E0B / dark #D97706 / light #FEF3C7) */
+    --brand-secondary-50:  #fef6e7;
+    --brand-secondary-100: #fdecc5;
+    --brand-secondary-200: #fbd98c;
+    --brand-secondary-300: #f9c453;
+    --brand-secondary-400: #f7ae28;
+    --brand-secondary-500: #f59e0b;
+    --brand-secondary-600: #d97706;
+    --brand-secondary-700: #b45309;
+    --brand-secondary-800: #8f400c;
+    --brand-secondary-900: #74340d;
+    --brand-secondary-950: #431c03;
+
+    /* Success — Green (#2E7D32) */
+    --brand-success-50:  #e9f5ea;
+    --brand-success-100: #c9e7cb;
+    --brand-success-200: #a3d5a6;
+    --brand-success-300: #79c07d;
+    --brand-success-400: #52a857;
+    --brand-success-500: #3b9040;
+    --brand-success-600: #2e7d32;
+    --brand-success-700: #256428;
+    --brand-success-800: #1d4e20;
+    --brand-success-900: #163c19;
+    --brand-success-950: #0a230d;
+
+    /* Warning — Orange (#ED6C02) */
+    --brand-warning-50:  #fef1e6;
+    --brand-warning-100: #fbdcc2;
+    --brand-warning-200: #f7bb86;
+    --brand-warning-300: #f29a4a;
+    --brand-warning-400: #ee8225;
+    --brand-warning-500: #ed6c02;
+    --brand-warning-600: #c85a02;
+    --brand-warning-700: #9c4602;
+    --brand-warning-800: #7b3705;
+    --brand-warning-900: #652f07;
+    --brand-warning-950: #391902;
+
+    /* Danger — Red (#D32F2F) */
+    --brand-danger-50:  #fcecec;
+    --brand-danger-100: #f8d2d2;
+    --brand-danger-200: #efa8a8;
+    --brand-danger-300: #e67c7c;
+    --brand-danger-400: #dd5252;
+    --brand-danger-500: #d83b3b;
+    --brand-danger-600: #d32f2f;
+    --brand-danger-700: #b02424;
+    --brand-danger-800: #8c1e1e;
+    --brand-danger-900: #721b1b;
+    --brand-danger-950: #3f0c0c;
+
+    /* Info — Cyan/Blue (#0288D1) */
+    --brand-info-50:  #e6f4fb;
+    --brand-info-100: #c3e5f5;
+    --brand-info-200: #8ecfec;
+    --brand-info-300: #59b8e3;
+    --brand-info-400: #24a1da;
+    --brand-info-500: #0691d4;
+    --brand-info-600: #0288d1;
+    --brand-info-700: #026ca6;
+    --brand-info-800: #045982;
+    --brand-info-900: #06496b;
+    --brand-info-950: #032e44;
+
+    /* Neutral — Slate (bg #F6F8FA / border #E2E8F0 / muted #64748B / text #172033) */
+    --brand-neutral-50:  #f6f8fa;
+    --brand-neutral-100: #eef1f5;
+    --brand-neutral-200: #e2e8f0;
+    --brand-neutral-300: #cbd5e1;
+    --brand-neutral-400: #94a3b8;
+    --brand-neutral-500: #64748b;
+    --brand-neutral-600: #475569;
+    --brand-neutral-700: #334155;
+    --brand-neutral-800: #1e293b;
+    --brand-neutral-900: #172033;
+    --brand-neutral-950: #0b1120;
+}
+
+/* ------------------------------------------------------------------------
+   DARK MODE — extension point.
+   The token architecture is dark-ready: redefine ONLY the semantic tokens
+   below (never the components) to ship a dark theme. Left commented so this
+   refactor does not silently change behaviour for apps without dark mode.
+   ---------------------------------------------------------------------- */
+/*
+.dark {
+    --color-background:     var(--brand-neutral-950);
+    --color-surface:        var(--brand-neutral-900);
+    --color-surface-muted:  var(--brand-neutral-800);
+    --color-surface-sunken: var(--brand-neutral-950);
+    --color-text:           var(--brand-neutral-50);
+    --color-text-muted:     var(--brand-neutral-400);
+    --color-text-disabled:  var(--brand-neutral-600);
+    --color-border:         var(--brand-neutral-800);
+    --color-border-strong:  var(--brand-neutral-700);
+    --color-primary:        var(--brand-primary-400);
+    --color-primary-hover:  var(--brand-primary-300);
+}
+*/
+
+/* ========================================================================
+   2. TAILWIND v4 REGISTRATION
+   ------------------------------------------------------------------------
+   - Registers semantic utilities:  bg-primary, text-text-muted,
+     border-border, ring-primary, bg-surface, text-success, shadow-card …
+   - Remaps the stock palette scales the existing markup already uses so a
+     legacy `bg-blue-600` / `text-slate-500` / `border-emerald-200` now
+     resolves to a brand token — no Blade edits required.
+   ====================================================================== */
+@theme {
+    /* -- SEMANTIC TOKENS ------------------------------------------------- */
+    --color-primary:          var(--brand-primary-600);
+    --color-primary-hover:     var(--brand-primary-700);
+    --color-primary-active:    var(--brand-primary-800);
+    --color-primary-light:     var(--brand-primary-50);
+    --color-primary-contrast:  #ffffff;
+
+    --color-secondary:          var(--brand-secondary-500);
+    --color-secondary-hover:    var(--brand-secondary-600);
+    --color-secondary-light:    var(--brand-secondary-50);
+    --color-secondary-contrast: #3a2a05;
+
+    --color-success:          var(--brand-success-600);
+    --color-success-hover:     var(--brand-success-700);
+    --color-success-light:     var(--brand-success-50);
+    --color-success-contrast:  #ffffff;
+
+    --color-warning:          var(--brand-warning-500);
+    --color-warning-hover:     var(--brand-warning-600);
+    --color-warning-light:     var(--brand-warning-50);
+    --color-warning-contrast:  #ffffff;
+
+    --color-danger:          var(--brand-danger-600);
+    --color-danger-hover:     var(--brand-danger-700);
+    --color-danger-light:     var(--brand-danger-50);
+    --color-danger-contrast:  #ffffff;
+
+    --color-info:          var(--brand-info-600);
+    --color-info-hover:     var(--brand-info-700);
+    --color-info-light:     var(--brand-info-50);
+    --color-info-contrast:  #ffffff;
+
+    /* Surfaces */
+    --color-background:     var(--brand-neutral-50);
+    --color-surface:        #ffffff;
+    --color-surface-muted:  var(--brand-neutral-100);
+    --color-surface-sunken: var(--brand-neutral-50);
+
+    /* Text */
+    --color-text:          var(--brand-neutral-900);
+    --color-text-muted:     var(--brand-neutral-500);
+    --color-text-disabled:  var(--brand-neutral-400);
+    --color-text-inverse:   #ffffff;
+
+    /* Borders */
+    --color-border:         var(--brand-neutral-200);
+    --color-border-strong:  var(--brand-neutral-300);
+
+    /* Sidebar — a dark operational surface, themeable on its own axis */
+    --color-sidebar:            var(--brand-neutral-900);
+    --color-sidebar-elevated:   var(--brand-neutral-950);
+    --color-sidebar-foreground: #ffffff;
+    --color-sidebar-muted:      var(--brand-neutral-400);
+    --color-sidebar-border:     rgb(255 255 255 / 0.08);
+    --color-sidebar-hover:      rgb(255 255 255 / 0.06);
+    --color-sidebar-active:     var(--brand-primary-600);
+
+    /* Flux UI kit accent (auth + settings screens) follows the brand */
+    --color-accent:            var(--brand-primary-600);
+    --color-accent-content:    var(--brand-primary-700);
+    --color-accent-foreground: #ffffff;
+
+    /* Shape & elevation */
+    --radius-control: 0.5rem;
+    --radius-card:    0.75rem;
+
+    --shadow-card:    0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.08);
+    --shadow-raised:  0 4px 6px -1px rgb(15 23 42 / 0.10), 0 2px 4px -2px rgb(15 23 42 / 0.10);
+    --shadow-popover: 0 10px 15px -3px rgb(15 23 42 / 0.10), 0 4px 6px -4px rgb(15 23 42 / 0.10);
+
+    /* ================================================================
+       REMAP — stock Tailwind palette scales → brand ramps.
+       Keeps the meaning intact:
+         blue/indigo/violet/purple/fuchsia → primary  (actions, nav, focus)
+         sky/cyan                          → info
+         emerald/green/teal                → success
+         amber/yellow/lime                 → secondary / attention
+         orange                            → warning
+         red/rose/pink                     → danger
+         slate/gray/zinc/neutral/stone     → neutral
+       ================================================================ */
+
+    /* PRIMARY family */
+    --color-blue-50:  var(--brand-primary-50);
+    --color-blue-100: var(--brand-primary-100);
+    --color-blue-200: var(--brand-primary-200);
+    --color-blue-300: var(--brand-primary-300);
+    --color-blue-400: var(--brand-primary-400);
+    --color-blue-500: var(--brand-primary-500);
+    --color-blue-600: var(--brand-primary-600);
+    --color-blue-700: var(--brand-primary-700);
+    --color-blue-800: var(--brand-primary-800);
+    --color-blue-900: var(--brand-primary-900);
+    --color-blue-950: var(--brand-primary-950);
+
+    --color-indigo-50:  var(--brand-primary-50);
+    --color-indigo-100: var(--brand-primary-100);
+    --color-indigo-200: var(--brand-primary-200);
+    --color-indigo-300: var(--brand-primary-300);
+    --color-indigo-400: var(--brand-primary-400);
+    --color-indigo-500: var(--brand-primary-500);
+    --color-indigo-600: var(--brand-primary-600);
+    --color-indigo-700: var(--brand-primary-700);
+    --color-indigo-800: var(--brand-primary-800);
+    --color-indigo-900: var(--brand-primary-900);
+    --color-indigo-950: var(--brand-primary-950);
+
+    --color-violet-50:  var(--brand-primary-50);
+    --color-violet-100: var(--brand-primary-100);
+    --color-violet-200: var(--brand-primary-200);
+    --color-violet-300: var(--brand-primary-300);
+    --color-violet-400: var(--brand-primary-400);
+    --color-violet-500: var(--brand-primary-500);
+    --color-violet-600: var(--brand-primary-600);
+    --color-violet-700: var(--brand-primary-700);
+    --color-violet-800: var(--brand-primary-800);
+    --color-violet-900: var(--brand-primary-900);
+    --color-violet-950: var(--brand-primary-950);
+
+    --color-purple-50:  var(--brand-primary-50);
+    --color-purple-100: var(--brand-primary-100);
+    --color-purple-200: var(--brand-primary-200);
+    --color-purple-300: var(--brand-primary-300);
+    --color-purple-400: var(--brand-primary-400);
+    --color-purple-500: var(--brand-primary-500);
+    --color-purple-600: var(--brand-primary-600);
+    --color-purple-700: var(--brand-primary-700);
+    --color-purple-800: var(--brand-primary-800);
+    --color-purple-900: var(--brand-primary-900);
+    --color-purple-950: var(--brand-primary-950);
+
+    --color-fuchsia-50:  var(--brand-primary-50);
+    --color-fuchsia-100: var(--brand-primary-100);
+    --color-fuchsia-200: var(--brand-primary-200);
+    --color-fuchsia-300: var(--brand-primary-300);
+    --color-fuchsia-400: var(--brand-primary-400);
+    --color-fuchsia-500: var(--brand-primary-500);
+    --color-fuchsia-600: var(--brand-primary-600);
+    --color-fuchsia-700: var(--brand-primary-700);
+    --color-fuchsia-800: var(--brand-primary-800);
+    --color-fuchsia-900: var(--brand-primary-900);
+    --color-fuchsia-950: var(--brand-primary-950);
+
+    /* INFO family */
+    --color-sky-50:  var(--brand-info-50);
+    --color-sky-100: var(--brand-info-100);
+    --color-sky-200: var(--brand-info-200);
+    --color-sky-300: var(--brand-info-300);
+    --color-sky-400: var(--brand-info-400);
+    --color-sky-500: var(--brand-info-500);
+    --color-sky-600: var(--brand-info-600);
+    --color-sky-700: var(--brand-info-700);
+    --color-sky-800: var(--brand-info-800);
+    --color-sky-900: var(--brand-info-900);
+    --color-sky-950: var(--brand-info-950);
+
+    --color-cyan-50:  var(--brand-info-50);
+    --color-cyan-100: var(--brand-info-100);
+    --color-cyan-200: var(--brand-info-200);
+    --color-cyan-300: var(--brand-info-300);
+    --color-cyan-400: var(--brand-info-400);
+    --color-cyan-500: var(--brand-info-500);
+    --color-cyan-600: var(--brand-info-600);
+    --color-cyan-700: var(--brand-info-700);
+    --color-cyan-800: var(--brand-info-800);
+    --color-cyan-900: var(--brand-info-900);
+    --color-cyan-950: var(--brand-info-950);
+
+    /* SUCCESS family */
+    --color-emerald-50:  var(--brand-success-50);
+    --color-emerald-100: var(--brand-success-100);
+    --color-emerald-200: var(--brand-success-200);
+    --color-emerald-300: var(--brand-success-300);
+    --color-emerald-400: var(--brand-success-400);
+    --color-emerald-500: var(--brand-success-500);
+    --color-emerald-600: var(--brand-success-600);
+    --color-emerald-700: var(--brand-success-700);
+    --color-emerald-800: var(--brand-success-800);
+    --color-emerald-900: var(--brand-success-900);
+    --color-emerald-950: var(--brand-success-950);
+
+    --color-green-50:  var(--brand-success-50);
+    --color-green-100: var(--brand-success-100);
+    --color-green-200: var(--brand-success-200);
+    --color-green-300: var(--brand-success-300);
+    --color-green-400: var(--brand-success-400);
+    --color-green-500: var(--brand-success-500);
+    --color-green-600: var(--brand-success-600);
+    --color-green-700: var(--brand-success-700);
+    --color-green-800: var(--brand-success-800);
+    --color-green-900: var(--brand-success-900);
+    --color-green-950: var(--brand-success-950);
+
+    --color-teal-50:  var(--brand-success-50);
+    --color-teal-100: var(--brand-success-100);
+    --color-teal-200: var(--brand-success-200);
+    --color-teal-300: var(--brand-success-300);
+    --color-teal-400: var(--brand-success-400);
+    --color-teal-500: var(--brand-success-500);
+    --color-teal-600: var(--brand-success-600);
+    --color-teal-700: var(--brand-success-700);
+    --color-teal-800: var(--brand-success-800);
+    --color-teal-900: var(--brand-success-900);
+    --color-teal-950: var(--brand-success-950);
+
+    /* SECONDARY family */
+    --color-amber-50:  var(--brand-secondary-50);
+    --color-amber-100: var(--brand-secondary-100);
+    --color-amber-200: var(--brand-secondary-200);
+    --color-amber-300: var(--brand-secondary-300);
+    --color-amber-400: var(--brand-secondary-400);
+    --color-amber-500: var(--brand-secondary-500);
+    --color-amber-600: var(--brand-secondary-600);
+    --color-amber-700: var(--brand-secondary-700);
+    --color-amber-800: var(--brand-secondary-800);
+    --color-amber-900: var(--brand-secondary-900);
+    --color-amber-950: var(--brand-secondary-950);
+
+    --color-yellow-50:  var(--brand-secondary-50);
+    --color-yellow-100: var(--brand-secondary-100);
+    --color-yellow-200: var(--brand-secondary-200);
+    --color-yellow-300: var(--brand-secondary-300);
+    --color-yellow-400: var(--brand-secondary-400);
+    --color-yellow-500: var(--brand-secondary-500);
+    --color-yellow-600: var(--brand-secondary-600);
+    --color-yellow-700: var(--brand-secondary-700);
+    --color-yellow-800: var(--brand-secondary-800);
+    --color-yellow-900: var(--brand-secondary-900);
+    --color-yellow-950: var(--brand-secondary-950);
+
+    --color-lime-50:  var(--brand-secondary-50);
+    --color-lime-100: var(--brand-secondary-100);
+    --color-lime-200: var(--brand-secondary-200);
+    --color-lime-300: var(--brand-secondary-300);
+    --color-lime-400: var(--brand-secondary-400);
+    --color-lime-500: var(--brand-secondary-500);
+    --color-lime-600: var(--brand-secondary-600);
+    --color-lime-700: var(--brand-secondary-700);
+    --color-lime-800: var(--brand-secondary-800);
+    --color-lime-900: var(--brand-secondary-900);
+    --color-lime-950: var(--brand-secondary-950);
+
+    /* WARNING family */
+    --color-orange-50:  var(--brand-warning-50);
+    --color-orange-100: var(--brand-warning-100);
+    --color-orange-200: var(--brand-warning-200);
+    --color-orange-300: var(--brand-warning-300);
+    --color-orange-400: var(--brand-warning-400);
+    --color-orange-500: var(--brand-warning-500);
+    --color-orange-600: var(--brand-warning-600);
+    --color-orange-700: var(--brand-warning-700);
+    --color-orange-800: var(--brand-warning-800);
+    --color-orange-900: var(--brand-warning-900);
+    --color-orange-950: var(--brand-warning-950);
+
+    /* DANGER family */
+    --color-red-50:  var(--brand-danger-50);
+    --color-red-100: var(--brand-danger-100);
+    --color-red-200: var(--brand-danger-200);
+    --color-red-300: var(--brand-danger-300);
+    --color-red-400: var(--brand-danger-400);
+    --color-red-500: var(--brand-danger-500);
+    --color-red-600: var(--brand-danger-600);
+    --color-red-700: var(--brand-danger-700);
+    --color-red-800: var(--brand-danger-800);
+    --color-red-900: var(--brand-danger-900);
+    --color-red-950: var(--brand-danger-950);
+
+    --color-rose-50:  var(--brand-danger-50);
+    --color-rose-100: var(--brand-danger-100);
+    --color-rose-200: var(--brand-danger-200);
+    --color-rose-300: var(--brand-danger-300);
+    --color-rose-400: var(--brand-danger-400);
+    --color-rose-500: var(--brand-danger-500);
+    --color-rose-600: var(--brand-danger-600);
+    --color-rose-700: var(--brand-danger-700);
+    --color-rose-800: var(--brand-danger-800);
+    --color-rose-900: var(--brand-danger-900);
+    --color-rose-950: var(--brand-danger-950);
+
+    --color-pink-50:  var(--brand-danger-50);
+    --color-pink-100: var(--brand-danger-100);
+    --color-pink-200: var(--brand-danger-200);
+    --color-pink-300: var(--brand-danger-300);
+    --color-pink-400: var(--brand-danger-400);
+    --color-pink-500: var(--brand-danger-500);
+    --color-pink-600: var(--brand-danger-600);
+    --color-pink-700: var(--brand-danger-700);
+    --color-pink-800: var(--brand-danger-800);
+    --color-pink-900: var(--brand-danger-900);
+    --color-pink-950: var(--brand-danger-950);
+
+    /* NEUTRAL family */
+    --color-slate-50:  var(--brand-neutral-50);
+    --color-slate-100: var(--brand-neutral-100);
+    --color-slate-200: var(--brand-neutral-200);
+    --color-slate-300: var(--brand-neutral-300);
+    --color-slate-400: var(--brand-neutral-400);
+    --color-slate-500: var(--brand-neutral-500);
+    --color-slate-600: var(--brand-neutral-600);
+    --color-slate-700: var(--brand-neutral-700);
+    --color-slate-800: var(--brand-neutral-800);
+    --color-slate-900: var(--brand-neutral-900);
+    --color-slate-950: var(--brand-neutral-950);
+
+    --color-gray-50:  var(--brand-neutral-50);
+    --color-gray-100: var(--brand-neutral-100);
+    --color-gray-200: var(--brand-neutral-200);
+    --color-gray-300: var(--brand-neutral-300);
+    --color-gray-400: var(--brand-neutral-400);
+    --color-gray-500: var(--brand-neutral-500);
+    --color-gray-600: var(--brand-neutral-600);
+    --color-gray-700: var(--brand-neutral-700);
+    --color-gray-800: var(--brand-neutral-800);
+    --color-gray-900: var(--brand-neutral-900);
+    --color-gray-950: var(--brand-neutral-950);
+
+    --color-zinc-50:  var(--brand-neutral-50);
+    --color-zinc-100: var(--brand-neutral-100);
+    --color-zinc-200: var(--brand-neutral-200);
+    --color-zinc-300: var(--brand-neutral-300);
+    --color-zinc-400: var(--brand-neutral-400);
+    --color-zinc-500: var(--brand-neutral-500);
+    --color-zinc-600: var(--brand-neutral-600);
+    --color-zinc-700: var(--brand-neutral-700);
+    --color-zinc-800: var(--brand-neutral-800);
+    --color-zinc-900: var(--brand-neutral-900);
+    --color-zinc-950: var(--brand-neutral-950);
+
+    --color-neutral-50:  var(--brand-neutral-50);
+    --color-neutral-100: var(--brand-neutral-100);
+    --color-neutral-200: var(--brand-neutral-200);
+    --color-neutral-300: var(--brand-neutral-300);
+    --color-neutral-400: var(--brand-neutral-400);
+    --color-neutral-500: var(--brand-neutral-500);
+    --color-neutral-600: var(--brand-neutral-600);
+    --color-neutral-700: var(--brand-neutral-700);
+    --color-neutral-800: var(--brand-neutral-800);
+    --color-neutral-900: var(--brand-neutral-900);
+    --color-neutral-950: var(--brand-neutral-950);
+
+    --color-stone-50:  var(--brand-neutral-50);
+    --color-stone-100: var(--brand-neutral-100);
+    --color-stone-200: var(--brand-neutral-200);
+    --color-stone-300: var(--brand-neutral-300);
+    --color-stone-400: var(--brand-neutral-400);
+    --color-stone-500: var(--brand-neutral-500);
+    --color-stone-600: var(--brand-neutral-600);
+    --color-stone-700: var(--brand-neutral-700);
+    --color-stone-800: var(--brand-neutral-800);
+    --color-stone-900: var(--brand-neutral-900);
+    --color-stone-950: var(--brand-neutral-950);
+}

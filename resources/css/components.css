@@ -1,0 +1,252 @@
+/* ============================================================================
+   FreeDOMS — Component Layer
+   ----------------------------------------------------------------------------
+   Reusable, theme-driven building blocks. Every value here resolves to a
+   semantic token from theme.css — no hex, no raw palette scales.
+
+   Placed in @layer components so any Tailwind utility in the markup still
+   wins (e.g. `class="btn btn-primary w-full"`).
+   ========================================================================== */
+
+@layer components {
+
+    /* --------------------------------------------------------------------
+       BUTTONS
+       ------------------------------------------------------------------ */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.25rem;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 0.15s ease, border-color 0.15s ease,
+                    color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    .btn:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    .btn:disabled,
+    .btn[aria-disabled="true"],
+    .btn.is-disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8125rem; }
+    .btn-lg { padding: 0.625rem 1.25rem; font-size: 0.9375rem; }
+    .btn-block { display: flex; width: 100%; }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: var(--color-primary-contrast);
+    }
+    .btn-primary:hover { background-color: var(--color-primary-hover); }
+    .btn-primary:active { background-color: var(--color-primary-active); }
+
+    .btn-secondary {
+        background-color: var(--color-secondary);
+        color: var(--color-secondary-contrast);
+    }
+    .btn-secondary:hover { background-color: var(--color-secondary-hover); }
+
+    .btn-success {
+        background-color: var(--color-success);
+        color: var(--color-success-contrast);
+    }
+    .btn-success:hover { background-color: var(--color-success-hover); }
+
+    .btn-warning {
+        background-color: var(--color-warning);
+        color: var(--color-warning-contrast);
+    }
+    .btn-warning:hover { background-color: var(--color-warning-hover); }
+
+    .btn-danger {
+        background-color: var(--color-danger);
+        color: var(--color-danger-contrast);
+    }
+    .btn-danger:hover { background-color: var(--color-danger-hover); }
+
+    .btn-outline {
+        background-color: var(--color-surface);
+        border-color: var(--color-border-strong);
+        color: var(--color-text);
+    }
+    .btn-outline:hover { background-color: var(--color-surface-muted); }
+
+    .btn-ghost {
+        background-color: transparent;
+        color: var(--color-text-muted);
+    }
+    .btn-ghost:hover {
+        background-color: var(--color-surface-muted);
+        color: var(--color-text);
+    }
+
+    /* --------------------------------------------------------------------
+       SURFACES / CARDS
+       ------------------------------------------------------------------ */
+    .card {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+    }
+    .card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+    .card-body { padding: 1.25rem; }
+    .card-footer {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid var(--color-border);
+        background-color: var(--color-surface-sunken);
+        border-bottom-left-radius: var(--radius-card);
+        border-bottom-right-radius: var(--radius-card);
+    }
+
+    /* --------------------------------------------------------------------
+       FORM CONTROLS
+       ------------------------------------------------------------------ */
+    .input,
+    .select,
+    .textarea {
+        display: block;
+        width: 100%;
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-control);
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        color: var(--color-text);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .textarea { min-height: 6rem; }
+
+    .input::placeholder,
+    .textarea::placeholder { color: var(--color-text-disabled); }
+
+    .input:focus,
+    .select:focus,
+    .textarea:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    }
+
+    .input:disabled,
+    .select:disabled,
+    .textarea:disabled {
+        background-color: var(--color-surface-muted);
+        color: var(--color-text-disabled);
+        cursor: not-allowed;
+    }
+
+    .input.is-invalid,
+    .select.is-invalid,
+    .textarea.is-invalid {
+        border-color: var(--color-danger);
+    }
+    .input.is-invalid:focus,
+    .select.is-invalid:focus,
+    .textarea.is-invalid:focus {
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 22%, transparent);
+    }
+
+    .checkbox,
+    .radio {
+        accent-color: var(--color-primary);
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .form-label {
+        display: inline-block;
+        margin-bottom: 0.375rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-text);
+    }
+    .form-hint { font-size: 0.75rem; color: var(--color-text-muted); }
+    .form-error { font-size: 0.75rem; color: var(--color-danger); }
+
+    /* --------------------------------------------------------------------
+       BADGES / STATUS
+       ------------------------------------------------------------------ */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--radius-pill, 9999px);
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1rem;
+        white-space: nowrap;
+    }
+    .badge-primary  { background-color: var(--color-primary-light);   color: var(--color-primary-hover); }
+    .badge-success  { background-color: var(--color-success-light);   color: var(--color-success-hover); }
+    .badge-warning  { background-color: var(--color-warning-light);   color: var(--color-warning-hover); }
+    .badge-danger   { background-color: var(--color-danger-light);    color: var(--color-danger-hover); }
+    .badge-info     { background-color: var(--color-info-light);      color: var(--color-info-hover); }
+    .badge-neutral  { background-color: var(--color-surface-muted);   color: var(--color-text-muted); }
+
+    /* --------------------------------------------------------------------
+       ALERTS
+       ------------------------------------------------------------------ */
+    .alert {
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+    .alert-success { background-color: var(--color-success-light); border-color: color-mix(in srgb, var(--color-success) 30%, transparent); color: var(--color-success-hover); }
+    .alert-warning { background-color: var(--color-warning-light); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent); color: var(--color-warning-hover); }
+    .alert-danger  { background-color: var(--color-danger-light);  border-color: color-mix(in srgb, var(--color-danger) 30%, transparent);  color: var(--color-danger-hover); }
+    .alert-info    { background-color: var(--color-info-light);    border-color: color-mix(in srgb, var(--color-info) 30%, transparent);    color: var(--color-info-hover); }
+
+    /* --------------------------------------------------------------------
+       TABLES
+       ------------------------------------------------------------------ */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .data-table thead th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-muted);
+        background-color: var(--color-surface-sunken);
+        border-bottom: 1px solid var(--color-border);
+    }
+    .data-table tbody td {
+        padding: 0.75rem 1rem;
+        color: var(--color-text);
+        border-bottom: 1px solid var(--color-border);
+    }
+    .data-table tbody tr:hover { background-color: var(--color-surface-sunken); }
+
+    /* --------------------------------------------------------------------
+       LINKS
+       ------------------------------------------------------------------ */
+    .link {
+        color: var(--color-primary);
+        font-weight: 500;
+        text-underline-offset: 2px;
+    }
+    .link:hover { color: var(--color-primary-hover); text-decoration: underline; }
+}
