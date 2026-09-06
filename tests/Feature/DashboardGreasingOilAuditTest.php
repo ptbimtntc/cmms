@@ -78,7 +78,7 @@ test('greasing card follows the global page area filter, admin-only', function (
     expect($response->viewData('greasing')['total'])->toBe(2);
 });
 
-test('greasing card global area filter is admin-only', function () {
+test('greasing card global area filter is admin-only and never widens a koordinator past their own area', function () {
     $koordinator = User::factory()->create(['role' => User::ROLE_KOORDINATOR_BUL]);
     $wwdGroup = Group::create(['name' => 'WWD 1']);
     $bulGroup = Group::create(['name' => 'BUL 1']);
@@ -86,9 +86,10 @@ test('greasing card global area filter is admin-only', function () {
     makeDashboardGreasing($wwdGroup, ['status' => 'OPEN', 'plan_date' => '2026-06-01']);
     makeDashboardGreasing($bulGroup, ['status' => 'OPEN', 'plan_date' => '2026-06-02']);
 
-    // Koordinator BUL tries to force area=WWD via query string — since the
-    // global area filter is admin-only, this must be ignored and both
-    // schedules (regardless of group) must still be counted.
+    // Koordinator BUL tries to force area=WWD via query string. The global
+    // area filter is admin-only so the param is ignored, and per-area
+    // authorization keeps this koordinator scoped to BUL — only the single
+    // BUL schedule is counted, never the WWD one.
     $response = $this->actingAs($koordinator)->get(route('dashboard', [
         'greasing_year' => 2026,
         'greasing_month' => 6,
@@ -96,7 +97,7 @@ test('greasing card global area filter is admin-only', function () {
     ]));
 
     $response->assertOk();
-    expect($response->viewData('greasing')['total'])->toBe(2);
+    expect($response->viewData('greasing')['total'])->toBe(1);
 });
 
 test('greasing card shows empty state gracefully when there is no data this month', function () {

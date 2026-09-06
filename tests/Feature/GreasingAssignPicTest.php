@@ -121,8 +121,8 @@ test('assigning pic on a group whose area cannot be inferred is rejected', funct
     $response->assertStatus(422);
 });
 
-test('koordinator can assign pic regardless of which area they belong to', function () {
-    $koordinatorBul = assignPicUser('KOORDINATOR BUL');
+test('koordinator can assign a pic on a schedule in their own area', function () {
+    $koordinatorWwd = assignPicUser('KOORDINATOR WWD');
     $group = Group::create(['name' => 'WWD 1']);
     $greasing = Greasing::create([
         'group_id' => $group->id,
@@ -134,11 +134,31 @@ test('koordinator can assign pic regardless of which area they belong to', funct
     ]);
     $pic = assignPicUser('PIC WWD');
 
-    $this->actingAs($koordinatorBul)->postJson(route('greasings.assign-pic', $greasing), [
+    $this->actingAs($koordinatorWwd)->postJson(route('greasings.assign-pic', $greasing), [
         'pic' => $pic->name,
     ])->assertOk();
 
     expect($greasing->fresh()->pic)->toBe($pic->name);
+});
+
+test('koordinator cannot assign a pic on a schedule outside their area', function () {
+    $koordinatorBul = assignPicUser('KOORDINATOR BUL');
+    $group = Group::create(['name' => 'WWD 1']);
+    $greasing = Greasing::create([
+        'group_id' => $group->id,
+        'order_number' => 'WO-6b',
+        'cycle' => '4W',
+        'plan_date' => '2026-08-01',
+        'due_date' => Greasing::calculateDueDate('2026-08-01'),
+        'status' => 'OPEN',
+    ]);
+    $pic = assignPicUser('PIC WWD');
+
+    $this->actingAs($koordinatorBul)->postJson(route('greasings.assign-pic', $greasing), [
+        'pic' => $pic->name,
+    ])->assertForbidden();
+
+    expect($greasing->fresh()->pic)->toBeNull();
 });
 
 test('pic and guest cannot call the assign-pic endpoint directly', function (string $role) {

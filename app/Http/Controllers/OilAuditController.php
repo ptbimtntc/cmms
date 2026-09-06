@@ -21,9 +21,68 @@ class OilAuditController extends Controller
 
     private const AUDIT_MACHINE_TYPES = ['NDE', 'NDB'];
 
-    public function scan(): View
+    public function scan(Request $request): View
     {
-        return view('oil-audits.scan');
+        $user = $request->user();
+
+        // The daily Start prompt is a PIC-only, once-per-day mechanism: it
+        // appears only while this PIC has not yet recorded an Oil Audit
+        // start for today. It does not gate access to the page — NO simply
+        // dismisses it and the existing scan workflow is untouched.
+        return view('oil-audits.scan', [
+            'promptStart' => $user->isPic() && ! $user->hasStartedOilAuditToday(),
+        ]);
+    }
+
+    /**
+     * Records this PIC's Oil Audit activity start for the current day.
+     * Writes only users.oil_audit_started_at — no oil_audits row, no
+     * follow-up, no status is touched. Idempotent within the same day, so
+     * a double submit cannot overwrite the original start time.
+     */
+    public function startDaily(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'started_at' => ['required', 'date'],
+        ]);
+
+        $user = $request->user();
+
+        if (! $user->hasStartedOilAuditToday()) {
+            $user->update([
+                'oil_audit_started_at' => Carbon::parse($validated['started_at']),
+            ]);
+        }
+
+        return redirect()
+            ->route('oil-audits.scan')
+            ->with('success', 'Oil Audit activity dimulai. Silakan mulai scan mesin.');
+    }
+
+    /**
+     * Records this PIC's Oil Audit Action activity start for the current
+     * day. Same shape and guarantees as startDaily(): writes only
+     * users.oil_audit_action_started_at, touches no audit / problem /
+     * action-taken / follow-up / status / history data, and is idempotent
+     * within the day.
+     */
+    public function startDailyAction(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'started_at' => ['required', 'date'],
+        ]);
+
+        $user = $request->user();
+
+        if (! $user->hasStartedOilAuditActionToday()) {
+            $user->update([
+                'oil_audit_action_started_at' => Carbon::parse($validated['started_at']),
+            ]);
+        }
+
+        return redirect()
+            ->route('oil-audits.report')
+            ->with('success', 'Oil Audit Action activity dimulai.');
     }
 
     public function entry(string $machineNumber): View
@@ -155,13 +214,19 @@ class OilAuditController extends Controller
             ->limit(8)
             ->get();
 
+        // Daily Start prompt — PIC-only, once per business day, mirrors the
+        // Oil Audit scan menu. Purely additive: it does not gate the page.
+        $user = $request->user();
+        $promptStart = $user->isPic() && ! $user->hasStartedOilAuditActionToday();
+
         return view('oil-audits.action', compact(
             'audits',
             'areas',
             'machineTypes',
             'pics',
             'summary',
-            'pendingAudits'
+            'pendingAudits',
+            'promptStart'
         ));
     }
 

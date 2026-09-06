@@ -40,6 +40,12 @@
         </div>
     @endif
 
+    @if (session('warning'))
+        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            {{ session('warning') }}
+        </div>
+    @endif
+
     <?php if (session('pm_schedules_import_result')): ?>
         <?php $importResult = session('pm_schedules_import_result'); ?>
         <div class="mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
@@ -243,12 +249,27 @@
                                     {{-- PIC --}}
                                 @elseif(str_starts_with($role, 'PIC'))
                                     @if (in_array($pm->status, ['OPEN', 'MISSED', 'IN_PROGRESS']))
-                                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
-                                            class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">
-
-                                            Fill PM
-
-                                        </a>
+                                        <div class="flex items-center justify-center gap-2">
+                                            @if ($pm->start_time)
+                                                <span
+                                                    class="inline-flex flex-col items-center rounded bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700"
+                                                    title="PM activity started">
+                                                    STARTED
+                                                    <span
+                                                        class="text-[10px] font-normal text-slate-500">{{ optional($pm->startedAt())->format('d-m-Y H:i') }}</span>
+                                                </span>
+                                            @else
+                                                <button type="button"
+                                                    class="pm-start-btn rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                                    data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}">
+                                                    START
+                                                </button>
+                                            @endif
+                                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                                class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">
+                                                Fill PM
+                                            </a>
+                                        </div>
                                     @else
                                         <a href="{{ route('pm-schedules.edit', $pm->id) }}"
                                             class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded">
@@ -368,9 +389,21 @@
                             class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700">Edit</a>
                     @elseif(str_starts_with($role, 'PIC'))
                         @if (in_array($pm->status, ['OPEN', 'MISSED', 'IN_PROGRESS']))
-                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
-                                class="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white hover:bg-green-700">Fill
-                                PM</a>
+                            <div class="flex flex-wrap items-center justify-end gap-2">
+                                @if ($pm->start_time)
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-lg bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
+                                        STARTED · {{ optional($pm->startedAt())->format('d-m-Y H:i') }}
+                                    </span>
+                                @else
+                                    <button type="button"
+                                        class="pm-start-btn rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
+                                        data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}">START</button>
+                                @endif
+                                <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                    class="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white hover:bg-green-700">Fill
+                                    PM</a>
+                            </div>
                         @else
                             <a href="{{ route('pm-schedules.edit', $pm->id) }}"
                                 class="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-medium text-white hover:bg-yellow-600">View</a>
@@ -434,5 +467,71 @@
             });
 
         });
+    </script>
+
+    {{-- ============ START PM ACTIVITY MODAL ============ --}}
+    <div id="pm-start-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 class="text-lg font-semibold text-slate-800">Start PM Activity</h3>
+            <p id="pm-start-machine" class="mt-1 text-sm text-slate-500"></p>
+
+            <form id="pm-start-form" method="POST" class="mt-4 space-y-4">
+                @csrf
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
+                    <input type="datetime-local" name="started_at" id="pm-start-input" required
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" id="pm-start-cancel"
+                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancel</button>
+                    <button type="submit"
+                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">START</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const modal = document.getElementById('pm-start-modal');
+            if (!modal) return;
+
+            const form = document.getElementById('pm-start-form');
+            const input = document.getElementById('pm-start-input');
+            const machineLabel = document.getElementById('pm-start-machine');
+            const baseAction = "{{ url('pm-schedules') }}";
+
+            // Current local (WIB) date/time as the editable default.
+            function nowLocal() {
+                const d = new Date();
+                d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                return d.toISOString().slice(0, 16);
+            }
+
+            function openModal(id, machine) {
+                form.action = `${baseAction}/${id}/start`;
+                input.value = nowLocal();
+                machineLabel.textContent = machine ? `Machine: ${machine}` : '';
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            document.querySelectorAll('.pm-start-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    openModal(this.dataset.id, this.dataset.machine);
+                });
+            });
+
+            document.getElementById('pm-start-cancel').addEventListener('click', closeModal);
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+        })();
     </script>
 @endsection

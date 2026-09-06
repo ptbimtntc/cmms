@@ -903,6 +903,81 @@ class PMScheduleController extends Controller
         ]);
     }
 
+    /**
+     * Start PM Activity — records the moment the PIC begins work on this
+     * schedule, using the EXISTING pm_schedules.start_time (time-of-day)
+     * and pm_schedules.actual_date (date) columns. No new column, no new
+     * table: "started" simply means start_time is populated while the PM is
+     * not yet finished (see PMSchedule::isActiveActivity()).
+     *
+     * This deliberately does NOT change the Fill PM workflow. The only
+     * status effect is the same forward OPEN -> IN_PROGRESS transition that
+     * Fill PM's update() already performs; MISSED / IN_PROGRESS / finished
+     * schedules keep their status.
+     */
+    public function start(Request $request, PMSchedule $pmSchedule)
+    {
+        $this->authorizeScheduleAccess($pmSchedule);
+
+        if (in_array($pmSchedule->status, PMSchedule::DONE_STATUSES, true)) {
+            return back()->with('warning', 'This PM is already finished.');
+        }
+
+        // Idempotent: keep the original start time instead of overwriting.
+        if (filled($pmSchedule->start_time)) {
+            return back()->with('warning', 'This PM activity has already been started.');
+        }
+
+        $validated = $request->validate([
+            'started_at' => ['required', 'date'],
+        ]);
+
+        // Activity Conflict guard. For now this only covers other PM
+        // schedules the same PIC has already started but not finished —
+        // Greasing / Oil Audit have no "active activity" concept yet, so a
+        // full cross-module check is deferred to the dedicated Activity
+        // Conflict Handling task.
+        $conflict = $this->picActivePmActivity($pmSchedule);
+
+        if ($conflict) {
+            return back()->with(
+                'warning',
+                trim(($pmSchedule->pic ?: 'This PIC'))
+                    ." already has an active PM on {$conflict->machine_number}. Finish it before starting another."
+            );
+        }
+
+        $startedAt = Carbon::parse($validated['started_at']);
+
+        $pmSchedule->update([
+            'actual_date' => $startedAt->toDateString(),
+            'start_time' => $startedAt->format('H:i'),
+            'status' => $pmSchedule->status === 'OPEN'
+                ? 'IN_PROGRESS'
+                : $pmSchedule->status,
+        ]);
+
+        return back()->with('success', 'PM activity started at '.$startedAt->format('d M Y H:i').'.');
+    }
+
+    /**
+     * The other PM schedule (if any) the same PIC has already started but
+     * not finished — a lightweight, PM-only Activity Conflict check.
+     */
+    private function picActivePmActivity(PMSchedule $pmSchedule): ?PMSchedule
+    {
+        if (blank($pmSchedule->pic)) {
+            return null;
+        }
+
+        return PMSchedule::query()
+            ->activeActivity()
+            ->where('id', '!=', $pmSchedule->id)
+            ->where('pic', $pmSchedule->pic)
+            ->orderByDesc('actual_date')
+            ->first();
+    }
+
     private function authorizeScheduleAccess(PMSchedule $pmSchedule): void
     {
         $user = auth()->user();

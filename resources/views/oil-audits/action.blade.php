@@ -224,4 +224,74 @@
 
         <div class="mt-5">{{ $audits->links() }}</div>
     @endif
+
+    @if ($promptStart ?? false)
+        {{-- Daily Start prompt — PIC only, once per business day. NO simply
+             dismisses it; the existing Action / follow-up workflow is never
+             blocked or altered. --}}
+        <div id="oil-audit-action-daily-prompt" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+                <h3 class="text-lg font-semibold text-slate-800">DO YOU WANT TO START OIL AUDIT ACTION?</h3>
+                <div class="mt-5 flex justify-center gap-3">
+                    <button type="button" id="oil-audit-action-prompt-no"
+                        class="rounded-lg border border-slate-300 px-6 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">NO</button>
+                    <button type="button" id="oil-audit-action-prompt-yes"
+                        class="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700">YES</button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Start Time modal — opened by YES. --}}
+        <div id="oil-audit-action-start-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+                <h3 class="text-lg font-semibold text-slate-800">Start Oil Audit Action Activity</h3>
+                <form method="POST" action="{{ route('oil-audits.report.start-daily') }}" class="mt-4 space-y-4">
+                    @csrf
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
+                        <input type="datetime-local" name="started_at" id="oil-audit-action-start-input" required
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-sky-500 focus:outline-none">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="oil-audit-action-start-cancel"
+                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancel</button>
+                        <button type="submit"
+                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">START</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                const prompt = document.getElementById('oil-audit-action-daily-prompt');
+                const startModal = document.getElementById('oil-audit-action-start-modal');
+                const input = document.getElementById('oil-audit-action-start-input');
+
+                function nowLocal() {
+                    const d = new Date();
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                    return d.toISOString().slice(0, 16);
+                }
+
+                function show(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+                function hide(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+
+                document.getElementById('oil-audit-action-prompt-no').addEventListener('click', function () {
+                    hide(prompt);
+                });
+
+                document.getElementById('oil-audit-action-prompt-yes').addEventListener('click', function () {
+                    hide(prompt);
+                    input.value = nowLocal();
+                    show(startModal);
+                });
+
+                document.getElementById('oil-audit-action-start-cancel').addEventListener('click', function () {
+                    hide(startModal);
+                    show(prompt);
+                });
+            })();
+        </script>
+    @endif
 @endsection
