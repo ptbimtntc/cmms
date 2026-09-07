@@ -24,6 +24,8 @@ use App\Http\Controllers\QrScannerController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SparepartController;
 use App\Http\Controllers\SparepartReportController;
+use App\Http\Controllers\TodayActivityController;
+use App\Http\Controllers\TodayActivityMonitorController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +38,12 @@ Route::get('/machine-history/{machineNumber}/detail/{pmSchedule}', [MachineHisto
 Route::get('/m/{machine}', [MachineHistoryController::class, 'show']);
 
 Route::get('/scan', [QrScannerController::class, 'index'])->name('qr.scan');
+
+// Public operational monitoring board (wall/TV display) — no login, all
+// roles + guests. Deliberately kept out of the authenticated sidebar.
+// /monitor/data backs the 60s in-place auto-refresh (no full page reload).
+Route::get('/monitor', [TodayActivityMonitorController::class, 'index'])->name('monitor');
+Route::get('/monitor/data', [TodayActivityMonitorController::class, 'data'])->name('monitor.data');
 
 Route::middleware('auth')->group(function () {
 
@@ -101,6 +109,15 @@ Route::middleware([
     Route::post('/pm-schedules/import', [PMScheduleController::class, 'import'])->name('pm-schedules.import');
     Route::post('/pm-schedules/{pmSchedule}/assign-pic', [PMScheduleController::class, 'assignPic'])->name('pm-schedules.assign-pic');
 
+    // Manual Activity — start / edit / finish from the Activity Control
+    // Panel. ADMIN / KOORDINATOR only; the controller re-checks the role and
+    // area scope. PM / Greasing / Oil Audit are not mutated here.
+    Route::post('/today-activity/manual', [TodayActivityController::class, 'storeManual'])->name('today-activity.manual.store');
+    Route::patch('/today-activity/manual/{manualActivity}', [TodayActivityController::class, 'updateManual'])->name('today-activity.manual.update');
+    // Finish = remove ANY activity from the monitor (monitoring only, never
+    // completes module work).
+    Route::post('/today-activity/finish', [TodayActivityController::class, 'finishActivity'])->name('today-activity.finish');
+
     Route::get('/import-templates', [ImportTemplateController::class, 'index'])->name('import-templates');
     Route::get('/import-templates/{type}', [ImportTemplateController::class, 'download'])->name('import-templates.download');
 });
@@ -110,6 +127,8 @@ Route::middleware([
     'role:ADMIN,KOORDINATOR WWD,KOORDINATOR BUL,PIC WWD,PIC BUL',
 ])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/today-activity', [TodayActivityController::class, 'index'])->name('today-activity.index');
 
     Route::get('spareparts', [SparepartController::class, 'index'])->name('spareparts.index');
 

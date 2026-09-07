@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesActivityConflict;
 use App\Imports\PMScheduleImport;
 use App\Models\Machine;
 use App\Models\MachineChecklist;
@@ -26,6 +27,8 @@ use Throwable;
 
 class PMScheduleController extends Controller
 {
+    use HandlesActivityConflict;
+
     public function index(Request $request)
     {
         $query = PMSchedule::query();
@@ -932,22 +935,26 @@ class PMScheduleController extends Controller
             'started_at' => ['required', 'date'],
         ]);
 
-        // Activity Conflict guard. For now this only covers other PM
-        // schedules the same PIC has already started but not finished —
-        // Greasing / Oil Audit have no "active activity" concept yet, so a
-        // full cross-module check is deferred to the dedicated Activity
-        // Conflict Handling task.
-        $conflict = $this->picActivePmActivity($pmSchedule);
-
-        if ($conflict) {
-            return back()->with(
-                'warning',
-                trim(($pmSchedule->pic ?: 'This PIC'))
-                    ." already has an active PM on {$conflict->machine_number}. Finish it before starting another."
-            );
-        }
-
         $startedAt = Carbon::parse($validated['started_at']);
+        $user = $request->user();
+
+        // One active activity per PIC — checked across every activity source
+        // (PM, Greasing, Oil Audit, Oil Audit Action). Unless the PIC has
+        // already confirmed END & START, bounce back with the confirmation
+        // payload instead of starting.
+        if (! $request->boolean('confirm_end_start')) {
+            $current = $this->activityConflictFor($user);
+
+            if ($current) {
+                return back()->with('activity_conflict', $this->activityConflictPayload(
+                    $current,
+                    route('pm-schedules.start', $pmSchedule),
+                    $startedAt,
+                ));
+            }
+        } else {
+            $startedAt = $this->confirmedStartTime($user, $startedAt);
+        }
 
         $pmSchedule->update([
             'actual_date' => $startedAt->toDateString(),
@@ -958,24 +965,6 @@ class PMScheduleController extends Controller
         ]);
 
         return back()->with('success', 'PM activity started at '.$startedAt->format('d M Y H:i').'.');
-    }
-
-    /**
-     * The other PM schedule (if any) the same PIC has already started but
-     * not finished — a lightweight, PM-only Activity Conflict check.
-     */
-    private function picActivePmActivity(PMSchedule $pmSchedule): ?PMSchedule
-    {
-        if (blank($pmSchedule->pic)) {
-            return null;
-        }
-
-        return PMSchedule::query()
-            ->activeActivity()
-            ->where('id', '!=', $pmSchedule->id)
-            ->where('pic', $pmSchedule->pic)
-            ->orderByDesc('actual_date')
-            ->first();
     }
 
     private function authorizeScheduleAccess(PMSchedule $pmSchedule): void

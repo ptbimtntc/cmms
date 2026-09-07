@@ -294,4 +294,6 @@
             })();
         </script>
     @endif
+
+    @include('partials.activity-conflict-modal')
 @endsection

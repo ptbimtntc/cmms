@@ -82,6 +82,7 @@ document.addEventListener('alpine:init', () => {
         $reportActive = request()->routeIs('reports.*');
         $userActive = request()->routeIs('users.*');
         $dashboardActive = request()->routeIs('dashboard');
+        $todayActivityActive = request()->routeIs('today-activity.*');
         $pmScheduleActive = request()->routeIs('pm-schedules.*');
         $importTemplateActive = request()->routeIs('import-templates');
         $measurementActive = request()->routeIs('machine-measurements.*');
@@ -98,7 +99,7 @@ document.addEventListener('alpine:init', () => {
         $machineHistoryActive = request()->routeIs('machine-history.*');
         @endphp
         <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
-            openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
+            openGroup: '{{ $dashboardActive || $todayActivityActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
                         ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
                         ($machineHistoryActive || $reportActive ? 'report' : 'system')) }}'
         }">
@@ -122,6 +123,20 @@ document.addEventListener('alpine:init', () => {
             'icon' => '
             <path d="m12 14 4-4" />
             <path d="M3.34 19a10 10 0 1 1 17.32 0" />',
+            ],
+            [
+            'route' => route('today-activity.index'),
+            'label' => "Today's Activity",
+            'active' => $todayActivityActive,
+            // activity (pulse line)
+            'icon' => '
+            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />',
+            'visible' =>
+            $userRole === 'ADMIN' ||
+            $userRole === 'PIC WWD' ||
+            $userRole === 'PIC BUL' ||
+            $userRole === 'KOORDINATOR WWD'||
+            $userRole === 'KOORDINATOR BUL',
             ],
             [
             'route' => route('pm-schedules.index'),

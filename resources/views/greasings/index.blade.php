@@ -385,4 +385,6 @@
             });
         })();
     </script>
+
+    @include('partials.activity-conflict-modal')
 @endsection

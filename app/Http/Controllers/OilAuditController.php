@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesActivityConflict;
 use App\Models\Machine;
 use App\Models\OilAudit;
 use App\Models\OilAuditFollowUp;
@@ -17,6 +18,8 @@ use Illuminate\View\View;
 
 class OilAuditController extends Controller
 {
+    use HandlesActivityConflict;
+
     private const AUDIT_AREA = 'WWD';
 
     private const AUDIT_MACHINE_TYPES = ['NDE', 'NDB'];
@@ -49,9 +52,28 @@ class OilAuditController extends Controller
         $user = $request->user();
 
         if (! $user->hasStartedOilAuditToday()) {
-            $user->update([
-                'oil_audit_started_at' => Carbon::parse($validated['started_at']),
-            ]);
+            $startedAt = Carbon::parse($validated['started_at']);
+
+            // One active activity per PIC — checked across every activity
+            // source. Unless END & START is already confirmed, bounce back
+            // with the confirmation payload.
+            if (! $request->boolean('confirm_end_start')) {
+                $current = $this->activityConflictFor($user);
+
+                if ($current) {
+                    return redirect()
+                        ->route('oil-audits.scan')
+                        ->with('activity_conflict', $this->activityConflictPayload(
+                            $current,
+                            route('oil-audits.start-daily'),
+                            $startedAt,
+                        ));
+                }
+            } else {
+                $startedAt = $this->confirmedStartTime($user, $startedAt);
+            }
+
+            $user->update(['oil_audit_started_at' => $startedAt]);
         }
 
         return redirect()
@@ -75,9 +97,28 @@ class OilAuditController extends Controller
         $user = $request->user();
 
         if (! $user->hasStartedOilAuditActionToday()) {
-            $user->update([
-                'oil_audit_action_started_at' => Carbon::parse($validated['started_at']),
-            ]);
+            $startedAt = Carbon::parse($validated['started_at']);
+
+            // One active activity per PIC — checked across every activity
+            // source. Unless END & START is already confirmed, bounce back
+            // with the confirmation payload.
+            if (! $request->boolean('confirm_end_start')) {
+                $current = $this->activityConflictFor($user);
+
+                if ($current) {
+                    return redirect()
+                        ->route('oil-audits.report')
+                        ->with('activity_conflict', $this->activityConflictPayload(
+                            $current,
+                            route('oil-audits.report.start-daily'),
+                            $startedAt,
+                        ));
+                }
+            } else {
+                $startedAt = $this->confirmedStartTime($user, $startedAt);
+            }
+
+            $user->update(['oil_audit_action_started_at' => $startedAt]);
         }
 
         return redirect()

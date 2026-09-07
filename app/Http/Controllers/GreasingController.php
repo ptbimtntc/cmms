@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesActivityConflict;
 use App\Imports\GreasingScheduleImport;
 use App\Models\Greasing;
 use App\Models\GreasingFinding;
@@ -14,6 +15,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class GreasingController extends Controller
 {
+    use HandlesActivityConflict;
+
     public function index(Request $request)
     {
         $query = Greasing::with('group')->withCount('findings');
@@ -319,6 +322,25 @@ class GreasingController extends Controller
         ]);
 
         $startedAt = Carbon::parse($validated['started_at']);
+        $user = auth()->user();
+
+        // One active activity per PIC — checked across every activity source
+        // (PM, Greasing, Oil Audit, Oil Audit Action). Unless the PIC has
+        // already confirmed END & START, bounce back with the confirmation
+        // payload instead of starting.
+        if (! $request->boolean('confirm_end_start')) {
+            $current = $this->activityConflictFor($user);
+
+            if ($current) {
+                return back()->with('activity_conflict', $this->activityConflictPayload(
+                    $current,
+                    route('greasings.start', $greasing),
+                    $startedAt,
+                ));
+            }
+        } else {
+            $startedAt = $this->confirmedStartTime($user, $startedAt);
+        }
 
         $greasing->update(['start_time' => $startedAt]);
 

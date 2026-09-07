@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\OilAudit;
+use App\Models\OilAuditFollowUp;
 use App\Models\User;
 use Carbon\Carbon;
 
@@ -60,13 +61,15 @@ test('non-PIC roles never see the action prompt', function () {
 test('START records the time and stops the action prompt for the rest of the day', function () {
     $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
 
+    $startedAt = now()->setTime(9, 45);
+
     $this->actingAs($pic)
-        ->post(route('oil-audits.report.start-daily'), ['started_at' => '2026-09-06T09:45'])
+        ->post(route('oil-audits.report.start-daily'), ['started_at' => $startedAt->format('Y-m-d\TH:i')])
         ->assertRedirect(route('oil-audits.report'));
 
     $pic->refresh();
 
-    expect($pic->oil_audit_action_started_at->format('Y-m-d H:i'))->toBe('2026-09-06 09:45')
+    expect($pic->oil_audit_action_started_at->format('Y-m-d H:i'))->toBe($startedAt->format('Y-m-d H:i'))
         ->and($pic->hasStartedOilAuditActionToday())->toBeTrue()
         ->and($pic->oil_audit_started_at)->toBeNull();   // scan marker untouched
 
@@ -106,7 +109,7 @@ test('starting the action activity creates no oil audit or follow-up record', fu
     ]);
 
     expect(OilAudit::count())->toBe(0)
-        ->and(\App\Models\OilAuditFollowUp::count())->toBe(0);
+        ->and(OilAuditFollowUp::count())->toBe(0);
 });
 
 test('the action daily start mechanism is independent per PIC', function () {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\OilAudit;
 use App\Models\User;
 use Carbon\Carbon;
 
@@ -47,14 +48,16 @@ test('non-PIC roles never see the prompt', function () {
 test('START records the start time and stops the prompt for the rest of the day', function () {
     $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD]);
 
+    $startedAt = now()->setTime(8, 15);
+
     $this->actingAs($pic)
-        ->post(route('oil-audits.start-daily'), ['started_at' => '2026-09-06T08:15'])
+        ->post(route('oil-audits.start-daily'), ['started_at' => $startedAt->format('Y-m-d\TH:i')])
         ->assertRedirect(route('oil-audits.scan'));
 
     $pic->refresh();
 
     expect($pic->oil_audit_started_at)->not->toBeNull()
-        ->and($pic->oil_audit_started_at->format('Y-m-d H:i'))->toBe('2026-09-06 08:15')
+        ->and($pic->oil_audit_started_at->format('Y-m-d H:i'))->toBe($startedAt->format('Y-m-d H:i'))
         ->and($pic->hasStartedOilAuditToday())->toBeTrue();
 
     $this->actingAs($pic)->get(route('oil-audits.scan'))
@@ -101,5 +104,5 @@ test('starting the daily activity creates no oil audit record', function () {
 
     $this->actingAs($pic)->post(route('oil-audits.start-daily'), ['started_at' => now()->format('Y-m-d\TH:i')]);
 
-    expect(\App\Models\OilAudit::count())->toBe(0);
+    expect(OilAudit::count())->toBe(0);
 });

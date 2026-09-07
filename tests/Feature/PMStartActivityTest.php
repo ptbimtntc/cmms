@@ -3,6 +3,7 @@
 use App\Models\Machine;
 use App\Models\PMSchedule;
 use App\Models\User;
+use App\Services\ActiveActivityResolver;
 use Carbon\Carbon;
 
 function makeStartTestMachine(array $overrides = []): Machine
@@ -95,7 +96,7 @@ test('a pic cannot start a pm assigned to someone else', function () {
     expect($pm->fresh()->start_time)->toBeNull();
 });
 
-test('starting a second pm is blocked while the pic already has an active one', function () {
+test('starting a second pm asks for END & START confirmation while the pic already has an active one', function () {
     $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD, 'name' => 'Budi']);
     $machine = makeStartTestMachine();
 
@@ -110,9 +111,43 @@ test('starting a second pm is blocked while the pic already has an active one', 
 
     $this->actingAs($pic)
         ->post(route('pm-schedules.start', $second), ['started_at' => now()->format('Y-m-d\TH:i')])
-        ->assertSessionHas('warning');
+        ->assertSessionHas('activity_conflict');
 
+    // Not started yet — the PIC still has to confirm END & START.
     expect($second->fresh()->start_time)->toBeNull();
+});
+
+test('END & START on a second pm closes the first and starts the second', function () {
+    $pic = User::factory()->create(['role' => User::ROLE_PIC_WWD, 'name' => 'Budi']);
+
+    $first = makeStartTestPmSchedule(makeStartTestMachine(), [
+        'pic' => 'Budi',
+        'status' => 'IN_PROGRESS',
+        'start_time' => '08:00',
+        'actual_date' => now()->toDateString(),
+    ]);
+
+    $second = makeStartTestPmSchedule(makeStartTestMachine(), ['pic' => 'Budi']);
+
+    $this->actingAs($pic)
+        ->post(route('pm-schedules.start', $second), [
+            'started_at' => now()->format('Y-m-d\TH:i'),
+            'confirm_end_start' => '1',
+        ])
+        ->assertSessionHas('success');
+
+    $second->refresh();
+    $first->refresh();
+
+    // New activity started and is now the PIC's single active activity.
+    expect($second->start_time)->not->toBeNull()
+        ->and($second->isActiveActivity())->toBeTrue()
+        ->and(app(ActiveActivityResolver::class)->currentFor($pic->fresh())->recordId)
+        ->toBe($second->id);
+
+    // The first PM's work status is NOT forced to complete — closing an
+    // activity is not completing work.
+    expect($first->status)->toBe('IN_PROGRESS');
 });
 
 test('the pm index shows START next to Fill PM, then STARTED after starting', function () {
