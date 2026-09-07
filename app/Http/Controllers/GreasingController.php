@@ -7,6 +7,7 @@ use App\Models\Greasing;
 use App\Models\GreasingFinding;
 use App\Models\Group;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
@@ -19,9 +20,10 @@ class GreasingController extends Controller
 
         $user = auth()->user();
 
-        if ($user->isPic()) {
-            $query->where('pic', $user->name);
-        }
+        // Per-area authorization, same rule as PMScheduleController::index():
+        // WWD roles only see WWD-group schedules, BUL roles only BUL-group,
+        // and PIC roles are further limited to schedules assigned to them.
+        $query->visibleToUser($user);
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
@@ -238,6 +240,17 @@ class GreasingController extends Controller
         // dropdown, so it must always answer in JSON — never rely on
         // Laravel's default exception-to-redirect behavior, since this
         // app's shouldRenderJsonWhen() only auto-renders JSON for /api/*.
+
+        // Per-area authorization: a koordinator may only assign a PIC on a
+        // schedule in their own area (ADMIN may assign anywhere). Mirrors
+        // PMScheduleController::assignPic().
+        if (! $greasing->isAccessibleBy(auth()->user())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not allowed to assign a PIC for this area.',
+            ], 403);
+        }
+
         $area = $greasing->group?->inferredArea();
 
         if ($area === null) {
@@ -276,6 +289,40 @@ class GreasingController extends Controller
         ]);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Start Greasing Activity — records the moment the PIC begins work on
+     * this schedule into the greasings.start_time column. It writes ONLY
+     * that column: scheduling (plan_date / due_date / cycle), status,
+     * action_date, remarks, and findings are all left untouched because
+     * Start Activity is not part of the execution / close flow.
+     *
+     * "Active" is then derived from existing data — start_time populated
+     * while the schedule is not yet completed (Greasing::isActiveActivity()).
+     */
+    public function start(Request $request, Greasing $greasing)
+    {
+        $this->authorizeGreasingAccess($greasing);
+
+        if (in_array($greasing->status, Greasing::DONE_STATUSES, true)) {
+            return back()->with('warning', 'This greasing schedule is already completed.');
+        }
+
+        // Idempotent: keep the original start time instead of overwriting.
+        if (filled($greasing->start_time)) {
+            return back()->with('warning', 'This greasing activity has already been started.');
+        }
+
+        $validated = $request->validate([
+            'started_at' => ['required', 'date'],
+        ]);
+
+        $startedAt = Carbon::parse($validated['started_at']);
+
+        $greasing->update(['start_time' => $startedAt]);
+
+        return back()->with('success', 'Greasing activity started at '.$startedAt->format('d M Y H:i').'.');
     }
 
     /**
@@ -367,22 +414,11 @@ class GreasingController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->isAdmin()) {
-            return;
-        }
-
-        if ($user->isKoordinator()) {
-            // Group master data is not area-scoped, so both koordinator
-            // roles manage all groups — consistent with Machine/Group access.
-            return;
-        }
-
-        if ($user->isPic()) {
-            abort_unless($greasing->pic === $user->name, 403);
-
-            return;
-        }
-
-        abort(403);
+        // Per-area authorization, same rule as
+        // PMScheduleController::authorizeScheduleAccess(): a WWD role can
+        // only touch WWD-group schedules, a BUL role only BUL-group ones,
+        // and a PIC additionally only their own assigned schedules. The
+        // area is derived from the linked Group's name.
+        abort_unless($greasing->isAccessibleBy($user), 403);
     }
 }

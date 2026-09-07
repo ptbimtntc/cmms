@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CostReportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardGuestController;
 use App\Http\Controllers\GreasingController;
 use App\Http\Controllers\GreasingReportController;
 use App\Http\Controllers\GroupController;
@@ -28,7 +29,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
-Route::view('/dashboard-guest', 'dashboard-guest')->name('dashboard-guest');
+Route::get('/dashboard-guest', [DashboardGuestController::class, 'index'])->name('dashboard-guest');
 
 Route::resource('machine-history', MachineHistoryController::class)->only(['index', 'show']);
 Route::get('/machine-history/{machineNumber}/detail/{pmSchedule}', [MachineHistoryController::class, 'detail'])->name('machine-history.detail');
@@ -115,6 +116,7 @@ Route::middleware([
     Route::resource('pm-schedules', PMScheduleController::class)->except(['create', 'store', 'destroy', 'import']);
     Route::get('/pm-schedules/{pmSchedule}/checklist', [PMScheduleController::class, 'checklist'])->name('pm-schedules.checklist');
     Route::post('/pm-schedules/{pmSchedule}/checklist', [PMScheduleController::class, 'saveChecklist'])->name('pm-schedules.checklist.save');
+    Route::post('/pm-schedules/{pmSchedule}/start', [PMScheduleController::class, 'start'])->name('pm-schedules.start');
     Route::get('/pm-schedules/{pmSchedule}/pdf', [PMScheduleController::class, 'exportPdf'])->name('pm-schedules.pdf');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -126,6 +128,7 @@ Route::middleware([
     Route::get('/reports/cost', [CostReportController::class, 'index'])->name('reports.cost');
 
     Route::get('/greasings', [GreasingController::class, 'index'])->name('greasings.index');
+    Route::post('/greasings/{greasing}/start', [GreasingController::class, 'start'])->name('greasings.start');
     Route::get('/greasings/{greasing}/execute', [GreasingController::class, 'execute'])->name('greasings.execute');
     Route::post('/greasings/{greasing}/execute', [GreasingController::class, 'storeExecution'])->name('greasings.execute.store');
     Route::patch('/greasings/{greasing}/findings/{finding}', [GreasingController::class, 'updateFinding'])->name('greasings.findings.update');
@@ -136,9 +139,11 @@ Route::middleware([
     'role:ADMIN,KOORDINATOR WWD,PIC WWD',
 ])->group(function () {
     Route::get('/oil-audits/scan', [OilAuditController::class, 'scan'])->name('oil-audits.scan');
+    Route::post('/oil-audits/start', [OilAuditController::class, 'startDaily'])->name('oil-audits.start-daily');
     Route::get('/oil-audits/entry/{machineNumber}', [OilAuditController::class, 'entry'])->name('oil-audits.entry');
     Route::post('/oil-audits', [OilAuditController::class, 'store'])->name('oil-audits.store');
     Route::get('/oil-audit-report', [OilAuditController::class, 'action'])->name('oil-audits.report');
+    Route::post('/oil-audit-report/start', [OilAuditController::class, 'startDailyAction'])->name('oil-audits.report.start-daily');
     Route::get('/oil-audit-report/{machineNumber}', [OilAuditController::class, 'history'])->name('oil-audits.history');
     Route::post('/oil-audits/{oilAudit}/follow-up', [OilAuditController::class, 'storeFollowUp'])->name('oil-audits.follow-up.store');
     Route::put('/oil-audits/{oilAudit}/follow-up', [OilAuditController::class, 'updateFollowUp'])->name('oil-audits.follow-up.update');

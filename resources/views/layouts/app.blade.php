@@ -17,7 +17,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
-<body class="h-dvh overflow-hidden bg-slate-100 text-slate-800">
+<body class="h-dvh overflow-hidden bg-background text-text">
     @php
         $routeName = Route::currentRouteName() ?? 'dashboard';
         $defaultPageTitle = match (true) {
@@ -65,7 +65,7 @@
                     @if ($fullWidth ?? false)
                         @yield('content')
                     @else
-                        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:p-8">
+                        <div class="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6 lg:p-8">
                             @yield('content')
                         </div>
                     @endif

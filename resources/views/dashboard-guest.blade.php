@@ -11,6 +11,9 @@
         <div class="mb-12">
             <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Dashboard Preview</h1>
             <p class="text-lg text-slate-600">Lihat informasi statistik dan aktivitas maintenance secara real-time</p>
+            <p class="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                Periode: {{ $periodLabel }} (bulan berjalan)
+            </p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
@@ -24,7 +27,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="text-3xl font-bold text-slate-900 mb-2">--</p>
+                <p class="text-3xl font-bold text-slate-900 mb-2">{{ number_format($pmThisMonth) }}</p>
                 <p class="text-xs text-slate-500">Jadwal PM bulan ini</p>
             </div>
 
@@ -37,7 +40,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="text-3xl font-bold text-slate-900 mb-2">--</p>
+                <p class="text-3xl font-bold text-slate-900 mb-2">{{ number_format($overduePm) }}</p>
                 <p class="text-xs text-slate-500">PM yang terlewat</p>
             </div>
 
@@ -50,7 +53,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="text-3xl font-bold text-slate-900 mb-2">--</p>
+                <p class="text-3xl font-bold text-slate-900 mb-2">{{ number_format($problems) }}</p>
                 <p class="text-xs text-slate-500">Masalah mesin</p>
             </div>
 
@@ -63,7 +66,7 @@
                         </svg>
                     </div>
                 </div>
-                <p class="text-3xl font-bold text-slate-900 mb-2">--</p>
+                <p class="text-3xl font-bold text-slate-900 mb-2">{{ number_format($sparepartUsage) }}</p>
                 <p class="text-xs text-slate-500">Penggunaan sparepart</p>
             </div>
 

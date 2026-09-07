@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class PMSchedule extends Model
@@ -53,6 +55,50 @@ class PMSchedule extends Model
                 ? Str::title(strtolower($this->pic))
                 : '-'
         );
+    }
+
+    /**
+     * PM statuses that count as "work is done" — used to decide whether a
+     * PM still represents an active activity.
+     */
+    public const DONE_STATUSES = ['FINISHED', 'FINISHED_ON_TIME'];
+
+    /**
+     * The datetime this PM's on-site work was started, composed from the
+     * EXISTING actual_date (date) + start_time (time-of-day) columns. There
+     * is no dedicated started_at column and none is needed. Returns null
+     * until the PM is started (see PMScheduleController::start()) or filled.
+     */
+    public function startedAt(): ?Carbon
+    {
+        if (blank($this->start_time)) {
+            return null;
+        }
+
+        $date = $this->actual_date
+            ? Carbon::parse($this->actual_date)->toDateString()
+            : now()->toDateString();
+
+        return Carbon::parse($date.' '.$this->start_time);
+    }
+
+    /**
+     * "Active activity" = work has been started (start_time populated) and
+     * the PM is not yet finished. This is derived purely from existing
+     * columns, so Today's Activity can read it without any parallel
+     * activity-state table to keep in sync.
+     */
+    public function isActiveActivity(): bool
+    {
+        return filled($this->start_time)
+            && ! in_array($this->status, self::DONE_STATUSES, true);
+    }
+
+    public function scopeActiveActivity(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('start_time')
+            ->whereNotIn('status', self::DONE_STATUSES);
     }
 
     public function requiresOilChange(): bool

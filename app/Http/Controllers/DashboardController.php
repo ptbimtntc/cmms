@@ -395,9 +395,9 @@ class DashboardController extends Controller
     private function greasingSummary(User $user, int $year, ?int $month, ?string $area): array
     {
         $statusCounts = Greasing::query()
+            ->visibleToUser($user)
             ->whereYear('plan_date', $year)
             ->when($month, fn ($q) => $q->whereMonth('plan_date', $month))
-            ->when($user->isPic(), fn ($q) => $q->where('pic', $user->name))
             ->when($area, fn ($q) => $q->whereHas('group', fn ($g) => $g->whereRaw('UPPER(name) LIKE ?', ['%'.$area.'%'])))
             ->select('status')
             ->selectRaw('count(*) as total')
@@ -413,7 +413,7 @@ class DashboardController extends Controller
      */
     private function availableGreasingYears(User $user, int $selectedYear): array
     {
-        $scope = Greasing::query()->when($user->isPic(), fn ($q) => $q->where('pic', $user->name));
+        $scope = Greasing::query()->visibleToUser($user);
         $minPlanDate = (clone $scope)->min('plan_date');
         $maxPlanDate = (clone $scope)->max('plan_date');
 

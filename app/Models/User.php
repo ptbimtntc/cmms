@@ -45,6 +45,8 @@ class User extends Authenticatable
         'role',
         'is_active',
         'avatar_path',
+        'oil_audit_started_at',
+        'oil_audit_action_started_at',
     ];
 
     /**
@@ -68,7 +70,31 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'oil_audit_started_at' => 'datetime',
+            'oil_audit_action_started_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether this user has already recorded an Oil Audit activity start
+     * for the current business date (Asia/Jakarta). Drives the once-a-day
+     * Start prompt on the Oil Audit menu — true suppresses it until the
+     * next day.
+     */
+    public function hasStartedOilAuditToday(): bool
+    {
+        return $this->oil_audit_started_at !== null
+            && $this->oil_audit_started_at->isToday();
+    }
+
+    /**
+     * Same once-a-day rule as hasStartedOilAuditToday(), for the separate
+     * Oil Audit Action (follow-up monitoring) menu.
+     */
+    public function hasStartedOilAuditActionToday(): bool
+    {
+        return $this->oil_audit_action_started_at !== null
+            && $this->oil_audit_action_started_at->isToday();
     }
 
     /*

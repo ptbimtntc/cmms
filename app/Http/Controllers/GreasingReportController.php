@@ -101,8 +101,8 @@ class GreasingReportController extends Controller
             ->paginate(15, ['*'], 'finding_page')
             ->withQueryString();
 
-        // --- Year filter options ---
-        $yearScope = Greasing::query()->when($user->isPic(), fn ($q) => $q->where('pic', $user->name));
+        // --- Year filter options (respect the same role/area visibility) ---
+        $yearScope = Greasing::query()->visibleToUser($user);
         $minPlanDate = (clone $yearScope)->min('plan_date');
         $maxPlanDate = (clone $yearScope)->max('plan_date');
 
@@ -167,18 +167,17 @@ class GreasingReportController extends Controller
     }
 
     /**
-     * Role/area visibility scope — identical to the previous
-     * scopePeriod()'s non-period portion. PIC is always restricted to their
-     * own name; ADMIN/KOORDINATOR are unrestricted except for the
-     * ADMIN-only $area filter. Koordinator roles are deliberately NOT
-     * area-scoped here — Greasing's business rule has never restricted
-     * koordinators by area, and this task must not change that.
+     * Role/area visibility scope. Per-area authorization now mirrors
+     * PMScheduleController: a WWD role (koordinator/PIC) only ever sees
+     * WWD-group schedules, a BUL role only BUL-group ones, and PIC roles
+     * are additionally restricted to schedules assigned to them by name.
+     * ADMIN is unrestricted except for the ADMIN-only $area filter. The
+     * area a schedule belongs to is derived from its Group's name, since
+     * Greasing has no area column (see Greasing::scopeVisibleToUser()).
      */
     private function applyVisibility(Builder $query, User $user, ?string $area): Builder
     {
-        if ($user->isPic()) {
-            $query->where('pic', $user->name);
-        }
+        $query->visibleToUser($user);
 
         if ($area) {
             $query->whereHas('group', fn ($q) => $q->whereRaw('UPPER(name) LIKE ?', ['%'.$area.'%']));
