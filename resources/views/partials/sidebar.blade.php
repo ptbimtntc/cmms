@@ -92,7 +92,6 @@ document.addEventListener('alpine:init', () => {
         $oilAuditActive = request()->routeIs('oil-audits.scan');
         $oilAuditActionActive = request()->routeIs('oil-audits.report');
         $greasingActive = request()->routeIs('greasings.*');
-        $greasingReportActive = request()->routeIs('reports.greasing');
         $profileActive = request()->routeIs('profile.*');
 
         @endphp
@@ -102,7 +101,7 @@ document.addEventListener('alpine:init', () => {
         <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
                         ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
-                        ($machineHistoryActive || $reportActive || $greasingReportActive ? 'report' : 'system')) }}'
+                        ($machineHistoryActive || $reportActive ? 'report' : 'system')) }}'
         }">
             @php
             $groups = [
@@ -216,22 +215,6 @@ document.addEventListener('alpine:init', () => {
             $userRole === 'PIC BUL' ||
             $userRole === 'KOORDINATOR WWD'||
             $userRole === 'KOORDINATOR BUL',
-            ],
-            [
-            'route' => route('reports.greasing'),
-            'label' => 'Greasing Report',
-            'active' => $greasingReportActive,
-            'icon' => '
-            <path d="M4 19V9" />
-            <path d="M10 19V5" />
-            <path d="M16 19v-11" />
-            <path d="M22 19V13" />',
-            'visible' =>
-            $userRole === 'ADMIN' ||
-            $userRole === 'KOORDINATOR WWD'||
-            $userRole === 'KOORDINATOR BUL'||
-            $userRole === 'PIC WWD'||
-            $userRole === 'PIC BUL',
             ],
             ],
             ],

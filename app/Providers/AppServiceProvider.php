@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -31,6 +32,13 @@ class AppServiceProvider extends ServiceProvider
         if (env('CODESPACES') === true) {
             URL::forceRootUrl(config('app.url'));
             URL::forceScheme('https');
+
+            // Pagination links build their base path from the raw request
+            // (Request::url()), which ignores forceRootUrl() above and just
+            // reflects whatever Host header Codespaces' proxy happens to send
+            // to the backend (observed as "localhost:8000"). Route it through
+            // url()->current() instead, which does respect forceRootUrl().
+            Paginator::currentPathResolver(fn () => url()->current());
         }
 
     }

@@ -23,6 +23,10 @@ class Machine extends Model
         'pm_cycle_unit',
     ];
 
+    protected $casts = [
+        'pm_cycle_value' => 'integer',
+    ];
+
     public function group(): BelongsTo
     {
         return $this->belongsTo(Group::class);
