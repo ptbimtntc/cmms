@@ -314,8 +314,64 @@ test('monitor: auto-refresh default ON, 60s, no full reload, not-started as smal
     expect($html)->toContain('data-auto-refresh-default="on"')
         ->and($html)->toContain('data-poll-interval="60000"')
         ->and($html)->not->toContain('location.reload')
-        ->and($html)->toContain('Not started:')       // small text line
-        ->and($html)->not->toContain('Completed Today');
+        ->and($html)->toContain('Not Started')        // status-panel section
+        ->and($html)->toContain('AAA')                // the not-started PIC listed
+        ->and($html)->not->toContain('Completed Today')
+        ->and($html)->not->toContain('Sparepart')
+        ->and($html)->not->toContain('Cost');
+});
+
+test('monitor: 3:1 layout with a Maintenance Status panel and an activity-distribution donut', function () {
+    $andi = reg_pic('ANDI');
+    reg_pm('ANDI', 'M-1', ['status' => 'IN_PROGRESS', 'start_time' => '08:00', 'actual_date' => now()->toDateString()]);
+    reg_pic('BUDI'); // not started
+
+    $this->get(route('monitor'))->assertOk()
+        ->assertSee('Maintenance Status')
+        ->assertSee('Active PIC')
+        ->assertSee('Activity Distribution')
+        ->assertSee('Area Status')
+        ->assertSee('monitor-donut', false)
+        ->assertSee('flex-[3]', false);   // the 75% left column
+
+    $this->getJson(route('monitor.data'))->assertOk()
+        ->assertJsonPath('distribution.PM', 1)
+        ->assertJsonPath('distribution.MANUAL', 0)
+        ->assertJsonPath('manualBreakdown', [])
+        ->assertJsonPath('active.0.source', 'PM')
+        ->assertJsonPath('counts.active', 1)
+        ->assertJsonPath('counts.notStarted', 1)
+        ->assertJsonPath('counts.inactive', 0)
+        ->assertJsonPath('area.WWD.active', 1)
+        ->assertJsonPath('area.WWD.available', 2);
+});
+
+test('monitor distribution lists manual activities by NAME, not a generic "Manual" row', function () {
+    $a = reg_pic('AA');
+    $b = reg_pic('BB');
+    $c = reg_pic('CC');
+    ManualActivity::create(['user_id' => $a->id, 'name' => 'Repair Conveyor', 'started_at' => now()->setTime(8, 0)]);
+    ManualActivity::create(['user_id' => $b->id, 'name' => 'Safety Meeting', 'started_at' => now()->setTime(8, 5)]);
+    ManualActivity::create(['user_id' => $c->id, 'name' => 'Safety Meeting', 'started_at' => now()->setTime(8, 10)]);
+
+    $this->getJson(route('monitor.data'))->assertOk()
+        ->assertJsonPath('distribution.MANUAL', 3)   // donut slice = total
+        ->assertJsonPath('manualBreakdown', [
+            ['name' => 'Safety Meeting', 'count' => 2],   // aggregated, sorted by count
+            ['name' => 'Repair Conveyor', 'count' => 1],
+        ]);
+
+    // The SSR legend renders each activity name (there is no generic "Manual" row).
+    $html = $this->get(route('monitor'))->assertOk()->getContent();
+    preg_match('/<div id="monitor-legend"[^>]*data-manual=\'([^\']*)\'/', $html, $m);
+
+    expect(json_decode($m[1], true))->toBe([
+        ['name' => 'Safety Meeting', 'count' => 2],
+        ['name' => 'Repair Conveyor', 'count' => 1],
+    ]);
+    $this->get(route('monitor'))->assertOk()
+        ->assertSee('Safety Meeting')
+        ->assertSee('Repair Conveyor');
 });
 
 test('monitor: empty state when nobody is active', function () {
@@ -323,6 +379,20 @@ test('monitor: empty state when nobody is active', function () {
     reg_pic('BBB');
 
     $this->get(route('monitor'))->assertOk()->assertSee('No Active Activity');
+});
+
+test('monitor has a link back to the landing page', function () {
+    $this->get(route('monitor'))->assertOk()
+        ->assertSee('Landing Page')
+        ->assertSee('href="'.e(route('home')).'"', false);
+});
+
+test('the authenticated sidebar logo links to the landing page', function () {
+    $pic = reg_pic('SIDEBAR PIC');
+
+    $this->actingAs($pic)->get(route('dashboard'))->assertOk()
+        ->assertSee('Go to landing page')
+        ->assertSee('href="'.e(route('home')).'"', false);
 });
 
 // ---------------------------------------------------------------------------

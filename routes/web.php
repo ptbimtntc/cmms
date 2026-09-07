@@ -117,6 +117,9 @@ Route::middleware([
     // Finish = remove ANY activity from the monitor (monitoring only, never
     // completes module work).
     Route::post('/today-activity/finish', [TodayActivityController::class, 'finishActivity'])->name('today-activity.finish');
+    // PIC availability — mark a NOT-STARTED PIC inactive for today / clear it.
+    Route::post('/today-activity/inactive', [TodayActivityController::class, 'setInactive'])->name('today-activity.inactive.set');
+    Route::delete('/today-activity/inactive/{picAvailability}', [TodayActivityController::class, 'clearInactive'])->name('today-activity.inactive.clear');
 
     Route::get('/import-templates', [ImportTemplateController::class, 'index'])->name('import-templates');
     Route::get('/import-templates/{type}', [ImportTemplateController::class, 'download'])->name('import-templates.download');

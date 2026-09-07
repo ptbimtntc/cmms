@@ -97,6 +97,74 @@
         </div>
 
         {{-- ------------------------------------------------------------------ --}}
+        {{-- PIC AVAILABILITY (ADMIN / KOORDINATOR)                              --}}
+        {{-- ------------------------------------------------------------------ --}}
+        @if ($canManage)
+            <div class="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+                <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">PIC Availability</div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-text-muted">
+                            <tr>
+                                <th class="pb-2 pr-4">PIC</th>
+                                <th class="pb-2 pr-4">Status</th>
+                                <th class="pb-2 pr-4">Reason</th>
+                                <th class="pb-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border text-text">
+                            @foreach ($picStatuses as $s)
+                                <tr>
+                                    <td class="py-2 pr-4 font-medium">{{ $s['pic']->name }}</td>
+                                    <td class="py-2 pr-4">
+                                        @if ($s['status'] === 'ACTIVE')
+                                            <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">ACTIVE</span>
+                                        @elseif ($s['status'] === 'INACTIVE')
+                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">INACTIVE</span>
+                                        @else
+                                            <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">NOT STARTED</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-2 pr-4 text-text-muted">
+                                        @if ($s['availability'])
+                                            {{ $s['availability']->reason }}@if ($s['availability']->notes) — {{ $s['availability']->notes }}@endif
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td class="py-2">
+                                        <div class="flex flex-wrap gap-2">
+                                            @if ($s['status'] === 'NOT STARTED')
+                                                <button type="button"
+                                                    class="pic-inactive-btn rounded-lg border border-amber-500 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                                                    data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
+                                                    data-reason="" data-notes="">Set Inactive</button>
+                                            @elseif ($s['status'] === 'INACTIVE')
+                                                <button type="button"
+                                                    class="pic-inactive-btn rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                                    data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
+                                                    data-reason="{{ $s['availability']->reason }}"
+                                                    data-notes="{{ $s['availability']->notes }}">Edit</button>
+                                                <form method="POST" action="{{ route('today-activity.inactive.clear', $s['availability']->id) }}">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                        class="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700">Set Available</button>
+                                                </form>
+                                            @else
+                                                <span class="text-xs text-text-disabled">—</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+
+        {{-- ------------------------------------------------------------------ --}}
         {{-- STARTED TODAY                                                       --}}
         {{-- ------------------------------------------------------------------ --}}
         <div class="rounded-2xl border border-border bg-surface p-5 shadow-sm">
@@ -266,6 +334,44 @@
             </div>
         </div>
 
+        {{-- ============ SET PIC INACTIVE MODAL ============ --}}
+        <div id="pic-inactive-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+                <h3 class="text-lg font-semibold text-slate-800">Set PIC Inactive</h3>
+                <p id="pic-inactive-name" class="mt-1 text-sm font-medium text-slate-500"></p>
+
+                <form method="POST" action="{{ route('today-activity.inactive.set') }}" class="mt-4 space-y-4">
+                    @csrf
+                    <input type="hidden" name="user_id" id="pic-inactive-user-id">
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-slate-700">Reason</label>
+                        <select name="reason" id="pic-inactive-reason" required
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
+                            @foreach ($inactiveReasons as $reason)
+                                <option value="{{ $reason }}">{{ $reason }}</option>
+                            @endforeach
+                        </select>
+                        @error('reason')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div id="pic-inactive-notes-wrap">
+                        <label class="mb-1 block text-sm font-medium text-slate-700">
+                            Notes <span id="pic-inactive-notes-opt" class="text-slate-400">(optional)</span>
+                        </label>
+                        <input type="text" name="notes" id="pic-inactive-notes" maxlength="255"
+                            placeholder="e.g. detail keterangan"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
+                        @error('notes')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="pic-inactive-cancel"
+                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">CANCEL</button>
+                        <button type="submit"
+                            class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">SAVE</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <script>
             (function () {
                 function nowLocal () {
@@ -301,6 +407,30 @@
                 });
                 document.getElementById('manual-edit-cancel').addEventListener('click', function () { hide(editModal); });
                 editModal.addEventListener('click', function (e) { if (e.target === editModal) hide(editModal); });
+
+                // --- Set inactive modal ---
+                const inactiveModal = document.getElementById('pic-inactive-modal');
+                const reasonSel = document.getElementById('pic-inactive-reason');
+                const notesInput = document.getElementById('pic-inactive-notes');
+                const notesOpt = document.getElementById('pic-inactive-notes-opt');
+                function syncNotes () {
+                    const other = reasonSel.value === 'Other';
+                    notesInput.required = other;
+                    notesOpt.textContent = other ? '(required)' : '(optional)';
+                }
+                reasonSel.addEventListener('change', syncNotes);
+                document.querySelectorAll('.pic-inactive-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        document.getElementById('pic-inactive-user-id').value = this.dataset.id;
+                        document.getElementById('pic-inactive-name').textContent = this.dataset.name || '';
+                        reasonSel.value = this.dataset.reason || 'Cuti';
+                        notesInput.value = this.dataset.notes || '';
+                        syncNotes();
+                        show(inactiveModal);
+                    });
+                });
+                document.getElementById('pic-inactive-cancel').addEventListener('click', function () { hide(inactiveModal); });
+                inactiveModal.addEventListener('click', function (e) { if (e.target === inactiveModal) hide(inactiveModal); });
 
                 @if ($errors->any())
                     if (! startInput.value) startInput.value = nowLocal();

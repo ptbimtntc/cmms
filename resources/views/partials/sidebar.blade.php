@@ -19,7 +19,8 @@ document.addEventListener('alpine:init', () => {
         <div class="border-b border-sidebar-border px-4 py-5">
             <div class="flex items-center justify-between gap-3">
 
-                <div class="flex min-w-0 items-center gap-3">
+                <a href="{{ route('home') }}" title="Go to landing page"
+                    class="flex min-w-0 items-center gap-3 transition hover:opacity-80">
                     <div class="flex h-12 w-12 items-center justify-center rounded-2xl
                 bg-primary text-white shadow-sm">
 
@@ -58,7 +59,7 @@ document.addEventListener('alpine:init', () => {
                         <div class="text-base font-semibold tracking-wide text-sidebar-foreground">FreeDOMS</div>
                         <div class="mt-0.5 text-xs text-sidebar-muted">Preventive Maintenance System</div>
                     </div>
-                </div>
+                </a>
 
                 {{-- Tombol Close (X) --}}
                 <button @click="$store.sidebar.open = false"

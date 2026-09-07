@@ -57,8 +57,8 @@ test('a PIC with an active activity is shown as a card, one without is only list
     $res->assertSee('ANDI')
         ->assertSee('M-1023')
         ->assertSee('08:12')
-        ->assertSee('Not started:')
-        ->assertSee('BUDI');
+        ->assertSee('Not Started')   // the status-panel section heading
+        ->assertSee('BUDI');         // the not-started PIC, listed under it
 });
 
 test('machine is optional on a card', function () {
@@ -90,12 +90,11 @@ test('when every PIC is active the bottom line says so', function () {
 
     $html = $this->get(route('monitor'))->assertOk()->getContent();
 
-    // Check the rendered footer region, not the whole document (the JS
-    // auto-refresh renderer legitimately contains the "Not started:" template).
+    // Check the rendered not-started element, not the whole document.
     preg_match('/<p id="monitor-notstarted"[^>]*>(.*?)<\/p>/s', $html, $m);
 
-    expect(trim($m[1]))->toContain('All PIC are active')
-        ->and(trim($m[1]))->not->toContain('Not started');
+    expect(trim($m[1]))->toContain('ALL PIC ARE ACTIVE')
+        ->and(trim($m[1]))->not->toContain('·');   // no PIC names listed
 });
 
 test('with no active activity the empty state is shown', function () {
@@ -105,7 +104,8 @@ test('with no active activity the empty state is shown', function () {
     $this->get(route('monitor'))
         ->assertOk()
         ->assertSee('No Active Activity')
-        ->assertSee('Not started:');
+        ->assertSee('Not Started')   // status-panel heading
+        ->assertSee('ANDI');         // a not-started PIC
 });
 
 test('ADMIN sees the Auto Refresh toggle', function () {

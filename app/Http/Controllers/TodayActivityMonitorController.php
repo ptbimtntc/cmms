@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PicAvailability;
 use App\Models\User;
 use App\Services\ActiveActivityResolver;
 use App\Support\Activities\ActiveActivity;
@@ -11,12 +12,13 @@ use Illuminate\View\View;
 
 /**
  * Today's Activity — a public, login-free operational monitoring board for
- * the PM team, built for a wall/TV display. It shows one card per PIC who
- * currently has an active activity (who / what / which machine / since when)
- * and lists the not-yet-started PICs as a small line of text.
+ * the PM team, built for a wall/TV display. Layout is 3:1 — active-activity
+ * cards on the left, a compact "Maintenance Status" column on the right
+ * (active-PIC count, an activity-distribution donut of the CURRENTLY ACTIVE
+ * activities, and the not-started PICs).
  *
- * It is intentionally NOT a dashboard: no statistics, no charts, no
- * "completed today". Read-only; it changes nothing.
+ * It is intentionally NOT a dashboard: no shift / cost / sparepart /
+ * completed KPIs. Read-only; it changes nothing.
  *
  * {@see data()} backs the lightweight 60s auto-refresh — it returns only the
  * board data as JSON so the page can patch itself in place instead of doing
@@ -44,6 +46,7 @@ class TodayActivityMonitorController extends Controller
             'name' => $entry['pic']->name,
             'photo' => $entry['pic']->photo_url,
             'initials' => $entry['pic']->initials(),
+            'source' => $entry['activity']->source,
             'activity' => $entry['activity']->displayLabel(),
             'machine' => $entry['activity']->machineNumber,
             'location' => $entry['activity']->locationLabel(),
@@ -55,6 +58,11 @@ class TodayActivityMonitorController extends Controller
             'notStarted' => array_map('strtoupper', $board['notStarted']),
             'activeCount' => count($active),
             'totalPics' => $board['totalPics'],
+            'distribution' => $board['distribution'],
+            'manualBreakdown' => $board['manualBreakdown'],
+            'inactive' => $board['inactive'],
+            'counts' => $board['counts'],
+            'area' => $board['area'],
         ]);
     }
 
@@ -63,36 +71,88 @@ class TodayActivityMonitorController extends Controller
      * roster (a handful of columns) plus, per PIC, their current activity
      * derived by ActiveActivityResolver from already-indexed columns.
      *
-     * @return array{active: list<array{pic: User, activity: ActiveActivity}>, notStarted: list<string>, totalPics: int}
+     * @return array{active: list<array{pic: User, activity: ActiveActivity}>, notStarted: list<string>, inactive: list<array{name: string, reason: string}>, totalPics: int, distribution: array<string, int>, manualBreakdown: list<array{name: string, count: int}>, area: array<string, array{active: int, available: int}>, counts: array{active: int, notStarted: int, inactive: int}}
      */
     private function board(): array
     {
         $resolver = app(ActiveActivityResolver::class);
 
         $pics = User::query()
-            ->select(['id', 'name', 'avatar_path', 'oil_audit_started_at', 'oil_audit_action_started_at'])
+            ->select(['id', 'name', 'role', 'avatar_path', 'oil_audit_started_at', 'oil_audit_action_started_at'])
             ->whereIn('role', [User::ROLE_PIC_WWD, User::ROLE_PIC_BUL])
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
 
+        // Today's INACTIVE PICs — not an activity: no card, no donut count.
+        $inactiveByUser = PicAvailability::query()
+            ->with('user:id,name')
+            ->whereIn('user_id', $pics->pluck('id'))
+            ->whereDate('date', today())
+            ->get()
+            ->keyBy('user_id');
+
         $active = [];
         $notStarted = [];
+        $inactive = [];
+        // Distribution counts ONLY currently-active activities, by source.
+        $distribution = ['PM' => 0, 'GREASING' => 0, 'OIL_AUDIT' => 0, 'OIL_AUDIT_ACTION' => 0, 'MANUAL' => 0];
+        $manualByName = [];
+        $area = [
+            'WWD' => ['active' => 0, 'available' => 0],
+            'BUL' => ['active' => 0, 'available' => 0],
+        ];
 
         foreach ($pics as $pic) {
+            $areaKey = $pic->role === User::ROLE_PIC_BUL ? 'BUL' : 'WWD';
+            $availability = $inactiveByUser->get($pic->id);
+
+            if ($availability) {
+                $inactive[] = ['name' => $pic->name, 'reason' => $availability->label()];
+
+                continue; // inactive PICs are not "available" and never active
+            }
+
+            $area[$areaKey]['available']++;
+
             $current = $resolver->currentFor($pic);
 
             if ($current) {
                 $active[] = ['pic' => $pic, 'activity' => $current];
+                $area[$areaKey]['active']++;
+
+                if (isset($distribution[$current->source])) {
+                    $distribution[$current->source]++;
+                }
+
+                if ($current->source === 'MANUAL') {
+                    $name = $current->displayLabel();
+                    $manualByName[$name] = ($manualByName[$name] ?? 0) + 1;
+                }
             } else {
                 $notStarted[] = $pic->name;
             }
         }
 
+        arsort($manualByName);
+        $manualBreakdown = [];
+        foreach ($manualByName as $name => $count) {
+            $manualBreakdown[] = ['name' => $name, 'count' => $count];
+        }
+
         return [
             'active' => $active,
             'notStarted' => $notStarted,
+            'inactive' => $inactive,
             'totalPics' => $pics->count(),
+            'distribution' => $distribution,
+            'manualBreakdown' => $manualBreakdown,
+            'area' => $area,
+            'counts' => [
+                'active' => count($active),
+                'notStarted' => count($notStarted),
+                'inactive' => count($inactive),
+            ],
         ];
     }
 }

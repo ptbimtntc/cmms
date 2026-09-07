@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\HandlesActivityConflict;
 use App\Models\ActivityMonitorClosure;
 use App\Models\ManualActivity;
+use App\Models\PicAvailability;
 use App\Models\User;
 use App\Services\ActiveActivityResolver;
 use App\Support\Activities\ActiveActivity;
@@ -45,20 +46,36 @@ class TodayActivityController extends Controller
             ? $this->assignablePics($user)
             : collect([$user]);
 
+        $inactiveByUser = PicAvailability::query()
+            ->whereIn('user_id', $pics->pluck('id'))
+            ->whereDate('date', today())
+            ->get()
+            ->keyBy('user_id');
+
         $rows = collect();
+        $picStatuses = collect();
 
         foreach ($pics as $pic) {
-            $current = $resolver->currentFor($pic);
+            $inactive = $inactiveByUser->get($pic->id);
+            $current = $inactive ? null : $resolver->currentFor($pic);
 
-            foreach ($resolver->forToday($pic) as $activity) {
-                $rows->push([
-                    'pic' => $pic,
-                    'activity' => $activity,
-                    'isActive' => $activity->sameAs($current),
-                    'moduleLink' => $this->moduleLinkFor($activity),
-                    'monitorKey' => (string) ($activity->recordId ?? $pic->id),
-                ]);
+            if (! $inactive) {
+                foreach ($resolver->forToday($pic) as $activity) {
+                    $rows->push([
+                        'pic' => $pic,
+                        'activity' => $activity,
+                        'isActive' => $activity->sameAs($current),
+                        'moduleLink' => $this->moduleLinkFor($activity),
+                        'monitorKey' => (string) ($activity->recordId ?? $pic->id),
+                    ]);
+                }
             }
+
+            $picStatuses->push([
+                'pic' => $pic,
+                'status' => $inactive ? 'INACTIVE' : ($current ? 'ACTIVE' : 'NOT STARTED'),
+                'availability' => $inactive,
+            ]);
         }
 
         $rows = $rows
@@ -68,8 +85,10 @@ class TodayActivityController extends Controller
         return view('today-activity.index', [
             'rows' => $rows,
             'activeRows' => $rows->where('isActive', true)->values(),
+            'picStatuses' => $picStatuses,
             'canManage' => $canManage,
             'assignablePics' => $canManage ? $pics : collect(),
+            'inactiveReasons' => PicAvailability::REASONS,
         ]);
     }
 
@@ -192,6 +211,56 @@ class TodayActivityController extends Controller
         ]);
 
         return back()->with('success', 'Activity removed from the monitor. The '.strtolower(str_replace('_', ' ', $validated['source'])).' work is unchanged.');
+    }
+
+    /**
+     * Mark a PIC INACTIVE for today (Cuti / Sakit / …), or update the reason
+     * of an existing marker. ADMIN / KOORDINATOR only, area-scoped. INACTIVE
+     * is NOT an activity: it changes nothing in any module.
+     */
+    public function setInactive(Request $request): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor->isAdmin() || $actor->isKoordinator(), 403);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer'],
+            'reason' => ['required', Rule::in(PicAvailability::REASONS)],
+            'notes' => ['nullable', 'string', 'max:255', Rule::requiredIf($request->input('reason') === 'Other')],
+        ]);
+
+        $target = $this->authorizedTarget($actor, (int) $validated['user_id']);
+
+        // Cannot mark someone inactive while they are actually working.
+        if (app(ActiveActivityResolver::class)->currentFor($target) !== null) {
+            return back()->with('warning', $target->name.' has an active activity and cannot be set inactive.');
+        }
+
+        PicAvailability::updateOrCreate(
+            ['user_id' => $target->id, 'date' => today()->toDateString()],
+            [
+                'reason' => $validated['reason'],
+                'notes' => trim((string) ($validated['notes'] ?? '')) ?: null,
+                'set_by_user_id' => $actor->id,
+            ],
+        );
+
+        return back()->with('success', $target->name.' set inactive ('.$validated['reason'].').');
+    }
+
+    /**
+     * Clear a PIC's inactive marker — they become NOT STARTED again.
+     */
+    public function clearInactive(Request $request, PicAvailability $picAvailability): RedirectResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor->isAdmin() || $actor->isKoordinator(), 403);
+        $this->authorizedTarget($actor, $picAvailability->user_id);
+
+        $name = $picAvailability->user?->name ?? 'PIC';
+        $picAvailability->delete();
+
+        return back()->with('success', $name.' set available.');
     }
 
     /**
