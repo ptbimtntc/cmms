@@ -112,20 +112,7 @@
                         </div>
                     </a>
 
-                    <a href="#" class="bg-white rounded-xl shadow-sm p-4 flex items-center space-x-3">
-                        <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg">
-                            <!-- Reports Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6M7 21h10" />
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xs text-gray-500">Reports</div>
-                            <div class="text-sm font-medium text-gray-800">View</div>
-                        </div>
-                    </a>
+                    
 
                     <a href="#" class="bg-white rounded-xl shadow-sm p-4 flex items-center space-x-3">
                         <div class="p-2 bg-pink-50 text-pink-600 rounded-lg">
