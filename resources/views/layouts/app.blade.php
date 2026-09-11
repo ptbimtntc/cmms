@@ -40,6 +40,7 @@
             str_contains($routeName, 'users') => 'Users',
             str_contains($routeName, 'reports') => 'Reports',
             str_contains($routeName, 'import') => 'Import',
+            str_contains($routeName, 'today-activity') => "Today's Activity",
             default => 'Dashboard',
         };
 

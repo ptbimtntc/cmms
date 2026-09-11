@@ -1,7 +1,5 @@
 @extends('layouts.app')
 
-@section('title', "Today&#39;s Activity")
-
 @section('content')
     <div class="space-y-6">
 
