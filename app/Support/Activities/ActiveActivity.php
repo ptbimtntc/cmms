@@ -49,7 +49,20 @@ final class ActiveActivity
         public readonly ?CarbonInterface $endedAt = null,
     ) {}
 
-    /** Explicitly finished (Manual Activity "Finish" action). */
+    /**
+     * Explicitly finished via the control panel's "Finish" action.
+     *
+     * Comparing endedAt against startedAt to detect a "stale" closure from a
+     * previous instance was tried and reverted: user-entered start times are
+     * only minute-precision (HTML datetime-local) while closed_at is
+     * second-precision now(), so the two routinely tie or even cross in
+     * either direction — no comparison operator (>, >=) is reliable. The
+     * real fix is at the source: OilAuditController deletes the PIC's
+     * previous Oil Audit / Oil Audit Action closure the moment they restart
+     * that source, so a stale closure never lingers to be compared against
+     * in the first place. See OilAuditController::currentActivitySource()
+     * callers.
+     */
     public function isFinished(): bool
     {
         return $this->endedAt !== null;

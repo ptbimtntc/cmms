@@ -87,6 +87,12 @@
 
                 </a>
 
+                <a href="{{ route('monitor') }}" class="text-slate-600 hover:text-blue-600 transition">
+
+                    Monitor
+
+                </a>
+
             </div>
 
             {{-- Action --}}

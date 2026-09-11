@@ -201,14 +201,26 @@ class TodayActivityController extends Controller
             return back()->with('warning', 'This activity is already finished.');
         }
 
-        ActivityMonitorClosure::create([
-            'source' => $validated['source'],
-            'source_key' => $validated['source_key'],
-            'business_date' => today(),
-            'pic_user_id' => $target->id,
-            'closed_by_user_id' => $actor->id,
-            'closed_at' => now(),
-        ]);
+        // updateOrCreate, not create: Oil Audit / Oil Audit Action have no
+        // per-instance row, so source_key is just the PIC's id — if the PIC
+        // was finished earlier today and later restarted the same source, a
+        // row for (source, source_key, business_date) already exists (the
+        // unique index enforces one closure per source per PIC per day).
+        // Bumping closed_at to now() here is exactly what ActiveActivity::
+        // isFinished() needs to correctly treat THIS later instance as
+        // finished too, instead of colliding on insert.
+        ActivityMonitorClosure::updateOrCreate(
+            [
+                'source' => $validated['source'],
+                'source_key' => $validated['source_key'],
+                'business_date' => today(),
+            ],
+            [
+                'pic_user_id' => $target->id,
+                'closed_by_user_id' => $actor->id,
+                'closed_at' => now(),
+            ]
+        );
 
         return back()->with('success', 'Activity removed from the monitor. The '.strtolower(str_replace('_', ' ', $validated['source'])).' work is unchanged.');
     }

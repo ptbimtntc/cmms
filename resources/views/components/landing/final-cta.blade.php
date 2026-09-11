@@ -42,6 +42,13 @@
 
             </a>
 
+            <a href="{{ route('monitor') }}"
+                class="px-8 py-4 rounded-2xl border-2 border-white text-white font-bold hover:bg-white hover:text-blue-700 transition">
+
+                🖥️ Lihat Monitor
+
+            </a>
+
             <a href="{{ route('qr.scan') }}"
                 class="px-8 py-4 rounded-2xl border-2 border-white text-white font-bold hover:bg-white hover:text-blue-700 transition">
 

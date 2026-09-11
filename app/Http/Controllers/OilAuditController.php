@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\HandlesActivityConflict;
+use App\Models\ActivityMonitorClosure;
 use App\Models\Machine;
 use App\Models\OilAudit;
 use App\Models\OilAuditFollowUp;
+use App\Models\User;
+use App\Services\ActiveActivityResolver;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -24,24 +27,60 @@ class OilAuditController extends Controller
 
     private const AUDIT_MACHINE_TYPES = ['NDE', 'NDB'];
 
+    /**
+     * The activity source ("OIL_AUDIT", "PM", ...) this PIC currently has
+     * active, or null. Single place both the daily-start prompt and its
+     * START endpoint check, so the two always agree with each other and
+     * with ActiveActivityResolver (the "one active activity per PIC" source
+     * of truth used everywhere else in the app).
+     */
+    private function currentActivitySource(User $user): ?string
+    {
+        return app(ActiveActivityResolver::class)->currentFor($user)?->source;
+    }
+
+    /**
+     * Oil Audit / Oil Audit Action have no per-instance row — their closure
+     * (see ActivityMonitorClosure) is keyed only by the PIC, unlike PM /
+     * Greasing / Manual which each get their own record id. So a closure
+     * from an EARLIER instance (finished, then the PIC restarted the same
+     * source later the same day) must be cleared the moment a fresh start
+     * is recorded — otherwise it would (a) keep the brand new instance
+     * looking permanently "finished" and (b) collide with the unique
+     * (source, source_key, business_date) index the next time it is
+     * finished again.
+     */
+    private function clearStaleClosure(string $source, User $user): void
+    {
+        ActivityMonitorClosure::where('source', $source)
+            ->where('source_key', (string) $user->id)
+            ->whereDate('business_date', today())
+            ->delete();
+    }
+
     public function scan(Request $request): View
     {
         $user = $request->user();
 
-        // The daily Start prompt is a PIC-only, once-per-day mechanism: it
-        // appears only while this PIC has not yet recorded an Oil Audit
-        // start for today. It does not gate access to the page — NO simply
-        // dismisses it and the existing scan workflow is untouched.
+        // The daily Start prompt is PIC-only and reflects whether Oil Audit
+        // is this PIC's CURRENT activity right now (not merely "started at
+        // some point today") — so it reappears if the PIC started Oil Audit,
+        // then moved to a different activity, and comes back here. It does
+        // not gate access to the page — NO simply dismisses it and the
+        // existing scan workflow is untouched.
         return view('oil-audits.scan', [
-            'promptStart' => $user->isPic() && ! $user->hasStartedOilAuditToday(),
+            'promptStart' => $user->isPic() && $this->currentActivitySource($user) !== 'OIL_AUDIT',
         ]);
     }
 
     /**
      * Records this PIC's Oil Audit activity start for the current day.
      * Writes only users.oil_audit_started_at — no oil_audits row, no
-     * follow-up, no status is touched. Idempotent within the same day, so
-     * a double submit cannot overwrite the original start time.
+     * follow-up, no status is touched. A no-op while Oil Audit is already
+     * this PIC's current activity (so a double submit cannot overwrite the
+     * current start time), but re-activates Oil Audit — going through the
+     * usual one-active-activity conflict check — once the PIC has moved on
+     * to something else and comes back to start it again.
      */
     public function startDaily(Request $request): RedirectResponse
     {
@@ -51,7 +90,7 @@ class OilAuditController extends Controller
 
         $user = $request->user();
 
-        if (! $user->hasStartedOilAuditToday()) {
+        if ($this->currentActivitySource($user) !== 'OIL_AUDIT') {
             $startedAt = Carbon::parse($validated['started_at']);
 
             // One active activity per PIC — checked across every activity
@@ -74,6 +113,7 @@ class OilAuditController extends Controller
             }
 
             $user->update(['oil_audit_started_at' => $startedAt]);
+            $this->clearStaleClosure('OIL_AUDIT', $user);
         }
 
         return redirect()
@@ -85,8 +125,9 @@ class OilAuditController extends Controller
      * Records this PIC's Oil Audit Action activity start for the current
      * day. Same shape and guarantees as startDaily(): writes only
      * users.oil_audit_action_started_at, touches no audit / problem /
-     * action-taken / follow-up / status / history data, and is idempotent
-     * within the day.
+     * action-taken / follow-up / status / history data, and is a no-op
+     * while Oil Audit Action is already this PIC's current activity — but
+     * re-activates it once the PIC has moved on and comes back.
      */
     public function startDailyAction(Request $request): RedirectResponse
     {
@@ -96,7 +137,7 @@ class OilAuditController extends Controller
 
         $user = $request->user();
 
-        if (! $user->hasStartedOilAuditActionToday()) {
+        if ($this->currentActivitySource($user) !== 'OIL_AUDIT_ACTION') {
             $startedAt = Carbon::parse($validated['started_at']);
 
             // One active activity per PIC — checked across every activity
@@ -119,6 +160,7 @@ class OilAuditController extends Controller
             }
 
             $user->update(['oil_audit_action_started_at' => $startedAt]);
+            $this->clearStaleClosure('OIL_AUDIT_ACTION', $user);
         }
 
         return redirect()
@@ -255,10 +297,12 @@ class OilAuditController extends Controller
             ->limit(8)
             ->get();
 
-        // Daily Start prompt — PIC-only, once per business day, mirrors the
-        // Oil Audit scan menu. Purely additive: it does not gate the page.
+        // Daily Start prompt — PIC-only, mirrors the Oil Audit scan menu:
+        // reflects whether Oil Audit Action is CURRENT right now, not just
+        // "started at some point today" (see scan() above). Purely
+        // additive: it does not gate the page.
         $user = $request->user();
-        $promptStart = $user->isPic() && ! $user->hasStartedOilAuditActionToday();
+        $promptStart = $user->isPic() && $this->currentActivitySource($user) !== 'OIL_AUDIT_ACTION';
 
         return view('oil-audits.action', compact(
             'audits',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Models\ActivityMonitorClosure;
 use App\Models\User;
 use App\Services\ActiveActivityResolver;
 use App\Support\Activities\ActiveActivity;
@@ -21,10 +22,11 @@ use Illuminate\Support\Carbon;
  *     `partials.activity-conflict-modal` renders the CANCEL / END & START
  *     confirmation.
  *  3. END & START re-POSTs the same `started_at` with `confirm_end_start=1`.
- *     The check is skipped and the new activity is started normally; the
- *     previous one simply stops being "active" because the new start is
- *     later (newest start wins — see ActiveActivityResolver). No source
- *     module status is changed: closing an activity is NOT completing work.
+ *     The check is skipped, {@see confirmedStartTime()} explicitly closes
+ *     the previous activity (an activity_monitor_closures row, same
+ *     mechanism the control panel's "Finish" uses) and the new activity is
+ *     started normally. No source module status is changed: closing an
+ *     activity is NOT completing work.
  */
 trait HandlesActivityConflict
 {
@@ -49,14 +51,43 @@ trait HandlesActivityConflict
     }
 
     /**
-     * On END & START, guarantee the new activity really becomes the current
-     * one: if the PIC hand-picked a start time earlier than the activity
-     * they are ending, fall back to now() so "newest start wins" holds and
-     * Today's Activity reads the new activity as active.
+     * On END & START: explicitly closes the activity being ended (so it
+     * cannot silently resurface as "active" again later — see below — the
+     * way relying on "newest start wins" alone allowed), then guarantees
+     * the new activity really becomes the current one: if the PIC
+     * hand-picked a start time earlier than the activity they are ending,
+     * fall back to now() so Today's Activity reads the new activity as
+     * active.
+     *
+     * Without this, the previous activity's own record was left completely
+     * untouched — correct for the module data, but ALSO untouched in the
+     * monitor, so it only stopped being "current" because its start
+     * timestamp was older. If the NEW activity was later finished from the
+     * control panel, {@see ActiveActivityResolver::currentFor()} would then
+     * fall back to that old, never-actually-closed activity and show it as
+     * active again — e.g. Oil Audit -> END & START into Oil Audit Action ->
+     * admin finishes Oil Audit Action -> Oil Audit incorrectly reappears.
+     * Writing a real closure here (identical to the control panel's
+     * "Finish") makes END & START end the old activity for good.
      */
     protected function confirmedStartTime(User $user, CarbonInterface $requested): CarbonInterface
     {
         $current = $this->activityConflictFor($user);
+
+        if ($current) {
+            ActivityMonitorClosure::updateOrCreate(
+                [
+                    'source' => $current->source,
+                    'source_key' => (string) ($current->recordId ?? $user->id),
+                    'business_date' => today(),
+                ],
+                [
+                    'pic_user_id' => $user->id,
+                    'closed_by_user_id' => $user->id,
+                    'closed_at' => now(),
+                ]
+            );
+        }
 
         return $current && $requested->lessThan($current->startedAt)
             ? Carbon::now()

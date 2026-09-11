@@ -1,6 +1,35 @@
 @extends('layouts.guest')
 
 @section('content')
+    <style>
+        /* Adaptive typography for treemap tiles — sized from each tile's OWN
+           measured dimensions (CSS container queries), not one fixed font
+           size for every tile. A huge tile (1-2 activities) renders visibly
+           bigger text/photo; a small tile (10-15 activities) shrinks to fit
+           without overflowing. min(...cqw,...cqh) uses the tile's shorter
+           side so neither a very wide-short nor a narrow-tall tile overflows.
+           Shared by the SSR markup (partials/monitor-board.blade.php) and
+           the JS-rebuilt markup (cardHTML() below) — both use the same
+           `.tile-*` class names, so this is the single place sizing lives. */
+        .monitor-tile { container-type: size; }
+        .tile-inner {
+            padding: clamp(8px, min(4cqw, 4cqh), 32px);
+            gap: clamp(3px, min(1.4cqw, 1.4cqh), 14px);
+        }
+        .tile-photo {
+            width: clamp(40px, min(24cqw, 24cqh), 240px);
+            height: clamp(40px, min(24cqw, 24cqh), 240px);
+            font-size: clamp(14px, min(9cqw, 9cqh), 72px);
+        }
+        .tile-name { font-size: clamp(16px, min(7.5cqw, 7.5cqh), 72px); }
+        .tile-activity { font-size: clamp(13px, min(6.2cqw, 6.2cqh), 58px); }
+        .tile-location { font-size: clamp(15px, min(7.2cqw, 7.2cqh), 68px); }
+        .tile-started { font-size: clamp(12px, min(5.6cqw, 5.6cqh), 48px); }
+        .tile-activity-cap, .tile-location-cap, .tile-started-cap {
+            font-size: clamp(9px, min(3.4cqw, 3.4cqh), 18px);
+        }
+    </style>
+
     <div id="monitor"
         data-poll-url="{{ route('monitor.data') }}"
         data-poll-interval="60000"
@@ -27,6 +56,15 @@
             </a>
 
             <div class="flex shrink-0 items-center gap-4">
+                <label class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Area:
+                    <select id="monitor-area-filter"
+                        class="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 focus:border-blue-500 focus:outline-none">
+                        <option value="ALL" @selected($selectedArea === 'ALL')>ALL</option>
+                        <option value="WWD" @selected($selectedArea === 'WWD')>WWD</option>
+                        <option value="BUL" @selected($selectedArea === 'BUL')>BUL</option>
+                    </select>
+                </label>
                 <div id="monitor-clock" class="text-3xl font-bold tabular-nums leading-none text-slate-900">--:--</div>
                 <a href="{{ route('home') }}"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
@@ -70,12 +108,26 @@
             const root = document.getElementById('monitor');
 
             // Source palette — keep in sync with partials/monitor-board + monitor-status.
-            const SRC_ORDER = ['PM', 'GREASING', 'OIL_AUDIT', 'OIL_AUDIT_ACTION', 'MANUAL']; // donut slice order
             const LEGEND_FIXED = ['PM', 'GREASING', 'OIL_AUDIT', 'OIL_AUDIT_ACTION'];       // Manual shown by name
             const SRC_LABEL = { PM: 'PM', GREASING: 'Greasing', OIL_AUDIT: 'Oil Audit', OIL_AUDIT_ACTION: 'Oil Audit Action', MANUAL: 'Manual' };
             const SRC_HEX = { PM: '#2563eb', GREASING: '#f59e0b', OIL_AUDIT: '#10b981', OIL_AUDIT_ACTION: '#0891b2', MANUAL: '#8b5cf6' };
             const SRC_ACCENT = { PM: 'border-blue-600', GREASING: 'border-amber-500', OIL_AUDIT: 'border-emerald-500', OIL_AUDIT_ACTION: 'border-cyan-600', MANUAL: 'border-violet-500' };
             const SRC_TEXT = { PM: 'text-blue-600', GREASING: 'text-amber-600', OIL_AUDIT: 'text-emerald-600', OIL_AUDIT_ACTION: 'text-cyan-700', MANUAL: 'text-violet-600' };
+
+            // Manual activities don't share one "Manual" color — each DISTINCT
+            // activity NAME gets its own deterministic color (same name always
+            // maps to the same hue; different names always differ), so the
+            // donut/legend distinguish "PM" from "Assembling" instead of both
+            // just reading as generic violet "Manual". Mirrored in PHP
+            // (partials/monitor-status.blade.php) for the pre-JS SSR paint.
+            function manualColor (name) {
+                const str = String(name || '');
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+                }
+                return `hsl(${hash % 360}, 65%, 45%)`;
+            }
 
             // --- Live clock ---
             const clock = document.getElementById('monitor-clock');
@@ -91,6 +143,19 @@
             const DEFAULT_ON = root.dataset.autoRefreshDefault === 'on';
             const POLL_MS = Math.max(60000, parseInt(root.dataset.pollInterval, 10) || 60000);
             const DATA_URL = root.dataset.pollUrl;
+
+            // --- Area filter (ALL / WWD / BUL) — client-side only, no full
+            // page reload. poll() always reads the CURRENT selection, so it
+            // stays applied through every subsequent 60s auto-refresh tick. ---
+            const areaFilterEl = document.getElementById('monitor-area-filter');
+            function currentArea () {
+                const v = areaFilterEl ? areaFilterEl.value : 'ALL';
+                return v === 'WWD' || v === 'BUL' ? v : 'ALL';
+            }
+            function dataUrl () {
+                const a = currentArea();
+                return a === 'ALL' ? DATA_URL : (DATA_URL + '?area=' + encodeURIComponent(a));
+            }
 
             const board = document.getElementById('monitor-board');
             const notStartedEl = document.getElementById('monitor-notstarted');
@@ -119,47 +184,177 @@
                 return d.innerHTML;
             }
 
-            // ---------- Left: active cards ----------
+            // ---------- Left: active-activity TREEMAP ----------
+            // The tile grid is NOT a fixed N-column layout: layoutTiles()
+            // measures #monitor-treemap and squarifiedTreemap() computes
+            // exact, gap-free rectangles for however many activities there
+            // are (1 tile fills everything, 15 tiles still fill everything).
+            // Tile markup here must keep the same `.tile-*` class hooks as
+            // partials/monitor-board.blade.php.
             function cardHTML (item) {
                 const accent = SRC_ACCENT[item.source] || 'border-t-slate-300';
                 const label = SRC_TEXT[item.source] || 'text-blue-600';
+                // Sizing (photo/text) is NOT inline here — it comes entirely
+                // from the adaptive `.tile-*` CSS (container queries) above,
+                // driven by whatever width/height layoutTiles() sets below.
                 const photo = item.photo
-                    ? `<img src="${esc(item.photo)}" alt="${esc(item.name)}" class="h-16 w-16 shrink-0 rounded-xl object-cover ring-2 ring-slate-200 2xl:h-20 2xl:w-20">`
-                    : `<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xl font-bold text-slate-500 ring-2 ring-slate-200 2xl:h-20 2xl:w-20 2xl:text-2xl">${esc(item.initials)}</div>`;
+                    ? `<img src="${esc(item.photo)}" alt="${esc(item.name)}" class="tile-photo shrink-0 rounded-xl object-cover ring-2 ring-slate-200">`
+                    : `<div class="tile-photo flex shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-500 ring-2 ring-slate-200">${esc(item.initials)}</div>`;
                 const location = item.location
                     ? `<div class="w-full">
-                        <div class="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400">Location</div>
-                        <div class="truncate font-mono text-base font-semibold text-slate-600 2xl:text-lg">${esc(item.location)}</div>
+                        <div class="tile-location-cap font-semibold uppercase tracking-[0.2em] text-slate-400">Location</div>
+                        <div class="tile-location truncate font-mono font-semibold text-slate-600">${esc(item.location)}</div>
                     </div>`
                     : '';
-                return `<article class="flex min-h-[11rem] flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border border-slate-200 border-t-4 ${accent} bg-white p-3 text-center leading-tight shadow-sm">
-                    ${photo}
-                    <div class="w-full truncate pt-1 text-base font-bold uppercase tracking-wide text-slate-900 2xl:text-lg">${esc(item.name)}</div>
-                    <div class="w-full">
-                        <div class="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400">Activity</div>
-                        <div class="truncate text-sm font-semibold uppercase tracking-[0.12em] ${label} 2xl:text-base">${esc(item.activity)}</div>
-                    </div>
-                    ${location}
-                    <div class="w-full">
-                        <div class="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400">Started</div>
-                        <div class="text-xs font-bold tabular-nums text-emerald-600 2xl:text-sm">${esc(item.startTime)}</div>
+                return `<article class="monitor-tile overflow-hidden rounded-2xl border border-slate-200 border-t-4 ${accent} bg-white shadow-sm" style="width:220px;height:180px;opacity:0;">
+                    <div class="tile-inner flex h-full w-full flex-col items-center justify-center overflow-hidden text-center leading-tight">
+                        ${photo}
+                        <div class="tile-name w-full truncate pt-1 font-bold uppercase tracking-wide text-slate-900">${esc(item.name)}</div>
+                        <div class="w-full">
+                            <div class="tile-activity-cap font-semibold uppercase tracking-[0.2em] text-slate-400">Activity</div>
+                            <div class="tile-activity truncate font-semibold uppercase tracking-[0.12em] ${label}">${esc(item.activity)}</div>
+                        </div>
+                        ${location}
+                        <div class="w-full">
+                            <div class="tile-started-cap font-semibold uppercase tracking-[0.2em] text-slate-400">Started</div>
+                            <div class="tile-started font-bold tabular-nums text-emerald-600">${esc(item.startTime)}</div>
+                        </div>
                     </div>
                 </article>`;
             }
 
+            // Squarified treemap (Bruls/Huizing/van Wijk) for N EQUAL-weight
+            // activities: recursively slices the container into rows/columns
+            // whose areas sum EXACTLY to width*height, so there is never any
+            // leftover blank space no matter what N is (1, 2, 13, 15, ...).
+            // Aspect ratios are kept as square as practical by the "worst"
+            // heuristic; tile sizes differ, which is expected/desired.
+            function squarifiedTreemap (count, x, y, w, h) {
+                if (count <= 0 || w <= 0 || h <= 0) return [];
+                const unit = (w * h) / count;
+                const areas = new Array(count).fill(unit);
+                const rects = new Array(count);
+
+                function worst (idxRow, side) {
+                    let sum = 0, mx = -Infinity, mn = Infinity;
+                    idxRow.forEach(function (idx) {
+                        const a = areas[idx];
+                        sum += a;
+                        if (a > mx) mx = a;
+                        if (a < mn) mn = a;
+                    });
+                    const s2 = side * side;
+                    return Math.max((s2 * mx) / (sum * sum), (sum * sum) / (s2 * mn));
+                }
+
+                function place (idxRow, rect, mode) {
+                    const rowTotal = idxRow.reduce(function (s, idx) { return s + areas[idx]; }, 0);
+                    if (mode === 'col') {
+                        const thickness = rect.h > 0 ? rowTotal / rect.h : 0;
+                        let cy = rect.y;
+                        idxRow.forEach(function (idx) {
+                            const ih = thickness > 0 ? areas[idx] / thickness : 0;
+                            rects[idx] = { x: rect.x, y: cy, w: thickness, h: ih };
+                            cy += ih;
+                        });
+                        return { x: rect.x + thickness, y: rect.y, w: Math.max(0, rect.w - thickness), h: rect.h };
+                    }
+                    const thickness = rect.w > 0 ? rowTotal / rect.w : 0;
+                    let cx = rect.x;
+                    idxRow.forEach(function (idx) {
+                        const iw = thickness > 0 ? areas[idx] / thickness : 0;
+                        rects[idx] = { x: cx, y: rect.y, w: iw, h: thickness };
+                        cx += iw;
+                    });
+                    return { x: rect.x, y: rect.y + thickness, w: rect.w, h: Math.max(0, rect.h - thickness) };
+                }
+
+                function recurse (remaining, rect) {
+                    if (remaining.length === 0 || rect.w <= 0 || rect.h <= 0) return;
+                    if (remaining.length === 1) {
+                        rects[remaining[0]] = { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
+                        return;
+                    }
+                    const mode = rect.w >= rect.h ? 'col' : 'row';
+                    const side = mode === 'col' ? rect.h : rect.w;
+
+                    let row = [remaining[0]];
+                    let i = 1;
+                    while (i < remaining.length) {
+                        const candidate = row.concat([remaining[i]]);
+                        if (worst(candidate, side) <= worst(row, side)) {
+                            row = candidate;
+                            i++;
+                        } else {
+                            break;
+                        }
+                    }
+                    recurse(remaining.slice(i), place(row, rect, mode));
+                }
+
+                recurse(areas.map(function (_, i) { return i; }), { x: x, y: y, w: w, h: h });
+                return rects;
+            }
+
+            // Measures #monitor-treemap and positions every .monitor-tile as
+            // an exact, gap-free squarified-treemap rectangle. Runs on load,
+            // after every poll render, and on resize. Typography/photo size
+            // is NOT computed here — giving each tile an explicit width/
+            // height (below) is exactly what the `.tile-*` CSS container
+            // queries above need to size their own content responsively.
+            function layoutTiles () {
+                const container = document.getElementById('monitor-treemap');
+                if (!container) return;
+                const tiles = Array.prototype.slice.call(container.querySelectorAll(':scope > .monitor-tile'));
+                if (tiles.length === 0) return;
+
+                const W = container.clientWidth;
+                const H = container.clientHeight;
+                if (W <= 0 || H <= 0) return;
+
+                const rects = squarifiedTreemap(tiles.length, 0, 0, W, H);
+                const GUTTER = 4;
+
+                container.style.position = 'relative';
+                tiles.forEach(function (tile, i) {
+                    const r = rects[i];
+                    if (!r) return;
+                    const w = Math.max(0, r.w - GUTTER * 2);
+                    const h = Math.max(0, r.h - GUTTER * 2);
+                    tile.style.position = 'absolute';
+                    tile.style.left = (r.x + GUTTER) + 'px';
+                    tile.style.top = (r.y + GUTTER) + 'px';
+                    tile.style.width = w + 'px';
+                    tile.style.height = h + 'px';
+                    tile.style.opacity = '1';
+                });
+            }
+
+            let resizeTimer = null;
+            window.addEventListener('resize', function () {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(layoutTiles, 150);
+            });
+
             // ---------- Right: donut + legend ----------
-            function donutSVG (dist) {
-                const total = SRC_ORDER.reduce((s, k) => s + (dist[k] || 0), 0);
+            // Slices = the 4 fixed sources PLUS one slice per DISTINCT manual
+            // activity name (not one lumped "Manual" slice), each colored by
+            // manualColor() — so the ring visually matches the legend below.
+            function donutSVG (dist, manualBreakdown) {
+                manualBreakdown = Array.isArray(manualBreakdown) ? manualBreakdown : [];
+                const slices = LEGEND_FIXED
+                    .map(k => ({ color: SRC_HEX[k], value: dist[k] || 0 }))
+                    .concat(manualBreakdown.map(m => ({ color: manualColor(m.name), value: m.count })));
+                const total = slices.reduce((s, sl) => s + sl.value, 0);
                 const r = 42, c = 2 * Math.PI * r;
                 let segs = '', offset = 0;
                 if (total === 0) {
                     segs = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="16"/>`;
                 } else {
-                    SRC_ORDER.forEach(function (k) {
-                        const v = dist[k] || 0;
-                        if (!v) return;
-                        const len = c * v / total;
-                        segs += `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${SRC_HEX[k]}" stroke-width="16" stroke-linecap="butt" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 60 60)"/>`;
+                    slices.forEach(function (sl) {
+                        if (!sl.value) return;
+                        const len = c * sl.value / total;
+                        segs += `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${sl.color}" stroke-width="16" stroke-linecap="butt" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 60 60)"/>`;
                         offset += len;
                     });
                 }
@@ -178,15 +373,21 @@
                 </div>`;
             }
             function legendHTML (dist, manualBreakdown) {
-                let html = LEGEND_FIXED.map(k => legendRow(SRC_HEX[k], SRC_LABEL[k], dist[k] || 0)).join('');
+                let html = LEGEND_FIXED
+                    .filter(k => (dist[k] || 0) > 0)
+                    .map(k => legendRow(SRC_HEX[k], SRC_LABEL[k], dist[k]))
+                    .join('');
                 (Array.isArray(manualBreakdown) ? manualBreakdown : []).forEach(function (m) {
-                    html += legendRow(SRC_HEX.MANUAL, m.name, m.count);
+                    html += legendRow(manualColor(m.name), m.name, m.count);
                 });
                 return html;
             }
             function areaHTML (area) {
                 area = area || {};
-                return ['WWD', 'BUL'].map(function (k) {
+                // Only the area(s) the server actually returned (i.e. the
+                // one(s) in scope for the current Area filter) — see
+                // partials/monitor-area.blade.php.
+                return Object.keys(area).map(function (k) {
                     const a = area[k] || { active: 0, available: 0 };
                     return `<div class="flex items-center justify-between gap-2 text-xs">
                         <span class="font-bold uppercase tracking-wider text-slate-500">${k}</span>
@@ -209,7 +410,7 @@
                 }).join('');
             }
             function renderStatus (dist, manualBreakdown) {
-                if (donutEl) donutEl.innerHTML = donutSVG(dist);
+                if (donutEl) donutEl.innerHTML = donutSVG(dist, manualBreakdown);
                 if (legendEl) legendEl.innerHTML = legendHTML(dist, manualBreakdown);
             }
 
@@ -222,9 +423,10 @@
                         <p class="text-center text-4xl font-black uppercase tracking-[0.2em] text-slate-300 sm:text-5xl">No Active Activity</p>
                     </div>`;
                 } else {
-                    board.innerHTML = `<div class="grid content-start gap-3 grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    board.innerHTML = `<div id="monitor-treemap" class="relative flex h-full w-full flex-wrap content-start gap-2">
                         ${active.map(cardHTML).join('')}
                     </div>`;
+                    layoutTiles();
                 }
 
                 const notStarted = Array.isArray(data.notStarted) ? data.notStarted : [];
@@ -257,7 +459,7 @@
             async function poll () {
                 if (document.hidden) return;
                 try {
-                    const res = await fetch(DATA_URL, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                    const res = await fetch(dataUrl(), { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
                     if (res.ok) render(await res.json());
                 } catch (e) { /* keep the last good board on a transient failure */ }
             }
@@ -268,6 +470,20 @@
             document.addEventListener('visibilitychange', function () {
                 if (!document.hidden && readState()) poll();
             });
+
+            // Changing the filter re-fetches immediately (no page reload);
+            // the interval above keeps using whatever is selected.
+            if (areaFilterEl) {
+                areaFilterEl.addEventListener('change', function () {
+                    const a = currentArea();
+                    try {
+                        const url = new URL(window.location.href);
+                        if (a === 'ALL') url.searchParams.delete('area'); else url.searchParams.set('area', a);
+                        window.history.replaceState(null, '', url);
+                    } catch (e) { /* URL API unavailable — filter still works without syncing the address bar */ }
+                    poll();
+                });
+            }
 
             @if ($isAdmin)
                 const toggle = document.getElementById('auto-refresh-toggle');
@@ -298,6 +514,9 @@
                     JSON.parse(legendEl?.dataset.manual || '[]')
                 );
             } catch (e) { renderStatus({}, []); }
+
+            // Position the server-rendered tiles as a treemap right away.
+            layoutTiles();
 
             if (readState()) { start(); }
         })();

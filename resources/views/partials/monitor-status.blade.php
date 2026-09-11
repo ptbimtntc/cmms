@@ -26,8 +26,14 @@
     ];
     $srcHex = [
         'PM' => '#2563eb', 'GREASING' => '#f59e0b', 'OIL_AUDIT' => '#10b981',
-        'OIL_AUDIT_ACTION' => '#0891b2', 'MANUAL' => '#8b5cf6',
+        'OIL_AUDIT_ACTION' => '#0891b2',
     ];
+    // Manual activities don't share one "Manual" color — each DISTINCT
+    // activity NAME gets its own deterministic color (same name always maps
+    // to the same hue; different names always differ). Mirrored in JS
+    // (manualColor() in today-activity-monitor.blade.php), which repaints
+    // this on load anyway — this is only the pre-JS SSR fallback.
+    $manualColor = fn (string $name): string => sprintf('hsl(%d, 65%%, 45%%)', crc32($name) % 360);
 @endphp
 
 <div class="flex h-full flex-col gap-3 p-3">
@@ -57,18 +63,19 @@
             <div id="monitor-donut" data-dist='@json($distribution)' class="shrink-0"></div>
             <div id="monitor-legend" data-manual='@json($manualBreakdown)' class="min-w-0 flex-1 space-y-1">
                 @foreach ($fixedOrder as $k)
+                    @continue(($distribution[$k] ?? 0) === 0)
                     <div class="flex items-center justify-between gap-2 text-xs">
                         <span class="flex min-w-0 items-center gap-2">
                             <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background: {{ $srcHex[$k] }}"></span>
                             <span class="truncate uppercase tracking-wider text-slate-600">{{ $srcLabels[$k] }}</span>
                         </span>
-                        <span class="shrink-0 tabular-nums font-bold text-slate-900">{{ $distribution[$k] ?? 0 }}</span>
+                        <span class="shrink-0 tabular-nums font-bold text-slate-900">{{ $distribution[$k] }}</span>
                     </div>
                 @endforeach
                 @foreach ($manualBreakdown as $m)
                     <div class="flex items-center justify-between gap-2 text-xs">
                         <span class="flex min-w-0 items-center gap-2">
-                            <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background: {{ $srcHex['MANUAL'] }}"></span>
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background: {{ $manualColor($m['name']) }}"></span>
                             <span class="truncate uppercase tracking-wider text-slate-600">{{ $m['name'] }}</span>
                         </span>
                         <span class="shrink-0 tabular-nums font-bold text-slate-900">{{ $m['count'] }}</span>
