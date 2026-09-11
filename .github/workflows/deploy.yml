@@ -35,11 +35,15 @@ jobs:
         npm run build
 
     - name: Sync Build Folder to Hostinger via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      uses: Wandalen/wretry.action@v3
       with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        port: ${{ secrets.FTP_PORT }}
-        local-dir: ./public/build/
-        server-dir: public_html/public/build/
+        action: SamKirkland/FTP-Deploy-Action@v4.3.5
+        attempt_limit: 3
+        attempt_delay: 15000
+        with: |
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT }}
+          local-dir: ./public/build/
+          server-dir: public_html/public/build/
