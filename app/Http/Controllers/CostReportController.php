@@ -18,14 +18,21 @@ class CostReportController extends Controller
         $user = $request->user();
 
         $year = (int) $request->input('year', now()->year);
-        $month = $request->filled('month') ? (int) $request->input('month') : null;
+        // Month is multi-select (checkbox-dropdown): arrives as an array,
+        // but a plain single value (old bookmarked link) still works via
+        // the (array) cast.
+        $months = collect((array) $request->input('month', []))
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
+            ->values()
+            ->all();
         $area = $user->isAdmin() && in_array($request->input('area'), self::AREAS, true)
             ? $request->input('area')
             : null;
         $machine = $request->input('machine') ?: null;
         $machineType = $request->input('machine_type') ?: null;
 
-        $query = $this->filteredQuery($user, $area, $year, $month, $machine, $machineType);
+        $query = $this->filteredQuery($user, $area, $year, $months, $machine, $machineType);
 
         // --- Summary — same filtered scope (year/month/area/machine/type)
         // as the table below it. ---
@@ -67,7 +74,7 @@ class CostReportController extends Controller
         // --- Monthly Cost Trend (Jan-Dec of the selected year) — 12 small
         // SQL aggregate queries (SUM only), never a bulk fetch-then-sum-in-
         // PHP over every transaction, regardless of how many rows exist. ---
-        $chartScope = $this->filteredQuery($user, $area, $year, null, $machine, $machineType);
+        $chartScope = $this->filteredQuery($user, $area, $year, [], $machine, $machineType);
         $monthlyTrend = collect(range(1, 12))->map(function (int $m) use ($chartScope) {
             $cost = (float) ((clone $chartScope)
                 ->whereMonth('pm_schedules.actual_date', $m)
@@ -113,7 +120,7 @@ class CostReportController extends Controller
         // --- Machine/Machine Type filter dropdown options — scoped by
         // role/area visibility and the active year/month, but never by the
         // other cross-filters. ---
-        $optionsScope = $this->filteredQuery($user, $area, $year, $month, null, null);
+        $optionsScope = $this->filteredQuery($user, $area, $year, $months, null, null);
         $machines = (clone $optionsScope)->select('pm_schedules.machine_number')->distinct()->orderBy('pm_schedules.machine_number')->pluck('machine_number');
         $machineTypes = (clone $optionsScope)->select('pm_schedules.machine_type')->distinct()->orderBy('pm_schedules.machine_type')->pluck('machine_type');
 
@@ -128,7 +135,7 @@ class CostReportController extends Controller
             'areas' => self::AREAS,
             'isAdmin' => $user->isAdmin(),
             'selectedYear' => $year,
-            'selectedMonth' => $month,
+            'selectedMonths' => $months,
             'selectedArea' => $area,
             'selectedMachine' => $machine,
             'selectedMachineType' => $machineType,
@@ -151,14 +158,18 @@ class CostReportController extends Controller
         return $this->applyScopeTo($query, $user, $area);
     }
 
-    private function applyFilters(Builder $query, ?int $year, ?int $month, ?string $machine, ?string $machineType): Builder
+    private function applyFilters(Builder $query, ?int $year, array $months, ?string $machine, ?string $machineType): Builder
     {
         if ($year) {
             $query->whereYear('pm_schedules.actual_date', $year);
         }
 
-        if ($month) {
-            $query->whereMonth('pm_schedules.actual_date', $month);
+        if (! empty($months)) {
+            $query->where(function (Builder $q) use ($months) {
+                foreach ($months as $m) {
+                    $q->orWhereMonth('pm_schedules.actual_date', $m);
+                }
+            });
         }
 
         if ($machine) {
@@ -176,11 +187,11 @@ class CostReportController extends Controller
         User $user,
         ?string $area,
         ?int $year,
-        ?int $month,
+        array $months,
         ?string $machine,
         ?string $machineType
     ): Builder {
-        return $this->applyFilters($this->baseQuery($user, $area), $year, $month, $machine, $machineType);
+        return $this->applyFilters($this->baseQuery($user, $area), $year, $months, $machine, $machineType);
     }
 
     /**

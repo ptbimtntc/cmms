@@ -66,7 +66,7 @@
     @endif
 
     <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search cycle or pic..."
+        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search cycle, pic, or order number..."
             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-64">
 
         <select name="group_id" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
@@ -76,12 +76,16 @@
             @endforeach
         </select>
 
-        <select name="status" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Status</option>
-            <option value="OPEN" {{ request('status') == 'OPEN' ? 'selected' : '' }}>OPEN</option>
-            <option value="FINISH" {{ request('status') == 'FINISH' ? 'selected' : '' }}>FINISH</option>
-            <option value="FINISH ON TIME" {{ request('status') == 'FINISH ON TIME' ? 'selected' : '' }}>FINISH ON TIME</option>
-        </select>
+        <x-checkbox-dropdown
+            name="status"
+            label="Status"
+            :options="[
+                'OPEN' => 'OPEN',
+                'FINISH' => 'FINISH',
+                'FINISH ON TIME' => 'FINISH ON TIME',
+            ]"
+            :selected="(array) request('status', [])"
+        />
 
         <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
             Filter

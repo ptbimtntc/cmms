@@ -63,14 +63,19 @@ class OilAuditReportController extends Controller
     {
         $area = in_array($request->input('area'), ['WWD', 'BUL'], true) ? $request->input('area') : null;
         $machineType = $request->input('machine_type') ?: null;
-        $condition = array_key_exists($request->input('condition'), OilAudit::CONDITION_LABELS)
-            ? $request->input('condition')
-            : null;
+        // Condition and Month are multi-select (checkbox-dropdown): arrive
+        // as arrays, but a plain single value (old bookmarked link) still
+        // works via the (array) cast.
+        $conditions = array_values(array_intersect((array) $request->input('condition', []), array_keys(OilAudit::CONDITION_LABELS)));
         $year = $request->filled('year') ? (int) $request->input('year') : null;
-        $month = $request->filled('month') ? (int) $request->input('month') : null;
+        $months = collect((array) $request->input('month', []))
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
+            ->values()
+            ->all();
         $search = trim((string) $request->input('search', ''));
 
-        $query = $this->filteredQuery($area, $machineType, $condition, $year, $month, $search);
+        $query = $this->filteredQuery($area, $machineType, $conditions, $year, $months, $search);
 
         // --- Summary — machine-centric, same filtered scope as the table.
         // Never counts audits as if they were machines. ---
@@ -118,7 +123,7 @@ class OilAuditReportController extends Controller
         // parent audit). `search` and `condition` intentionally do NOT
         // touch the analysis — it stays a stable view of the whole
         // filtered period, not the current text query.
-        $analysisFilters = [$area, $machineType, $year, $month];
+        $analysisFilters = [$area, $machineType, $year, $months];
 
         return view('reports.oil-audit.index', [
             'summary' => $summary,
@@ -128,9 +133,9 @@ class OilAuditReportController extends Controller
             'years' => $years,
             'selectedArea' => $area,
             'selectedMachineType' => $machineType,
-            'selectedCondition' => $condition,
+            'selectedConditions' => $conditions,
             'selectedYear' => $year,
-            'selectedMonth' => $month,
+            'selectedMonths' => $months,
             'search' => $search,
             'repeatFindingMin' => self::REPEAT_FINDING_MIN,
             'repeatFindingThreshold' => self::REPEAT_FINDING_THRESHOLD,
@@ -160,9 +165,9 @@ class OilAuditReportController extends Controller
         Builder $query,
         ?string $area,
         ?string $machineType,
-        ?string $condition,
+        array $conditions,
         ?int $year,
-        ?int $month,
+        array $months,
         string $search
     ): Builder {
         if ($area) {
@@ -173,16 +178,20 @@ class OilAuditReportController extends Controller
             $query->where('machine_type', $machineType);
         }
 
-        if ($condition || $year || $month) {
-            $query->whereHas('latestOilAudit', function (Builder $q) use ($condition, $year, $month) {
-                if ($condition) {
-                    $q->where('condition', $condition);
+        if (! empty($conditions) || $year || ! empty($months)) {
+            $query->whereHas('latestOilAudit', function (Builder $q) use ($conditions, $year, $months) {
+                if (! empty($conditions)) {
+                    $q->whereIn('condition', $conditions);
                 }
                 if ($year) {
                     $q->whereYear('audited_at', $year);
                 }
-                if ($month) {
-                    $q->whereMonth('audited_at', $month);
+                if (! empty($months)) {
+                    $q->where(function (Builder $mq) use ($months) {
+                        foreach ($months as $m) {
+                            $mq->orWhereMonth('audited_at', $m);
+                        }
+                    });
                 }
             });
         }
@@ -201,12 +210,12 @@ class OilAuditReportController extends Controller
     private function filteredQuery(
         ?string $area,
         ?string $machineType,
-        ?string $condition,
+        array $conditions,
         ?int $year,
-        ?int $month,
+        array $months,
         string $search
     ): Builder {
-        return $this->applyFilters($this->baseScope(), $area, $machineType, $condition, $year, $month, $search);
+        return $this->applyFilters($this->baseScope(), $area, $machineType, $conditions, $year, $months, $search);
     }
 
     /**
@@ -216,7 +225,7 @@ class OilAuditReportController extends Controller
      * the WWD + NDE/NDB scope, then narrowed by the shared report filters
      * (Area / Machine Type / Year / Month on the parent audit).
      */
-    private function analysisBase(?string $area, ?string $machineType, ?int $year, ?int $month): Builder
+    private function analysisBase(?string $area, ?string $machineType, ?int $year, array $months): Builder
     {
         return OilAuditFollowUpProblem::query()
             ->join('oil_audit_follow_ups', 'oil_audit_follow_ups.id', '=', 'oil_audit_follow_up_problems.oil_audit_follow_up_id')
@@ -232,7 +241,11 @@ class OilAuditReportController extends Controller
             ->when($area, fn (Builder $q) => $q->where('oil_audits.area', $area))
             ->when($machineType, fn (Builder $q) => $q->where('oil_audits.machine_type', $machineType))
             ->when($year, fn (Builder $q) => $q->whereYear('oil_audits.audited_at', $year))
-            ->when($month, fn (Builder $q) => $q->whereMonth('oil_audits.audited_at', $month));
+            ->when(! empty($months), fn (Builder $q) => $q->where(function (Builder $mq) use ($months) {
+                foreach ($months as $m) {
+                    $mq->orWhereMonth('oil_audits.audited_at', $m);
+                }
+            }));
     }
 
     /**
@@ -254,9 +267,9 @@ class OilAuditReportController extends Controller
      *
      * @return Collection<int, object{problem: string, finding: string, total: int}>
      */
-    private function problemFrequency(?string $area, ?string $machineType, ?int $year, ?int $month): Collection
+    private function problemFrequency(?string $area, ?string $machineType, ?int $year, array $months): Collection
     {
-        return $this->analysisBase($area, $machineType, $year, $month)
+        return $this->analysisBase($area, $machineType, $year, $months)
             ->groupBy('oil_audit_follow_up_problems.problem', DB::raw($this->findingSql()))
             ->select(
                 'oil_audit_follow_up_problems.problem',
@@ -281,7 +294,7 @@ class OilAuditReportController extends Controller
      *
      * @return Collection<int, object{machine_number: string, events: int}>
      */
-    private function repeatFindingMachines(?string $area, ?string $machineType, ?int $year, ?int $month): Collection
+    private function repeatFindingMachines(?string $area, ?string $machineType, ?int $year, array $months): Collection
     {
         return OilAuditFollowUp::query()
             ->join('oil_audits', 'oil_audits.id', '=', 'oil_audit_follow_ups.oil_audit_id')
@@ -290,7 +303,11 @@ class OilAuditReportController extends Controller
             ->when($area, fn (Builder $q) => $q->where('oil_audits.area', $area))
             ->when($machineType, fn (Builder $q) => $q->where('oil_audits.machine_type', $machineType))
             ->when($year, fn (Builder $q) => $q->whereYear('oil_audits.audited_at', $year))
-            ->when($month, fn (Builder $q) => $q->whereMonth('oil_audits.audited_at', $month))
+            ->when(! empty($months), fn (Builder $q) => $q->where(function (Builder $mq) use ($months) {
+                foreach ($months as $m) {
+                    $mq->orWhereMonth('oil_audits.audited_at', $m);
+                }
+            }))
             ->groupBy('oil_audits.machine_number')
             ->havingRaw('COUNT(*) >= ?', [self::REPEAT_FINDING_MIN])
             ->select('oil_audits.machine_number', DB::raw('COUNT(*) as events'))

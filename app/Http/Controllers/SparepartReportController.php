@@ -20,17 +20,24 @@ class SparepartReportController extends Controller
         $user = $request->user();
 
         $year = $request->filled('year') ? (int) $request->input('year') : null;
-        $month = $request->filled('month') ? (int) $request->input('month') : null;
+        // Month and Status are multi-select (checkbox-dropdown): both
+        // arrive as arrays, but a plain single value (old bookmarked link)
+        // still works via the (array) cast.
+        $months = collect((array) $request->input('month', []))
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
+            ->values()
+            ->all();
         $area = $user->isAdmin() && in_array($request->input('area'), self::AREAS, true)
             ? $request->input('area')
             : null;
         $machine = $request->input('machine') ?: null;
         $machineType = $request->input('machine_type') ?: null;
         $segment = $request->input('segment') ?: null;
-        $status = in_array($request->input('status'), self::STATUSES, true) ? $request->input('status') : null;
+        $statuses = array_values(array_intersect((array) $request->input('status', []), self::STATUSES));
         $search = trim((string) $request->input('search', ''));
 
-        $query = $this->filteredQuery($user, $area, $year, $month, $machine, $machineType, $segment, $status, $search);
+        $query = $this->filteredQuery($user, $area, $year, $months, $machine, $machineType, $segment, $statuses, $search);
 
         // --- Summary — same filtered scope as the table/top-analysis below. ---
         $summaryRow = (clone $query)
@@ -99,7 +106,7 @@ class SparepartReportController extends Controller
         // scoped by role/area visibility and the active year/month, but
         // never by the other cross-filters, so narrowing one never hides
         // the choices available in another. ---
-        $optionsScope = $this->filteredQuery($user, $area, $year, $month, null, null, null, null, '');
+        $optionsScope = $this->filteredQuery($user, $area, $year, $months, null, null, null, [], '');
         $machines = (clone $optionsScope)->select('pm_schedules.machine_number')->distinct()->orderBy('pm_schedules.machine_number')->pluck('machine_number');
         $machineTypes = (clone $optionsScope)->select('pm_schedules.machine_type')->distinct()->orderBy('pm_schedules.machine_type')->pluck('machine_type');
         $segments = (clone $optionsScope)->select('spareparts.segment')->whereNotNull('spareparts.segment')->distinct()->orderBy('spareparts.segment')->pluck('segment');
@@ -117,12 +124,12 @@ class SparepartReportController extends Controller
             'areas' => self::AREAS,
             'isAdmin' => $user->isAdmin(),
             'selectedYear' => $year,
-            'selectedMonth' => $month,
+            'selectedMonths' => $months,
             'selectedArea' => $area,
             'selectedMachine' => $machine,
             'selectedMachineType' => $machineType,
             'selectedSegment' => $segment,
-            'selectedStatus' => $status,
+            'selectedStatuses' => $statuses,
             'search' => $search,
             // Forecasting/Predictive Maintenance is not implemented yet.
             // The underlying query already supports grouping usage by
@@ -152,19 +159,23 @@ class SparepartReportController extends Controller
     private function applyFilters(
         Builder $query,
         ?int $year,
-        ?int $month,
+        array $months,
         ?string $machine,
         ?string $machineType,
         ?string $segment,
-        ?string $status,
+        array $statuses,
         string $search
     ): Builder {
         if ($year) {
             $query->whereYear('pm_schedules.actual_date', $year);
         }
 
-        if ($month) {
-            $query->whereMonth('pm_schedules.actual_date', $month);
+        if (! empty($months)) {
+            $query->where(function (Builder $q) use ($months) {
+                foreach ($months as $m) {
+                    $q->orWhereMonth('pm_schedules.actual_date', $m);
+                }
+            });
         }
 
         if ($machine) {
@@ -179,8 +190,8 @@ class SparepartReportController extends Controller
             $query->where('spareparts.segment', $segment);
         }
 
-        if ($status) {
-            $query->where('spareparts.status', $status);
+        if (! empty($statuses)) {
+            $query->whereIn('spareparts.status', $statuses);
         }
 
         if ($search !== '') {
@@ -198,14 +209,14 @@ class SparepartReportController extends Controller
         User $user,
         ?string $area,
         ?int $year,
-        ?int $month,
+        array $months,
         ?string $machine,
         ?string $machineType,
         ?string $segment,
-        ?string $status,
+        array $statuses,
         string $search
     ): Builder {
-        return $this->applyFilters($this->baseQuery($user, $area), $year, $month, $machine, $machineType, $segment, $status, $search);
+        return $this->applyFilters($this->baseQuery($user, $area), $year, $months, $machine, $machineType, $segment, $statuses, $search);
     }
 
     /**

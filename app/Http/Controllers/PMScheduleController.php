@@ -70,7 +70,8 @@ class PMScheduleController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('machine_number', 'like', '%'.$request->search.'%')
-                    ->orWhere('machine_type', 'like', '%'.$request->search.'%');
+                    ->orWhere('machine_type', 'like', '%'.$request->search.'%')
+                    ->orWhere('order_number', 'like', '%'.$request->search.'%');
             });
         }
 
@@ -87,14 +88,16 @@ class PMScheduleController extends Controller
             $query->where('machine_type', $request->machine_type);
         }
 
-        // FILTER STATUS
+        // FILTER STATUS — status[] / plan_month[] arrive as arrays from the
+        // checkbox-dropdown filter (multi-select), but a plain single value
+        // (e.g. an old bookmarked link) still works via the (array) cast.
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->whereIn('status', (array) $request->status);
         }
 
         // FILTER MONTH
         if ($request->filled('plan_month')) {
-            $query->where('plan_month', $request->plan_month);
+            $query->whereIn('plan_month', (array) $request->plan_month);
         }
 
         // FILTER YEAR

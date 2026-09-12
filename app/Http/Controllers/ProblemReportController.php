@@ -18,7 +18,14 @@ class ProblemReportController extends Controller
         $user = $request->user();
 
         $year = $request->filled('year') ? (int) $request->input('year') : null;
-        $month = $request->filled('month') ? (int) $request->input('month') : null;
+        // Month is multi-select (checkbox-dropdown): arrives as an array,
+        // but a plain single value (old bookmarked link) still works via
+        // the (array) cast.
+        $months = collect((array) $request->input('month', []))
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
+            ->values()
+            ->all();
         $area = $user->isAdmin() && in_array($request->input('area'), self::AREAS, true)
             ? $request->input('area')
             : null;
@@ -27,7 +34,7 @@ class ProblemReportController extends Controller
         $category = $request->input('category') ?: null;
         $search = trim((string) $request->input('search', ''));
 
-        $query = $this->filteredQuery($user, $area, $year, $month, $machine, $machineType, $category, $search);
+        $query = $this->filteredQuery($user, $area, $year, $months, $machine, $machineType, $category, $search);
 
         // --- Summary — same filtered scope as the table/chart below it.
         // Deliberately no Open/Completed counts: PM Problems have no such
@@ -125,7 +132,7 @@ class ProblemReportController extends Controller
         // scoped by role/area visibility and the active year/month, but
         // never by the other cross-filters, so narrowing one never hides
         // the choices available in another. ---
-        $optionsScope = $this->filteredQuery($user, $area, $year, $month, null, null, null, '');
+        $optionsScope = $this->filteredQuery($user, $area, $year, $months, null, null, null, '');
         $machines = (clone $optionsScope)->select('pm_schedules.machine_number')->distinct()->orderBy('pm_schedules.machine_number')->pluck('machine_number');
         $machineTypes = (clone $optionsScope)->select('pm_schedules.machine_type')->distinct()->orderBy('pm_schedules.machine_type')->pluck('machine_type');
         $categories = (clone $optionsScope)->select('machine_problems.category')->whereNotNull('machine_problems.category')->distinct()->orderBy('machine_problems.category')->pluck('category');
@@ -142,7 +149,7 @@ class ProblemReportController extends Controller
             'areas' => self::AREAS,
             'isAdmin' => $user->isAdmin(),
             'selectedYear' => $year,
-            'selectedMonth' => $month,
+            'selectedMonths' => $months,
             'selectedArea' => $area,
             'selectedMachine' => $machine,
             'selectedMachineType' => $machineType,
@@ -161,7 +168,7 @@ class ProblemReportController extends Controller
     private function applyFilters(
         Builder $query,
         ?int $year,
-        ?int $month,
+        array $months,
         ?string $machine,
         ?string $machineType,
         ?string $category,
@@ -171,8 +178,12 @@ class ProblemReportController extends Controller
             $query->whereYear('pm_schedules.actual_date', $year);
         }
 
-        if ($month) {
-            $query->whereMonth('pm_schedules.actual_date', $month);
+        if (! empty($months)) {
+            $query->where(function (Builder $q) use ($months) {
+                foreach ($months as $m) {
+                    $q->orWhereMonth('pm_schedules.actual_date', $m);
+                }
+            });
         }
 
         if ($machine) {
@@ -202,7 +213,7 @@ class ProblemReportController extends Controller
         User $user,
         ?string $area,
         ?int $year,
-        ?int $month,
+        array $months,
         ?string $machine,
         ?string $machineType,
         ?string $category,
@@ -214,7 +225,7 @@ class ProblemReportController extends Controller
 
         $this->applyScopeTo($query, $user, $area);
 
-        return $this->applyFilters($query, $year, $month, $machine, $machineType, $category, $search);
+        return $this->applyFilters($query, $year, $months, $machine, $machineType, $category, $search);
     }
 
     /**

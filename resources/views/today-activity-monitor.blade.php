@@ -2,15 +2,16 @@
 
 @section('content')
     <style>
-        /* Adaptive typography for treemap tiles — sized from each tile's OWN
-           measured dimensions (CSS container queries), not one fixed font
-           size for every tile. A huge tile (1-2 activities) renders visibly
-           bigger text/photo; a small tile (10-15 activities) shrinks to fit
-           without overflowing. min(...cqw,...cqh) uses the tile's shorter
-           side so neither a very wide-short nor a narrow-tall tile overflows.
-           Shared by the SSR markup (partials/monitor-board.blade.php) and
-           the JS-rebuilt markup (cardHTML() below) — both use the same
-           `.tile-*` class names, so this is the single place sizing lives. */
+        /* Adaptive typography for the structured-grid tiles — sized from
+           each tile's OWN measured dimensions (CSS container queries), not
+           one fixed font size for every tile. A huge tile (1-2 activities)
+           renders visibly bigger text/photo; a small tile (13-16
+           activities) shrinks to fit without overflowing. min(...cqw,...cqh)
+           uses the tile's shorter side so neither a very wide-short nor a
+           narrow-tall tile overflows. Shared by the SSR markup
+           (partials/monitor-board.blade.php) and the JS-rebuilt markup
+           (cardHTML() below) — both use the same `.tile-*` class names, so
+           this is the single place sizing lives. */
         .monitor-tile { container-type: size; }
         .tile-inner {
             padding: clamp(8px, min(4cqw, 4cqh), 32px);
@@ -184,19 +185,22 @@
                 return d.innerHTML;
             }
 
-            // ---------- Left: active-activity TREEMAP ----------
-            // The tile grid is NOT a fixed N-column layout: layoutTiles()
-            // measures #monitor-treemap and squarifiedTreemap() computes
-            // exact, gap-free rectangles for however many activities there
-            // are (1 tile fills everything, 15 tiles still fill everything).
-            // Tile markup here must keep the same `.tile-*` class hooks as
+            // ---------- Left: active-activity structured grid ----------
+            // The board is grouped into rows via gridForCount()/rowSizesForCount()
+            // below (mirrored in PHP — see partials/monitor-board.blade.php)
+            // and laid out with plain CSS flexbox: an equal-height row per
+            // entry in the row-size list, each row's tiles sharing its width
+            // equally (a short last row is redistributed across the FULL
+            // width instead of leaving blank space). No JS geometry pass is
+            // needed — flexbox reflows on resize on its own. Tile markup
+            // here must keep the same `.tile-*` class hooks as
             // partials/monitor-board.blade.php.
             function cardHTML (item) {
                 const accent = SRC_ACCENT[item.source] || 'border-t-slate-300';
                 const label = SRC_TEXT[item.source] || 'text-blue-600';
                 // Sizing (photo/text) is NOT inline here — it comes entirely
                 // from the adaptive `.tile-*` CSS (container queries) above,
-                // driven by whatever width/height layoutTiles() sets below.
+                // driven by whatever box flexbox gives this tile.
                 const photo = item.photo
                     ? `<img src="${esc(item.photo)}" alt="${esc(item.name)}" class="tile-photo shrink-0 rounded-xl object-cover ring-2 ring-slate-200">`
                     : `<div class="tile-photo flex shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-500 ring-2 ring-slate-200">${esc(item.initials)}</div>`;
@@ -206,7 +210,7 @@
                         <div class="tile-location truncate font-mono font-semibold text-slate-600">${esc(item.location)}</div>
                     </div>`
                     : '';
-                return `<article class="monitor-tile overflow-hidden rounded-2xl border border-slate-200 border-t-4 ${accent} bg-white shadow-sm" style="width:220px;height:180px;opacity:0;">
+                return `<article class="monitor-tile flex-1 min-w-0 overflow-hidden rounded-2xl border border-slate-200 border-t-4 ${accent} bg-white shadow-sm">
                     <div class="tile-inner flex h-full w-full flex-col items-center justify-center overflow-hidden text-center leading-tight">
                         ${photo}
                         <div class="tile-name w-full truncate pt-1 font-bold uppercase tracking-wide text-slate-900">${esc(item.name)}</div>
@@ -223,118 +227,53 @@
                 </article>`;
             }
 
-            // Squarified treemap (Bruls/Huizing/van Wijk) for N EQUAL-weight
-            // activities: recursively slices the container into rows/columns
-            // whose areas sum EXACTLY to width*height, so there is never any
-            // leftover blank space no matter what N is (1, 2, 13, 15, ...).
-            // Aspect ratios are kept as square as practical by the "worst"
-            // heuristic; tile sizes differ, which is expected/desired.
-            function squarifiedTreemap (count, x, y, w, h) {
-                if (count <= 0 || w <= 0 || h <= 0) return [];
-                const unit = (w * h) / count;
-                const areas = new Array(count).fill(unit);
-                const rects = new Array(count);
-
-                function worst (idxRow, side) {
-                    let sum = 0, mx = -Infinity, mn = Infinity;
-                    idxRow.forEach(function (idx) {
-                        const a = areas[idx];
-                        sum += a;
-                        if (a > mx) mx = a;
-                        if (a < mn) mn = a;
-                    });
-                    const s2 = side * side;
-                    return Math.max((s2 * mx) / (sum * sum), (sum * sum) / (s2 * mn));
+            // Deterministic rows x cols for N equal-weight tiles, matching:
+            // 1->1x1, 2->2x1, 3-4->2x2, 5-6->3x2, 7-9->3x3, 10-12->4x3,
+            // 13-16->4x4, 17-20->5x4, ... (stepped capacity table — each
+            // step alternates "add a column" / "add a row"). Whatever N is,
+            // rows*cols is the smallest such capacity >= N, so the grid is
+            // never over- or under-sized for the count.
+            function gridForCount (n) {
+                if (n <= 0) return { rows: 0, cols: 0 };
+                let k = 1;
+                while (true) {
+                    const half = Math.floor(k / 2);
+                    const rows = (k % 2 === 1) ? half + 1 : half;
+                    const cols = half + 1;
+                    if (rows * cols >= n) return { rows: rows, cols: cols };
+                    k++;
                 }
-
-                function place (idxRow, rect, mode) {
-                    const rowTotal = idxRow.reduce(function (s, idx) { return s + areas[idx]; }, 0);
-                    if (mode === 'col') {
-                        const thickness = rect.h > 0 ? rowTotal / rect.h : 0;
-                        let cy = rect.y;
-                        idxRow.forEach(function (idx) {
-                            const ih = thickness > 0 ? areas[idx] / thickness : 0;
-                            rects[idx] = { x: rect.x, y: cy, w: thickness, h: ih };
-                            cy += ih;
-                        });
-                        return { x: rect.x + thickness, y: rect.y, w: Math.max(0, rect.w - thickness), h: rect.h };
-                    }
-                    const thickness = rect.w > 0 ? rowTotal / rect.w : 0;
-                    let cx = rect.x;
-                    idxRow.forEach(function (idx) {
-                        const iw = thickness > 0 ? areas[idx] / thickness : 0;
-                        rects[idx] = { x: cx, y: rect.y, w: iw, h: thickness };
-                        cx += iw;
-                    });
-                    return { x: rect.x, y: rect.y + thickness, w: rect.w, h: Math.max(0, rect.h - thickness) };
-                }
-
-                function recurse (remaining, rect) {
-                    if (remaining.length === 0 || rect.w <= 0 || rect.h <= 0) return;
-                    if (remaining.length === 1) {
-                        rects[remaining[0]] = { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
-                        return;
-                    }
-                    const mode = rect.w >= rect.h ? 'col' : 'row';
-                    const side = mode === 'col' ? rect.h : rect.w;
-
-                    let row = [remaining[0]];
-                    let i = 1;
-                    while (i < remaining.length) {
-                        const candidate = row.concat([remaining[i]]);
-                        if (worst(candidate, side) <= worst(row, side)) {
-                            row = candidate;
-                            i++;
-                        } else {
-                            break;
-                        }
-                    }
-                    recurse(remaining.slice(i), place(row, rect, mode));
-                }
-
-                recurse(areas.map(function (_, i) { return i; }), { x: x, y: y, w: w, h: h });
-                return rects;
             }
 
-            // Measures #monitor-treemap and positions every .monitor-tile as
-            // an exact, gap-free squarified-treemap rectangle. Runs on load,
-            // after every poll render, and on resize. Typography/photo size
-            // is NOT computed here — giving each tile an explicit width/
-            // height (below) is exactly what the `.tile-*` CSS container
-            // queries above need to size their own content responsively.
-            function layoutTiles () {
-                const container = document.getElementById('monitor-treemap');
-                if (!container) return;
-                const tiles = Array.prototype.slice.call(container.querySelectorAll(':scope > .monitor-tile'));
-                if (tiles.length === 0) return;
-
-                const W = container.clientWidth;
-                const H = container.clientHeight;
-                if (W <= 0 || H <= 0) return;
-
-                const rects = squarifiedTreemap(tiles.length, 0, 0, W, H);
-                const GUTTER = 4;
-
-                container.style.position = 'relative';
-                tiles.forEach(function (tile, i) {
-                    const r = rects[i];
-                    if (!r) return;
-                    const w = Math.max(0, r.w - GUTTER * 2);
-                    const h = Math.max(0, r.h - GUTTER * 2);
-                    tile.style.position = 'absolute';
-                    tile.style.left = (r.x + GUTTER) + 'px';
-                    tile.style.top = (r.y + GUTTER) + 'px';
-                    tile.style.width = w + 'px';
-                    tile.style.height = h + 'px';
-                    tile.style.opacity = '1';
-                });
+            // Splits N into per-row tile counts for that grid. Every row but
+            // the last has exactly `cols` tiles; the last row takes whatever
+            // remains (which may be less than `cols`) — that row's tiles
+            // then flex to share its FULL width, so an incomplete last row
+            // still fills the board edge-to-edge instead of leaving blank
+            // space (e.g. 11 -> [4, 4, 3]).
+            function rowSizesForCount (n) {
+                if (n <= 0) return [];
+                const g = gridForCount(n);
+                const sizes = [];
+                let remaining = n;
+                for (let r = 0; r < g.rows; r++) {
+                    const take = (r === g.rows - 1) ? remaining : g.cols;
+                    sizes.push(take);
+                    remaining -= take;
+                }
+                return sizes;
             }
 
-            let resizeTimer = null;
-            window.addEventListener('resize', function () {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(layoutTiles, 150);
-            });
+            function boardHTML (active) {
+                const sizes = rowSizesForCount(active.length);
+                let idx = 0;
+                const rows = sizes.map(function (count) {
+                    const tiles = active.slice(idx, idx + count).map(cardHTML).join('');
+                    idx += count;
+                    return `<div class="tile-row flex min-h-0 flex-1 gap-2">${tiles}</div>`;
+                }).join('');
+                return `<div id="monitor-treemap" class="flex h-full w-full flex-col gap-2">${rows}</div>`;
+            }
 
             // ---------- Right: donut + legend ----------
             // Slices = the 4 fixed sources PLUS one slice per DISTINCT manual
@@ -423,10 +362,7 @@
                         <p class="text-center text-4xl font-black uppercase tracking-[0.2em] text-slate-300 sm:text-5xl">No Active Activity</p>
                     </div>`;
                 } else {
-                    board.innerHTML = `<div id="monitor-treemap" class="relative flex h-full w-full flex-wrap content-start gap-2">
-                        ${active.map(cardHTML).join('')}
-                    </div>`;
-                    layoutTiles();
+                    board.innerHTML = boardHTML(active);
                 }
 
                 const notStarted = Array.isArray(data.notStarted) ? data.notStarted : [];
@@ -514,9 +450,6 @@
                     JSON.parse(legendEl?.dataset.manual || '[]')
                 );
             } catch (e) { renderStatus({}, []); }
-
-            // Position the server-rendered tiles as a treemap right away.
-            layoutTiles();
 
             if (readState()) { start(); }
         })();

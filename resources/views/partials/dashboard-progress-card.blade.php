@@ -1,7 +1,7 @@
 <div class="bg-surface border border-border rounded-xl shadow-sm p-6">
     <div class="flex items-center justify-between">
         <div>
-            <div class="text-sm text-text-muted">PM Completion</div>
+            <div class="text-sm text-text-muted">PM Closing</div>
             <div class="mt-1 text-3xl font-bold text-text">{{ $percentage ?? '72%' }}</div>
         </div>
         <div class="text-right text-sm text-text-muted">

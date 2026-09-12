@@ -31,13 +31,12 @@
             @endforeach
         </select>
 
-        <select name="month" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Months</option>
-            @foreach (range(1, 12) as $m)
-                <option value="{{ $m }}" {{ $selectedMonth == $m ? 'selected' : '' }}>
-                    {{ \Carbon\Carbon::create(null, $m, 1)->format('F') }}</option>
-            @endforeach
-        </select>
+        <x-checkbox-dropdown
+            name="month"
+            label="Month"
+            :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
+            :selected="$selectedMonths"
+        />
 
         <select name="machine" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
             <option value="">All Machines</option>

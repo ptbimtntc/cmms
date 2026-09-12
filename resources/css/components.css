@@ -8,6 +8,47 @@
    wins (e.g. `class="btn btn-primary w-full"`).
    ========================================================================== */
 
+/* ----------------------------------------------------------------------
+   EDITABLE vs DISABLED/READ-ONLY FIELD BACKGROUND — enforced globally
+   ------------------------------------------------------------------------
+   Most views in this app style form fields with raw hardcoded Tailwind
+   utilities (bg-white, bg-slate-50, bg-slate-100, bg-gray-100, ...)
+   straight in Blade instead of the .input/.select/.textarea classes
+   below, and the editable/disabled distinction is applied by hand per
+   field. This rule makes the distinction automatic and consistent
+   everywhere instead: every native <input>/<select>/<textarea> — Flux UI
+   fields included, since Flux renders real <input>/<select>/<textarea>
+   tags with a data-flux-control attribute — gets the light --color-surface
+   background when editable and the muted --color-surface-muted background
+   when :disabled/[readonly], no matter what bg-* utility a page hardcodes.
+
+   !important is deliberate: a hardcoded page-level background is exactly
+   what must lose here so this stays true app-wide without hunting down
+   every view. Only background-color is touched — border, radius, focus
+   ring, and validation/error styling are untouched.
+
+   Excluded: control types with no "field background" concept
+   (checkbox/radio/range/color/file) or that render as buttons
+   (submit/button/reset/image), plus hidden inputs.
+   ------------------------------------------------------------------- */
+@layer base {
+    :is(
+        input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="submit"], [type="button"], [type="reset"], [type="image"], [type="hidden"]),
+        select,
+        textarea
+    ) {
+        background-color: var(--color-surface) !important;
+    }
+
+    :is(
+        input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="submit"], [type="button"], [type="reset"], [type="image"], [type="hidden"]),
+        select,
+        textarea
+    ):is(:disabled, [readonly], [aria-disabled="true"]) {
+        background-color: var(--color-surface-muted) !important;
+    }
+}
+
 @layer components {
 
     /* --------------------------------------------------------------------

@@ -15,7 +15,7 @@
         </div>
     </div>
     <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input title="Search machine / type..." type="text" name="search" value="{{ request('search') }}"
+        <input title="Search machine / type / order number..." type="text" name="search" value="{{ request('search') }}"
             placeholder="Search..."
             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-40">
 

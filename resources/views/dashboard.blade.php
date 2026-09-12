@@ -16,7 +16,7 @@
         {{-- KPI Summary --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             @include('partials.dashboard-kpi-card', [
-                'title' => 'PM Completion (%)  (Current Month)',
+                'title' => 'PM Closing (%)  (Current Month)',
                 'value' => $monthKpi['completion_percent'] . '%',
                 'icon' =>
                     '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/></svg>',
@@ -112,22 +112,6 @@
                         </div>
                     </a>
 
-                    
-
-                    <a href="#" class="bg-white rounded-xl shadow-sm p-4 flex items-center space-x-3">
-                        <div class="p-2 bg-pink-50 text-pink-600 rounded-lg">
-                            <!-- Machine Master Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8c-1.657 0-3 .895-3 2v4h6v-4c0-1.105-1.343-2-3-2zM6 20h12" />
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xs text-gray-500">Machine Master</div>
-                            <div class="text-sm font-medium text-gray-800">Manage</div>
-                        </div>
-                    </a>
                 </div>
 
             </div>
@@ -136,7 +120,7 @@
         {{-- ROW 1: PM Completion Trend + PM Status Breakdown — 50/50, PM stays the most prominent row --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @include('partials.dashboard-chart-card', [
-                'title' => 'PM Completion Trend',
+                'title' => 'PM Closing Trend',
                 'subtitle' => 'Actual vs ' . $pmTargetPercent . '% target · gray bars = no PM planned that month',
                 'id' => 'pmTrendChart',
                 'height' => 'h-72 md:h-[380px]',

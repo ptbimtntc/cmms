@@ -25,7 +25,16 @@ class PMReportController extends Controller
         $user = $request->user();
 
         $year = $request->filled('year') ? (int) $request->input('year') : null;
-        $month = $request->filled('month') ? (int) $request->input('month') : null;
+
+        // Month and Status are multi-select (checkbox-dropdown): both arrive
+        // as arrays, but a plain single value (old bookmarked link) still
+        // works via the (array) cast.
+        $months = collect((array) $request->input('month', []))
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
+            ->values()
+            ->all();
+
         // Area filter is ADMIN-only — every other role is already fixed to
         // one area/pic by applyScopeTo() (same convention as the dashboard
         // and Greasing Report).
@@ -35,12 +44,10 @@ class PMReportController extends Controller
         $machineType = $request->input('machine_type') ?: null;
         $machine = $request->input('machine') ?: null;
         $pic = $request->input('pic') ?: null;
-        $status = in_array($request->input('status'), self::STATUSES, true)
-            ? $request->input('status')
-            : null;
+        $statuses = array_values(array_intersect((array) $request->input('status', []), self::STATUSES));
         $search = trim((string) $request->input('search', ''));
 
-        $query = $this->filteredQuery($user, $area, $year, $month, $machineType, $machine, $pic, $status, $search);
+        $query = $this->filteredQuery($user, $area, $year, $months, $machineType, $machine, $pic, $statuses, $search);
 
         // Summary must always reflect the exact same filtered/scoped query
         // as the table below it, so the two can never disagree.
@@ -75,12 +82,12 @@ class PMReportController extends Controller
             'areas' => $this->visibleAreas($user, $area),
             'isAdmin' => $user->isAdmin(),
             'selectedYear' => $year,
-            'selectedMonth' => $month,
+            'selectedMonths' => $months,
             'selectedArea' => $area,
             'selectedMachineType' => $machineType,
             'selectedMachine' => $machine,
             'selectedPic' => $pic,
-            'selectedStatus' => $status,
+            'selectedStatuses' => $statuses,
             'search' => $search,
             // Forecasting/Predictive Maintenance is not implemented yet —
             // deliberately no key is passed here. When it is built, add a
@@ -101,11 +108,11 @@ class PMReportController extends Controller
         User $user,
         ?string $area,
         ?int $year,
-        ?int $month,
+        array $months,
         ?string $machineType,
         ?string $machine,
         ?string $pic,
-        ?string $status,
+        array $statuses,
         string $search
     ): Builder {
         $query = $this->scoped($user, $area);
@@ -114,8 +121,12 @@ class PMReportController extends Controller
             $query->whereYear('plan_date', $year);
         }
 
-        if ($month) {
-            $query->whereMonth('plan_date', $month);
+        if (! empty($months)) {
+            $query->where(function (Builder $q) use ($months) {
+                foreach ($months as $m) {
+                    $q->orWhereMonth('plan_date', $m);
+                }
+            });
         }
 
         if ($machineType) {
@@ -130,8 +141,8 @@ class PMReportController extends Controller
             $query->where('pic', $pic);
         }
 
-        if ($status) {
-            $query->where('status', $status);
+        if (! empty($statuses)) {
+            $query->whereIn('status', $statuses);
         }
 
         if ($search !== '') {

@@ -1,5 +1,5 @@
 <div class="bg-surface border border-border rounded-xl shadow-sm p-4">
-    <div class="text-sm font-medium text-text mb-4">Completion by Area</div>
+    <div class="text-sm font-medium text-text mb-4">Closing by Area</div>
     <div class="space-y-3">
         @forelse($areas as $area)
             <div>

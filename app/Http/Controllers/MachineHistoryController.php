@@ -27,11 +27,16 @@ class MachineHistoryController extends Controller
     {
         $query = Machine::query();
 
-        // SEARCH
+        // SEARCH — order_number lives on the related pm_schedules rows, not
+        // on the machine itself, so it's matched via whereHas: typing a PM
+        // order number finds the machine that PM was performed on.
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('machine_number', 'like', '%'.$request->search.'%')
-                    ->orWhere('machine_type', 'like', '%'.$request->search.'%');
+                    ->orWhere('machine_type', 'like', '%'.$request->search.'%')
+                    ->orWhereHas('pmSchedules', function ($pm) use ($request) {
+                        $pm->where('order_number', 'like', '%'.$request->search.'%');
+                    });
             });
         }
 

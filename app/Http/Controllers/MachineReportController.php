@@ -38,11 +38,14 @@ class MachineReportController extends Controller
             ? $request->input('area')
             : null;
         $machineType = $request->input('machine_type') ?: null;
-        $status = $request->input('status') ?: null;
+        // Status is multi-select (checkbox-dropdown): arrives as an array,
+        // but a plain single value (old bookmarked link) still works via
+        // the (array) cast.
+        $selectedStatuses = array_values(array_filter((array) $request->input('status', [])));
         $groupId = $request->filled('group_id') ? (int) $request->input('group_id') : null;
         $search = trim((string) $request->input('search', ''));
 
-        $query = $this->filteredQuery($user, $area, $machineType, $status, $groupId, $search);
+        $query = $this->filteredQuery($user, $area, $machineType, $selectedStatuses, $groupId, $search);
 
         // --- Summary — same filtered scope as the table below it. ---
         $totalMachine = (clone $query)->count();
@@ -113,7 +116,7 @@ class MachineReportController extends Controller
             'isAdmin' => $user->isAdmin(),
             'selectedArea' => $area,
             'selectedMachineType' => $machineType,
-            'selectedStatus' => $status,
+            'selectedStatuses' => $selectedStatuses,
             'selectedGroupId' => $groupId,
             'search' => $search,
         ]);
@@ -140,7 +143,7 @@ class MachineReportController extends Controller
     private function applyFilters(
         Builder $query,
         ?string $machineType,
-        ?string $status,
+        array $statuses,
         ?int $groupId,
         string $search
     ): Builder {
@@ -148,8 +151,8 @@ class MachineReportController extends Controller
             $query->where('machines.machine_type', $machineType);
         }
 
-        if ($status) {
-            $query->where('machines.status', $status);
+        if (! empty($statuses)) {
+            $query->whereIn('machines.status', $statuses);
         }
 
         if ($groupId) {
@@ -170,7 +173,7 @@ class MachineReportController extends Controller
         User $user,
         ?string $area,
         ?string $machineType,
-        ?string $status,
+        array $statuses,
         ?int $groupId,
         string $search
     ): Builder {
@@ -186,7 +189,7 @@ class MachineReportController extends Controller
 
         $this->applyScopeTo($query, $user, $area);
 
-        return $this->applyFilters($query, $machineType, $status, $groupId, $search);
+        return $this->applyFilters($query, $machineType, $statuses, $groupId, $search);
     }
 
     /**

@@ -26,12 +26,12 @@
             @endforeach
         </select>
 
-        <select name="condition" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Latest Conditions</option>
-            @foreach ($conditions as $value => $label)
-                <option value="{{ $value }}" {{ $selectedCondition === $value ? 'selected' : '' }}>{{ $label }}</option>
-            @endforeach
-        </select>
+        <x-checkbox-dropdown
+            name="condition"
+            label="Condition"
+            :options="$conditions"
+            :selected="$selectedConditions"
+        />
 
         <select name="year" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
             <option value="">All Years (latest audit)</option>
@@ -40,13 +40,12 @@
             @endforeach
         </select>
 
-        <select name="month" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Months (latest audit)</option>
-            @foreach (range(1, 12) as $m)
-                <option value="{{ $m }}" {{ $selectedMonth == $m ? 'selected' : '' }}>
-                    {{ \Carbon\Carbon::create(null, $m, 1)->format('F') }}</option>
-            @endforeach
-        </select>
+        <x-checkbox-dropdown
+            name="month"
+            label="Month"
+            :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
+            :selected="$selectedMonths"
+        />
 
         <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
             Filter

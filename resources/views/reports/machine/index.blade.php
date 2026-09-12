@@ -35,12 +35,12 @@
             @endforeach
         </select>
 
-        <select name="status" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Status</option>
-            @foreach ($statuses as $s)
-                <option value="{{ $s }}" {{ $selectedStatus === $s ? 'selected' : '' }}>{{ $s }}</option>
-            @endforeach
-        </select>
+        <x-checkbox-dropdown
+            name="status"
+            label="Status"
+            :options="collect($statuses)->mapWithKeys(fn ($s) => [$s => $s])->all()"
+            :selected="$selectedStatuses"
+        />
 
         @if ($groups->isNotEmpty())
             <select name="group_id" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">

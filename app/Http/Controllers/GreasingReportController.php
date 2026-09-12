@@ -19,11 +19,22 @@ class GreasingReportController extends Controller
 
         $periodType = $request->input('period_type') === 'yearly' ? 'yearly' : 'monthly';
         $year = (int) $request->input('year', now()->year);
-        $month = (int) $request->input('month', now()->month);
-
-        if ($month < 1 || $month > 12) {
-            $month = now()->month;
-        }
+        // Month is multi-select (checkbox-dropdown), only meaningful in
+        // 'monthly' period type: arrives as an array, but a plain single
+        // value (old bookmarked link) still works via the (array) cast.
+        // Empty selection means "every month of the year" — there is no
+        // forced default to the current month anymore.
+        //
+        // Named $selectedMonths (not $months) on purpose: further down,
+        // $months is reused for the Jan-Dec dropdown OPTIONS list — reusing
+        // the same name here would get this value silently overwritten by
+        // that assignment (this happened once already, in
+        // MachineReportController, before it was caught and fixed).
+        $selectedMonths = collect((array) $request->input('month', []))
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
+            ->values()
+            ->all();
 
         // Area filter is ADMIN-only — every other role has no established
         // per-area scoping for Greasing (see applyVisibility()).
@@ -34,15 +45,16 @@ class GreasingReportController extends Controller
         $groupId = $request->filled('group_id') ? (int) $request->input('group_id') : null;
         $cycle = $request->input('cycle') ?: null;
         $pic = $user->isPic() ? null : ($request->input('pic') ?: null);
-        $status = in_array($request->input('status'), Greasing::STATUSES, true)
-            ? $request->input('status')
-            : null;
+        // Status is multi-select (checkbox-dropdown): arrives as an array,
+        // but a plain single value (old bookmarked link) still works via
+        // the (array) cast.
+        $statuses = array_values(array_intersect((array) $request->input('status', []), Greasing::STATUSES));
         $search = trim((string) $request->input('search', ''));
         $isAdmin = $user->isAdmin();
         $isPic = $user->isPic();
 
         // --- KPI (single source of truth: GreasingKpiCalculator) ---
-        $statusCounts = $this->filteredQuery($user, $periodType, $year, $month, $area, $groupId, $cycle, $pic, $status, $search)
+        $statusCounts = $this->filteredQuery($user, $periodType, $year, $selectedMonths, $area, $groupId, $cycle, $pic, $statuses, $search)
             ->select('status')
             ->selectRaw('count(*) as total')
             ->groupBy('status')
@@ -55,7 +67,7 @@ class GreasingReportController extends Controller
         $monthlyTrend = null;
 
         if ($periodType === 'yearly') {
-            $yearRecords = $this->filteredQuery($user, 'yearly', $year, $month, $area, $groupId, $cycle, $pic, $status, $search)
+            $yearRecords = $this->filteredQuery($user, 'yearly', $year, $selectedMonths, $area, $groupId, $cycle, $pic, $statuses, $search)
                 ->get(['plan_date', 'status']);
 
             $monthlyTrend = collect(range(1, 12))->map(function (int $m) use ($yearRecords) {
@@ -74,7 +86,7 @@ class GreasingReportController extends Controller
         }
 
         // --- Greasing Report table ---
-        $greasings = $this->filteredQuery($user, $periodType, $year, $month, $area, $groupId, $cycle, $pic, $status, $search)
+        $greasings = $this->filteredQuery($user, $periodType, $year, $selectedMonths, $area, $groupId, $cycle, $pic, $statuses, $search)
             ->with('group')
             ->withCount('findings')
             ->orderBy('plan_date')
@@ -83,16 +95,16 @@ class GreasingReportController extends Controller
 
         // --- Finding Report table (from greasing_findings, same filtered scope) ---
         $findings = GreasingFinding::query()
-            ->whereHas('greasing', function (Builder $query) use ($user, $periodType, $year, $month, $area, $groupId, $cycle, $pic, $status, $search) {
+            ->whereHas('greasing', function (Builder $query) use ($user, $periodType, $year, $selectedMonths, $area, $groupId, $cycle, $pic, $statuses, $search) {
                 $this->applyFilters(
                     $this->applyVisibility($query, $user, $area),
                     $periodType,
                     $year,
-                    $month,
+                    $selectedMonths,
                     $groupId,
                     $cycle,
                     $pic,
-                    $status,
+                    $statuses,
                     $search
                 );
             })
@@ -129,11 +141,11 @@ class GreasingReportController extends Controller
             $this->applyVisibility(Greasing::query(), $user, $area),
             $periodType,
             $year,
-            $month,
+            $selectedMonths,
             null,
             null,
             null,
-            null,
+            [],
             ''
         );
 
@@ -149,7 +161,7 @@ class GreasingReportController extends Controller
             'findings',
             'periodType',
             'year',
-            'month',
+            'selectedMonths',
             'years',
             'months',
             'area',
@@ -159,7 +171,7 @@ class GreasingReportController extends Controller
             'groupId',
             'cycle',
             'pic',
-            'status',
+            'statuses',
             'search',
             'isAdmin',
             'isPic',
@@ -196,17 +208,21 @@ class GreasingReportController extends Controller
         Builder $query,
         string $periodType,
         int $year,
-        int $month,
+        array $months,
         ?int $groupId,
         ?string $cycle,
         ?string $pic,
-        ?string $status,
+        array $statuses,
         string $search
     ): Builder {
         $query->whereYear('plan_date', $year);
 
-        if ($periodType === 'monthly') {
-            $query->whereMonth('plan_date', $month);
+        if ($periodType === 'monthly' && ! empty($months)) {
+            $query->where(function (Builder $q) use ($months) {
+                foreach ($months as $m) {
+                    $q->orWhereMonth('plan_date', $m);
+                }
+            });
         }
 
         if ($groupId) {
@@ -221,8 +237,8 @@ class GreasingReportController extends Controller
             $query->where('pic', $pic);
         }
 
-        if ($status) {
-            $query->where('status', $status);
+        if (! empty($statuses)) {
+            $query->whereIn('status', $statuses);
         }
 
         if ($search !== '') {
@@ -239,16 +255,16 @@ class GreasingReportController extends Controller
         User $user,
         string $periodType,
         int $year,
-        int $month,
+        array $months,
         ?string $area,
         ?int $groupId,
         ?string $cycle,
         ?string $pic,
-        ?string $status,
+        array $statuses,
         string $search
     ): Builder {
         $query = $this->applyVisibility(Greasing::query(), $user, $area);
 
-        return $this->applyFilters($query, $periodType, $year, $month, $groupId, $cycle, $pic, $status, $search);
+        return $this->applyFilters($query, $periodType, $year, $months, $groupId, $cycle, $pic, $statuses, $search);
     }
 }

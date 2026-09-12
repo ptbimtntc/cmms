@@ -31,11 +31,13 @@
         @if ($periodType === 'monthly')
             <div>
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Month</label>
-                <select name="month" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                    @foreach ($months as $value => $label)
-                        <option value="{{ $value }}" {{ (int) $month === $value ? 'selected' : '' }}>{{ $label }}</option>
-                    @endforeach
-                </select>
+                <x-checkbox-dropdown
+                    name="month"
+                    label="Month"
+                    :options="$months"
+                    :selected="$selectedMonths"
+                    :auto-submit="true"
+                />
             </div>
         @endif
 
@@ -93,12 +95,13 @@
 
         <div>
             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
-            <select name="status" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="">All Status</option>
-                @foreach (\App\Models\Greasing::STATUSES as $s)
-                    <option value="{{ $s }}" {{ $status === $s ? 'selected' : '' }}>{{ $s }}</option>
-                @endforeach
-            </select>
+            <x-checkbox-dropdown
+                name="status"
+                label="Status"
+                :options="collect(\App\Models\Greasing::STATUSES)->mapWithKeys(fn ($s) => [$s => $s])->all()"
+                :selected="$statuses"
+                :auto-submit="true"
+            />
         </div>
 
         <div>
@@ -120,7 +123,11 @@
         <div class="ml-auto text-sm text-slate-500">
             Showing:
             <span class="font-semibold text-slate-800">
-                {{ $periodType === 'monthly' ? \Carbon\Carbon::create(null, $month, 1)->format('F').' '.$year : $year }}
+                @if ($periodType === 'monthly' && count($selectedMonths))
+                    {{ collect($selectedMonths)->sort()->map(fn ($m) => \Carbon\Carbon::create(null, $m, 1)->format('F'))->implode(', ') }} {{ $year }}
+                @else
+                    {{ $year }}
+                @endif
                 @if ($area)
                     &middot; {{ $area }}
                 @endif
@@ -202,9 +209,15 @@
         </div>
     </div>
 
-    {{-- Greasing Report (~75%) + Finding Report (~25%) side by side --}}
+    {{-- Greasing Report (~75%) + Finding Report (~25%) side by side.
+         `items-start` keeps this panel at its own natural height — Finding
+         Report can have MORE entries than Greasing has rows (one greasing
+         may have several findings), so letting the grid stretch both to
+         the taller one would inflate this panel too. Finding Report's
+         height is instead pinned to match this panel's real rendered
+         height via the small script below, and scrolls internally. --}}
     <div class="grid items-start gap-4 lg:grid-cols-4">
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-3">
+        <div id="greasing-report-panel" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-3">
             <div class="border-b border-slate-200 px-4 py-3">
                 <h2 class="text-sm font-semibold text-slate-800">Greasing Report</h2>
             </div>
@@ -328,11 +341,11 @@
             </div>
         </div>
 
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-1">
+        <div id="finding-report-panel" class="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-1">
             <div class="border-b border-slate-200 px-4 py-3">
                 <h2 class="text-sm font-semibold text-slate-800">Finding Report</h2>
             </div>
-            <div class="max-h-140 divide-y divide-slate-100 overflow-y-auto">
+            <div class="max-h-140 min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto lg:max-h-none">
                 @forelse ($findings as $finding)
                     <div @class([
                         'space-y-1 border-l-4 p-3 text-xs',
@@ -396,4 +409,30 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Finding Report can hold more entries than Greasing Report has rows
+        // (one greasing may have several findings), so it can't just be left
+        // to size itself — it's pinned to Greasing Report's actual rendered
+        // height (lg and up, where they sit side by side) and scrolls
+        // internally past that. Re-measured on resize and whenever Greasing
+        // Report's own height changes (e.g. web fonts finishing load).
+        (function () {
+            const source = document.getElementById('greasing-report-panel');
+            const target = document.getElementById('finding-report-panel');
+            if (!source || !target) return;
+
+            const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+
+            function syncHeight () {
+                target.style.height = isDesktop() ? source.offsetHeight + 'px' : '';
+            }
+
+            syncHeight();
+            window.addEventListener('resize', syncHeight);
+            if (window.ResizeObserver) {
+                new ResizeObserver(syncHeight).observe(source);
+            }
+        })();
+    </script>
 @endsection

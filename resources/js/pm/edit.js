@@ -75,6 +75,7 @@ window.addProblem = function () {
 
     wrapper.insertAdjacentHTML('beforeend', buildProblemRow(problemIndex));
     problemIndex++;
+    syncProblemOptions();
 };
 
 window.removeProblem = function (button) {
@@ -83,6 +84,8 @@ window.removeProblem = function (button) {
     if (rows.length > 1 && button?.parentElement) {
         button.parentElement.remove();
     }
+
+    syncProblemOptions();
 };
 
 function loadFinding(problemSelect) {
@@ -122,6 +125,28 @@ function initProblemFindings() {
         if (select.value) {
             loadFinding(select);
         }
+    });
+}
+
+// Prevent picking the same problem (e.g. "Capstan 1") in more than one row:
+// disable that <option> in every OTHER .problem-select once it's chosen in
+// one row. The row that currently holds the value keeps it enabled for
+// itself, so pre-existing duplicate data (saved before this rule existed)
+// doesn't get silently broken — it just can't be re-picked once changed.
+function syncProblemOptions() {
+    const selects = Array.from(document.querySelectorAll('.problem-select'));
+    const selectedValues = selects
+        .map(function (select) { return select.value; })
+        .filter(function (value) { return value !== ''; });
+
+    selects.forEach(function (select) {
+        Array.from(select.options).forEach(function (option) {
+            if (option.value === '') {
+                return;
+            }
+
+            option.disabled = selectedValues.includes(option.value) && option.value !== select.value;
+        });
     });
 }
 
@@ -268,6 +293,7 @@ function initPage() {
     document.addEventListener('change', function (event) {
         if (event.target.classList.contains('problem-select')) {
             loadFinding(event.target);
+            syncProblemOptions();
         }
 
         // sessions change handlers
@@ -281,6 +307,7 @@ function initPage() {
     });
 
     initProblemFindings();
+    syncProblemOptions();
 
     // migrate single start/end inputs if present (legacy); keep compatibility but not required for multi-day
     const startInput = document.getElementById('start_time');

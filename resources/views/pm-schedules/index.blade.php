@@ -57,7 +57,7 @@
     <?php endif; ?>
 
     <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input title="Search machine / type..." type="text" name="search" value="{{ request('search') }}"
+        <input title="Search machine / type / order number..." type="text" name="search" value="{{ request('search') }}"
             placeholder="Search..."
             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-40">
 
@@ -79,23 +79,25 @@
             @endforeach
         </select>
 
-        <select name="status" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Status</option>
-            <option value="OPEN" {{ request('status') == 'OPEN' ? 'selected' : '' }}>OPEN</option>
-            <option value="IN_PROGRESS" {{ request('status') == 'IN_PROGRESS' ? 'selected' : '' }}>IN PROGRESS</option>
-            <option value="FINISHED" {{ request('status') == 'FINISHED' ? 'selected' : '' }}>FINISHED</option>
-            <option value="FINISHED_ON_TIME" {{ request('status') == 'FINISHED_ON_TIME' ? 'selected' : '' }}>FINISHED ON
-                TIME</option>
-            <option value="MISSED" {{ request('status') == 'MISSED' ? 'selected' : '' }}>MISSED</option>
-        </select>
+        <x-checkbox-dropdown
+            name="status"
+            label="Status"
+            :options="[
+                'OPEN' => 'OPEN',
+                'IN_PROGRESS' => 'IN PROGRESS',
+                'FINISHED' => 'FINISHED',
+                'FINISHED_ON_TIME' => 'FINISHED ON TIME',
+                'MISSED' => 'MISSED',
+            ]"
+            :selected="(array) request('status', [])"
+        />
 
-        <select name="plan_month" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Month</option>
-            @foreach ($months as $m)
-                <option value="{{ $m }}" {{ request('plan_month') == $m ? 'selected' : '' }}>
-                    {{ $m }}</option>
-            @endforeach
-        </select>
+        <x-checkbox-dropdown
+            name="plan_month"
+            label="Month"
+            :options="array_combine($months, $months)"
+            :selected="(array) request('plan_month', [])"
+        />
 
         <select name="plan_year" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
             <option value="">All Year</option>

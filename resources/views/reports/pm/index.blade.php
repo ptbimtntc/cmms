@@ -35,13 +35,12 @@
             @endforeach
         </select>
 
-        <select name="month" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Months</option>
-            @foreach (range(1, 12) as $m)
-                <option value="{{ $m }}" {{ $selectedMonth == $m ? 'selected' : '' }}>
-                    {{ \Carbon\Carbon::create(null, $m, 1)->format('F') }}</option>
-            @endforeach
-        </select>
+        <x-checkbox-dropdown
+            name="month"
+            label="Month"
+            :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
+            :selected="$selectedMonths"
+        />
 
         <select name="machine_type" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
             <option value="">All Machine Type</option>
@@ -65,13 +64,12 @@
             @endforeach
         </select>
 
-        <select name="status" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Status</option>
-            @foreach ($statuses as $s)
-                <option value="{{ $s }}" {{ $selectedStatus === $s ? 'selected' : '' }}>
-                    {{ str_replace('_', ' ', $s) }}</option>
-            @endforeach
-        </select>
+        <x-checkbox-dropdown
+            name="status"
+            label="Status"
+            :options="collect($statuses)->mapWithKeys(fn ($s) => [$s => str_replace('_', ' ', $s)])->all()"
+            :selected="$selectedStatuses"
+        />
 
         <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
             Filter

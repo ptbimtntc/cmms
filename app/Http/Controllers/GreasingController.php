@@ -31,7 +31,8 @@ class GreasingController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('pic', 'like', '%' . $request->search . '%')
-                  ->orWhere('cycle', 'like', '%' . $request->search . '%');
+                  ->orWhere('cycle', 'like', '%' . $request->search . '%')
+                  ->orWhere('order_number', 'like', '%' . $request->search . '%');
             });
         }
 
@@ -40,7 +41,7 @@ class GreasingController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->whereIn('status', (array) $request->status);
         }
 
         $greasings = $query
