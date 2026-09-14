@@ -24,12 +24,20 @@ use App\Http\Controllers\QrScannerController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SparepartController;
 use App\Http\Controllers\SparepartReportController;
+use App\Http\Controllers\SyncOperationController;
 use App\Http\Controllers\TodayActivityController;
 use App\Http\Controllers\TodayActivityMonitorController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
+
+// FreeDOMS offline-first — Service Worker navigation fallback (Phase 1,
+// Task 3). Public, self-contained, no user/server data — see
+// resources/views/offline.blade.php and public/sw.js. Not linked from
+// anywhere in the UI; only ever reached by the Service Worker when a page
+// navigation fails while offline.
+Route::view('/offline', 'offline')->name('offline');
 
 Route::get('/dashboard-guest', [DashboardGuestController::class, 'index'])->name('dashboard-guest');
 
@@ -55,6 +63,16 @@ Route::middleware('auth')->group(function () {
 
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
         ->name('profile.password.update');
+
+    // FreeDOMS offline-first sync endpoint (Phase 1, Task 2). A single
+    // route carries every transaction type (PM_START, PM_SAVE,
+    // PM_CHECKLIST_SAVE, OIL_AUDIT_CREATE, OIL_AUDIT_FOLLOW_UP_SAVE), each
+    // with a different role scope — so it sits under plain 'auth' and
+    // SyncOperationController enforces the per-type role scope itself,
+    // rather than one role:... middleware group covering every case.
+    // Purely additive: existing pm-schedules.* / oil-audits.* routes below
+    // are untouched and remain the only way to use those features online.
+    Route::post('/api/sync', [SyncOperationController::class, 'handle'])->name('api.sync');
 });
 
 Route::middleware([

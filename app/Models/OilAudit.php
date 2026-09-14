@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class OilAudit extends Model
 {
+    /**
+     * Scope Oil Audit is restricted to — extracted from
+     * OilAuditController's private AUDIT_AREA/AUDIT_MACHINE_TYPES constants
+     * so the same scope can be reused outside the controller (e.g. by the
+     * offline sync handler) without redefining it a second time.
+     */
+    public const AREA = 'WWD';
+
+    public const MACHINE_TYPES = ['NDE', 'NDB'];
+
     public const CONDITION_LABELS = [
         'OKE' => 'Oke',
         'PANTAU' => 'Pantau',
@@ -98,6 +108,9 @@ class OilAudit extends Model
         return $this->belongsTo(User::class, 'audited_by_user_id');
     }
 
+    /**
+     * @return HasOne<OilAuditFollowUp, $this>
+     */
     public function followUp(): HasOne
     {
         return $this->hasOne(OilAuditFollowUp::class);
@@ -117,6 +130,17 @@ class OilAudit extends Model
     public function needsFollowUp(): bool
     {
         return in_array($this->condition, self::followUpConditions(), true);
+    }
+
+    /**
+     * Extracted verbatim from OilAuditController::assertFollowUpAllowed()'s
+     * scope guard, so both the online controller and the offline sync
+     * handler check the exact same WWD + NDE/NDB scope.
+     */
+    public function isInAuditScope(): bool
+    {
+        return $this->area === self::AREA
+            && in_array($this->machine_type, self::MACHINE_TYPES, true);
     }
 
     public function conditionLabel(): string

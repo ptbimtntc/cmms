@@ -16,10 +16,12 @@ use App\Models\PMSchedule;
 use App\Models\PMSparepart;
 use App\Models\Sparepart;
 use App\Models\User;
+use App\Services\PMChecklistSaveService;
+use App\Services\PMScheduleSaveService;
+use App\Services\PMStartService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
@@ -324,334 +326,25 @@ class PMScheduleController extends Controller
             ]);
         }
 
-        // VALIDASI INPUT
-        $rules = [
-            'order_number' => 'required',
-            'pic' => 'required',
-            'greasing' => 'nullable',
-            'oil_change' => 'nullable',
-            'wo_zsbp' => 'nullable',
-            'remarks' => 'nullable',
-            'problems.*.problem' => 'nullable',
-            'problems.*.finding' => 'nullable',
-            'problems.*.severity' => 'nullable',
-            'measurements.*.measurement_item' => 'nullable',
-            'measurements.*.measurement_value' => 'nullable',
-            'spareparts.*.sparepart_id' => 'nullable',
-            'spareparts.*.qty' => 'nullable|integer|min:1',
-        ];
+        // VALIDASI INPUT — rule set lives in PMScheduleSaveService::rules()
+        // so the online request and the offline sync handler never drift.
+        $request->validate(PMScheduleSaveService::rules($request->has('sessions')));
 
-        // If sessions array provided => multi-day flow
-        if ($request->has('sessions')) {
-            $rules['sessions'] = 'array';
-            $rules['sessions.*.actual_date'] = 'required|date';
-            $rules['sessions.*.start_time'] = 'required';
-            $rules['sessions.*.end_time'] = 'nullable';
-        } else {
-            // legacy single-day flow
-            $rules['actual_date'] = 'required|date';
-            $rules['start_time'] = 'required';
-            $rules['end_time'] = 'nullable';
-        }
+        // Server-side duration and persistence — PM_SAVE business logic
+        // lives in PMScheduleSaveService so it can later be reused by an
+        // offline sync replay without duplicating the rule.
+        $data = $request->only([
+            'order_number', 'pic', 'oil_change', 'greasing', 'wo_zsbp', 'remarks',
+            'sessions', 'actual_date', 'start_time', 'end_time',
+            'measurements', 'problems', 'spareparts',
+        ]);
 
-        $request->validate($rules);
-
-        // Server-side duration and persistence
-        DB::transaction(function () use ($request, $pmSchedule) {
-
-            // Update header (do NOT change actual_date/start_time/end_time/duration for multi-day sessions)
-            $updateHeader = [
-                'order_number' => $request->order_number,
-                'pic' => $request->pic,
-                'oil_change' => $pmSchedule->requiresOilChange() ? $request->oil_change : null,
-                'greasing' => $request->greasing,
-                'wo_zsbp' => $request->wo_zsbp,
-                'remarks' => $request->remarks,
-                'status' => 'IN_PROGRESS',
-            ];
-
-            // Multi-day sessions handling
-            if ($request->has('sessions')) {
-
-                $sessionIds = [];
-
-                // existing sessions for selective delete
-                $existingIds = $pmSchedule->workSessions()->pluck('id')->toArray();
-
-                foreach ($request->sessions as $s) {
-
-                    $start = Carbon::createFromFormat('H:i', $s['start_time']);
-                    $end = $s['end_time'] ? Carbon::createFromFormat('H:i', $s['end_time']) : null;
-
-                    if ($end) {
-                        if ($end->lessThan($start)) {
-                            $end->addDay();
-                        }
-                        $duration = $start->diffInMinutes($end);
-                    } else {
-                        $duration = null;
-                    }
-
-                    // If id provided and belongs to this schedule, update; otherwise create
-                    if (! empty($s['id'])) {
-                        $ws = $pmSchedule->workSessions()->where('id', $s['id'])->first();
-                        if ($ws) {
-                            $ws->update([
-                                'actual_date' => $s['actual_date'],
-                                'start_time' => $s['start_time'],
-                                'end_time' => $s['end_time'] ?? null,
-                                'duration' => $duration,
-                            ]);
-
-                            $sessionIds[] = $ws->id;
-
-                            continue;
-                        }
-                    }
-
-                    $new = $pmSchedule->workSessions()->create([
-                        'actual_date' => $s['actual_date'],
-                        'start_time' => $s['start_time'],
-                        'end_time' => $s['end_time'] ?? null,
-                        'duration' => $duration,
-                    ]);
-
-                    $sessionIds[] = $new->id;
-                }
-
-                // delete removed sessions (selective)
-                $toDelete = array_diff($existingIds, $sessionIds);
-                if (! empty($toDelete)) {
-                    $pmSchedule->workSessions()->whereIn('id', $toDelete)->delete();
-                }
-
-                // Update header without touching legacy execution columns
-                $pmSchedule->update($updateHeader);
-
-            } else {
-                // Legacy single-day behavior (keep existing semantics)
-                $duration = null;
-                if ($request->start_time && $request->end_time) {
-                    $start = Carbon::createFromFormat('H:i', $request->start_time);
-                    $end = Carbon::createFromFormat('H:i', $request->end_time);
-                    if ($end->lessThan($start)) {
-                        $end->addDay();
-                    }
-                    $duration = $start->diffInMinutes($end);
-                }
-
-                $pmSchedule->update(array_merge($updateHeader, [
-                    'actual_date' => $request->actual_date,
-                    'start_time' => $request->start_time,
-                    'end_time' => $request->end_time,
-                    'duration' => $duration,
-                ]));
-            }
-
-            // 3. update measurements (unchanged)
-            PMMeasurement::where(
-                'pm_schedule_id',
-                $pmSchedule->id
-            )->delete();
-            if ($request->measurements) {
-
-                foreach ($request->measurements as $measurement) {
-
-                    // dd($request->measurements);
-
-                    PMMeasurement::create([
-
-                        'pm_schedule_id' => $pmSchedule->id,
-
-                        'machine_measurement_id' => $measurement['machine_measurement_id'],
-
-                        'measurement_item' => $measurement['measurement_item'],
-
-                        'standard' => $measurement['standard'],
-
-                        'measurement_value' => $measurement['measurement_value'],
-
-                        'unit' => $measurement['unit'],
-
-                    ]);
-
-                }
-
-            }
-
-            PMProblem::where(
-                'pm_schedule_id',
-                $pmSchedule->id
-            )->delete();
-
-            if ($request->problems) {
-
-                foreach ($request->problems as $problem) {
-
-                    if (empty($problem['problem'])) {
-                        continue;
-                    }
-
-                    PMProblem::create([
-
-                        'pm_schedule_id' => $pmSchedule->id,
-
-                        'machine_problem_id' => $problem['problem'],
-
-                        'machine_problem_finding_id' => $problem['finding'],
-
-                        'severity' => $problem['severity'],
-
-                    ]);
-
-                }
-
-            }
-
-            $gearboxProblem = 'NO';
-
-            if ($pmSchedule->isGearboxApplicable()) {
-                $hasGearboxProblem = PMProblem::with('machineProblem')
-                    ->where('pm_schedule_id', $pmSchedule->id)
-                    ->get()
-                    ->contains(fn ($p) => PMSchedule::matchesGearboxKeyword($p->machineProblem->problem ?? null));
-
-                $gearboxProblem = $hasGearboxProblem ? 'YES' : 'NO';
-            }
-
-            $pmSchedule->update(['gearbox_problem' => $gearboxProblem]);
-
-            PMSparepart::where(
-                'pm_schedule_id',
-                $pmSchedule->id
-            )->delete();
-
-            if ($request->spareparts) {
-
-                foreach ($request->spareparts as $item) {
-
-                    if (empty($item['sparepart_id'])) {
-                        continue;
-                    }
-
-                    PMSparepart::create([
-
-                        'pm_schedule_id' => $pmSchedule->id,
-
-                        'sparepart_id' => $item['sparepart_id'],
-
-                        'qty' => $item['qty'] ?? 1,
-
-                        'unit' => $item['unit'] ?? null,
-
-                    ]);
-
-                }
-
-            }
-
-        });
+        app(PMScheduleSaveService::class)->save($pmSchedule, $data);
 
         return redirect()
             ->route('pm-schedules.checklist', $pmSchedule->id)
             ->with('success', 'PM Progress Saved');
 
-    }
-
-    private function updatePMStatus(PMSchedule $pmSchedule)
-    {
-
-        // belum ada PM
-        if (! $pmSchedule->actual_date) {
-
-            if (now()->greaterThan($pmSchedule->due_date)) {
-
-                $pmSchedule->update([
-                    'status' => 'MISSED',
-                ]);
-
-            } else {
-
-                $pmSchedule->update([
-                    'status' => 'OPEN',
-                ]);
-
-            }
-
-            return;
-        }
-
-        // cek apakah checklist sudah disimpan
-        $hasChecklist = PMChecklist::where(
-            'pm_schedule_id',
-            $pmSchedule->id
-        )->exists();
-
-        if (! $hasChecklist) {
-
-            $pmSchedule->update([
-                'status' => 'IN_PROGRESS',
-            ]);
-
-            return;
-
-        }
-
-        // checklist sudah ada
-        if (
-            Carbon::parse($pmSchedule->actual_date)
-                ->greaterThan(
-                    Carbon::parse($pmSchedule->due_date)
-                )
-        ) {
-
-            $pmSchedule->update([
-                'status' => 'FINISHED',
-            ]);
-
-        } else {
-
-            $pmSchedule->update([
-                'status' => 'FINISHED_ON_TIME',
-            ]);
-
-        }
-
-    }
-
-    private function validatePMCompleted(PMSchedule $pmSchedule)
-    {
-        $errors = [];
-
-        if ($pmSchedule->requiresOilChange() && blank($pmSchedule->oil_change)) {
-            $errors[] = 'Oil Change';
-        }
-
-        if (blank($pmSchedule->greasing)) {
-            $errors[] = 'Greasing';
-        }
-
-        if (blank($pmSchedule->wo_zsbp)) {
-            $errors[] = 'WO ZSBP';
-        }
-
-        if (blank($pmSchedule->remarks)) {
-            $errors[] = 'Remarks';
-        }
-
-        if (! $pmSchedule->problems()->exists()) {
-            $errors[] = 'Problem';
-        }
-
-        if (! $pmSchedule->measurements()->exists()) {
-            $errors[] = 'Measurement';
-        }
-
-        if (! $pmSchedule->spareparts()->exists()) {
-            $errors[] = 'Sparepart';
-        }
-
-        return $errors;
     }
 
     public function checklist(PMSchedule $pmSchedule)
@@ -734,7 +427,9 @@ class PMScheduleController extends Controller
     public function saveChecklist(Request $request, PMSchedule $pmSchedule)
     {
         $this->authorizeScheduleAccess($pmSchedule);
-        $errors = $this->validatePMCompleted($pmSchedule);
+
+        $checklistService = app(PMChecklistSaveService::class);
+        $errors = $checklistService->completionErrors($pmSchedule);
 
         if (! empty($errors)) {
 
@@ -747,49 +442,7 @@ class PMScheduleController extends Controller
 
         }
 
-        DB::transaction(function () use ($request, $pmSchedule) {
-
-            // hapus checklist lama jika ada
-            PMChecklist::where(
-                'pm_schedule_id',
-                $pmSchedule->id
-            )->delete();
-
-            foreach ($request->checklists as $item) {
-
-                PMChecklist::create([
-
-                    'pm_schedule_id' => $pmSchedule->id,
-
-                    'machine_checklist_id' => $item['machine_checklist_id'],
-
-                    'clean' => $item['clean'] ?? 'NO',
-
-                    'lubrication' => $item['lubrication'] ?? 'NO',
-
-                    'replace' => $item['replace'] ?? 'NO',
-
-                    'check' => $item['check'] ?? 'NO',
-
-                    'remarks' => $item['remarks'] ?? null,
-
-                ]);
-
-            }
-
-        });
-
-        // If there are work sessions, set completion date to last session's date when checklist is saved
-        $lastSessionDate = $pmSchedule->workSessions()->latest('actual_date')->value('actual_date');
-        if ($lastSessionDate) {
-            $pmSchedule->update([
-                'actual_date' => $lastSessionDate,
-            ]);
-        }
-
-        $pmSchedule->refresh();
-
-        $this->updatePMStatus($pmSchedule);
+        $checklistService->save($pmSchedule, (array) $request->checklists);
 
         return redirect()
             ->route('pm-schedules.index')
@@ -925,92 +578,28 @@ class PMScheduleController extends Controller
     {
         $this->authorizeScheduleAccess($pmSchedule);
 
-        if (in_array($pmSchedule->status, PMSchedule::DONE_STATUSES, true)) {
-            return back()->with('warning', 'This PM is already finished.');
-        }
+        $result = app(PMStartService::class)->start(
+            $pmSchedule,
+            $request->user(),
+            $request->input('started_at'),
+            $request->boolean('confirm_end_start')
+        );
 
-        // Idempotent: keep the original start time instead of overwriting.
-        if (filled($pmSchedule->start_time)) {
-            return back()->with('warning', 'This PM activity has already been started.');
-        }
-
-        $validated = $request->validate([
-            'started_at' => ['required', 'date'],
-        ]);
-
-        $startedAt = Carbon::parse($validated['started_at']);
-        $user = $request->user();
-
-        // One active activity per PIC — checked across every activity source
-        // (PM, Greasing, Oil Audit, Oil Audit Action). Unless the PIC has
-        // already confirmed END & START, bounce back with the confirmation
-        // payload instead of starting.
-        if (! $request->boolean('confirm_end_start')) {
-            $current = $this->activityConflictFor($user);
-
-            if ($current) {
-                return back()->with('activity_conflict', $this->activityConflictPayload(
-                    $current,
-                    route('pm-schedules.start', $pmSchedule),
-                    $startedAt,
-                ));
-            }
-        } else {
-            $startedAt = $this->confirmedStartTime($user, $startedAt);
-        }
-
-        $pmSchedule->update([
-            'actual_date' => $startedAt->toDateString(),
-            'start_time' => $startedAt->format('H:i'),
-            'status' => $pmSchedule->status === 'OPEN'
-                ? 'IN_PROGRESS'
-                : $pmSchedule->status,
-        ]);
-
-        return back()->with('success', 'PM activity started at '.$startedAt->format('d M Y H:i').'.');
+        return match ($result['outcome']) {
+            PMStartService::OUTCOME_ALREADY_FINISHED => back()->with('warning', 'This PM is already finished.'),
+            PMStartService::OUTCOME_ALREADY_STARTED => back()->with('warning', 'This PM activity has already been started.'),
+            PMStartService::OUTCOME_ACTIVITY_CONFLICT => back()->with('activity_conflict', $this->activityConflictPayload(
+                $result['conflict'],
+                route('pm-schedules.start', $pmSchedule),
+                $result['requested_started_at'],
+            )),
+            PMStartService::OUTCOME_STARTED => back()->with('success', 'PM activity started at '.$result['started_at']->format('d M Y H:i').'.'),
+        };
     }
 
     private function authorizeScheduleAccess(PMSchedule $pmSchedule): void
     {
-        $user = auth()->user();
-
-        if ($user->isAdmin()) {
-            return;
-        }
-
-        if ($user->isKoordinatorWwd()) {
-            abort_unless($pmSchedule->area === 'WWD', 403);
-
-            return;
-        }
-
-        if ($user->isKoordinatorBul()) {
-            abort_unless($pmSchedule->area === 'BUL', 403);
-
-            return;
-        }
-
-        if ($user->isPicWwd()) {
-            abort_unless(
-                $pmSchedule->area === 'WWD' &&
-                $pmSchedule->pic === $user->name,
-                403
-            );
-
-            return;
-        }
-
-        if ($user->isPicBul()) {
-            abort_unless(
-                $pmSchedule->area === 'BUL' &&
-                $pmSchedule->pic === $user->name,
-                403
-            );
-
-            return;
-        }
-
-        abort(403);
+        abort_unless($pmSchedule->isAccessibleBy(auth()->user()), 403);
     }
 
     public function destroy(PMSchedule $pmSchedule)

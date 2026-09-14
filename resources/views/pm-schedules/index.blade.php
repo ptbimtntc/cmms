@@ -263,7 +263,8 @@
                                             @else
                                                 <button type="button"
                                                     class="pm-start-btn rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
-                                                    data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}">
+                                                    data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}"
+                                                    data-status="{{ $pm->status }}">
                                                     START
                                                 </button>
                                             @endif
@@ -400,7 +401,8 @@
                                 @else
                                     <button type="button"
                                         class="pm-start-btn rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
-                                        data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}">START</button>
+                                        data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}"
+                                        data-status="{{ $pm->status }}">START</button>
                                 @endif
                                 <a href="{{ route('pm-schedules.edit', $pm->id) }}"
                                     class="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white hover:bg-green-700">Fill
@@ -477,7 +479,7 @@
             <h3 class="text-lg font-semibold text-slate-800">Start PM Activity</h3>
             <p id="pm-start-machine" class="mt-1 text-sm text-slate-500"></p>
 
-            <form id="pm-start-form" method="POST" class="mt-4 space-y-4">
+            <form id="pm-start-form" method="POST" class="mt-4 space-y-4" data-base-action="{{ url('pm-schedules') }}">
                 @csrf
                 <div>
                     <label class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
@@ -494,48 +496,11 @@
         </div>
     </div>
 
-    <script>
-        (function() {
-            const modal = document.getElementById('pm-start-modal');
-            if (!modal) return;
-
-            const form = document.getElementById('pm-start-form');
-            const input = document.getElementById('pm-start-input');
-            const machineLabel = document.getElementById('pm-start-machine');
-            const baseAction = "{{ url('pm-schedules') }}";
-
-            // Current local (WIB) date/time as the editable default.
-            function nowLocal() {
-                const d = new Date();
-                d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-                return d.toISOString().slice(0, 16);
-            }
-
-            function openModal(id, machine) {
-                form.action = `${baseAction}/${id}/start`;
-                input.value = nowLocal();
-                machineLabel.textContent = machine ? `Machine: ${machine}` : '';
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-
-            function closeModal() {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-
-            document.querySelectorAll('.pm-start-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    openModal(this.dataset.id, this.dataset.machine);
-                });
-            });
-
-            document.getElementById('pm-start-cancel').addEventListener('click', closeModal);
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) closeModal();
-            });
-        })();
-    </script>
+    {{--
+        PM Start modal wiring (open/close, online-vs-offline decision,
+        offline enqueue) lives in resources/js/pm/start.js — see Task 4
+        (FreeDOMS offline-first). Nothing else on this page changed.
+    --}}
 
     @include('partials.activity-conflict-modal')
 @endsection

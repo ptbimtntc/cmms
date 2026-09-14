@@ -101,6 +101,37 @@ class PMSchedule extends Model
             ->whereNotIn('status', self::DONE_STATUSES);
     }
 
+    /**
+     * Extracted verbatim from PMScheduleController::authorizeScheduleAccess()
+     * so the same access rule can be reused by both the online controller
+     * (via abort_unless) and the offline sync handler (as a plain bool,
+     * without aborting the whole request).
+     */
+    public function isAccessibleBy(User $user): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isKoordinatorWwd()) {
+            return $this->area === 'WWD';
+        }
+
+        if ($user->isKoordinatorBul()) {
+            return $this->area === 'BUL';
+        }
+
+        if ($user->isPicWwd()) {
+            return $this->area === 'WWD' && $this->pic === $user->name;
+        }
+
+        if ($user->isPicBul()) {
+            return $this->area === 'BUL' && $this->pic === $user->name;
+        }
+
+        return false;
+    }
+
     public function requiresOilChange(): bool
     {
         return in_array($this->machine_type, [
