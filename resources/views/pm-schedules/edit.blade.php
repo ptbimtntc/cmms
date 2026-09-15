@@ -12,12 +12,21 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('pm-schedules.update', $pmSchedule) }}"
+    {{--
+        FreeDOMS offline-first PM Save (Task 5). Hidden by default; shown by
+        resources/js/pm/save.js only when a local draft or "saved offline"
+        state actually exists for this PM. No layout/behavior change for
+        anyone who never goes offline.
+    --}}
+    <div id="pm-draft-banner" class="mb-4 hidden rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800"></div>
+
+    <form id="pm-save-form" method="POST" action="{{ route('pm-schedules.update', $pmSchedule) }}"
         class="bg-white p-6 rounded shadow max-sm:p-4">
 
         <div id="pm-data" data-findings='@json($problemFindings)' data-spareparts='@json($spareparts)'
             data-big-problems='@json($bigProblems)' data-problem-index='@json(isset($pmProblems) ? $pmProblems->count() : 0)'
-            data-sparepart-index='@json(isset($pmSpareparts) ? $pmSpareparts->count() : 0)'></div>
+            data-sparepart-index='@json(isset($pmSpareparts) ? $pmSpareparts->count() : 0)'
+            data-pm-schedule-id="{{ $pmSchedule->id }}" data-pm-status="{{ $pmSchedule->status }}"></div>
 
         @csrf
         @method('PUT')

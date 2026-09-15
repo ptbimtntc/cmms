@@ -71,6 +71,19 @@ class OilAuditController extends Controller
         // existing scan workflow is untouched.
         return view('oil-audits.scan', [
             'promptStart' => $user->isPic() && $this->currentActivitySource($user) !== 'OIL_AUDIT',
+            // FreeDOMS offline-first (Task 7): the in-scope machine list and
+            // condition options are embedded on the page so
+            // resources/js/oil-audits/scan.js can populate the offline
+            // machine cache (Task 3's MasterDataCache) without a separate
+            // request. Purely additive — nothing here changes scan()'s
+            // existing behavior/response for anyone online. Kept minimal
+            // (only the fields OIL_AUDIT_CREATE actually needs), never the
+            // whole machines table.
+            'offlineMachines' => Machine::where('area', self::AUDIT_AREA)
+                ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+                ->orderBy('machine_number')
+                ->get(['id', 'machine_number', 'machine_type', 'area']),
+            'offlineConditions' => OilAudit::CONDITION_LABELS,
         ]);
     }
 

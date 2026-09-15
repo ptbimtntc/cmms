@@ -29,6 +29,8 @@
 
 <input type="hidden" name="_followup_audit" value="{{ $audit->id }}">
 
+<div class="js-followup-banner mb-3 hidden rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800"></div>
+
 <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
     <div>
         <h3 class="font-bold text-slate-900">

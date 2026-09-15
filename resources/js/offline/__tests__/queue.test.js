@@ -119,6 +119,15 @@ describe('listing', () => {
         expect(pending.map((e) => e.operation_uuid)).toEqual(['p1']);
         expect(synced.map((e) => e.operation_uuid)).toEqual(['p2']);
     });
+
+    it('listByUser(null) (no authenticated user known) returns matches without throwing a DataError', async () => {
+        await Queue.enqueue({ operationUuid: 'anon-1', transactionType: 'PM_SAVE', payload: {} });
+        await Queue.enqueue({ operationUuid: 'known-1', transactionType: 'PM_SAVE', payload: {}, userId: 'u1' });
+
+        const anonymous = await Queue.listByUser(null);
+
+        expect(anonymous.map((e) => e.operation_uuid)).toEqual(['anon-1']);
+    });
 });
 
 describe('durability across a simulated reload', () => {

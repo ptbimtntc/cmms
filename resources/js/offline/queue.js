@@ -102,7 +102,19 @@ export function listByStatus(status) {
     return OfflineStorage.getAll(STORES.SYNC_QUEUE, { indexName: 'by_status', query: status });
 }
 
+/**
+ * Queries the `by_user` index for a real userId, but falls back to
+ * scanning + filtering in JS when userId is null/undefined — an
+ * IndexedDB index query for a null key throws `DataError` (null/undefined
+ * are not valid IndexedDB key values), which would otherwise make this
+ * throw for the legitimate "no authenticated user known" case instead of
+ * simply returning that scope's operations.
+ */
 export function listByUser(userId) {
+    if (userId === null || userId === undefined) {
+        return listAll().then((all) => all.filter((operation) => operation.user_id === userId));
+    }
+
     return OfflineStorage.getAll(STORES.SYNC_QUEUE, { indexName: 'by_user', query: userId });
 }
 
