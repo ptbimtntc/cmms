@@ -66,16 +66,28 @@ export function getDraft(draftId) {
 }
 
 /**
+ * Deliberately queries the single-field `by_reference` index (never the
+ * composite `by_user_type_reference` one) and filters draftType/userId in
+ * JS afterwards. IndexedDB compound keys treat `null`/`undefined` as an
+ * invalid key component — a record whose user_id is null (no
+ * authenticated user known, e.g. a guest context) is silently left OUT of
+ * a composite index entirely, and querying that index with a null
+ * component throws `DataError: Data provided to an operation does not
+ * meet requirements.` `reference_id` is always a real, required value
+ * (saveDraft() rejects a blank one), so `by_reference` never has this
+ * problem — this is what makes the lookup work for every userId,
+ * including null.
+ *
  * @param {{userId: string|null, draftType: string, referenceId: string|number}} lookup
  * @returns {Promise<object|undefined>}
  */
 export async function getDraftByReference({ userId = null, draftType, referenceId }) {
-    const matches = await OfflineStorage.getAll(STORES.DRAFTS, {
-        indexName: 'by_user_type_reference',
-        query: [userId, draftType, referenceId],
+    const candidates = await OfflineStorage.getAll(STORES.DRAFTS, {
+        indexName: 'by_reference',
+        query: referenceId,
     });
 
-    return matches[0];
+    return candidates.find((draft) => draft.draft_type === draftType && draft.user_id === userId);
 }
 
 export function listDraftsByType(userId, draftType) {

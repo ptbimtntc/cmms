@@ -80,6 +80,26 @@ describe('deleteDraft', () => {
     });
 });
 
+describe('a null userId (no authenticated user known) never crashes draft lookups', () => {
+    it('saveDraft + getDraftByReference work with userId: null, without throwing a DataError', async () => {
+        const draft = await Drafts.saveDraft({ draftType: 'PM', referenceId: 101, payload: { a: 1 }, userId: null });
+
+        expect(draft.user_id).toBeNull();
+
+        const found = await Drafts.getDraftByReference({ userId: null, draftType: 'PM', referenceId: 101 });
+
+        expect(found?.draft_id).toBe(draft.draft_id);
+    });
+
+    it('a repeat saveDraft() with userId: null updates in place rather than throwing or duplicating', async () => {
+        const first = await Drafts.saveDraft({ draftType: 'PM', referenceId: 101, payload: { step: 1 }, userId: null });
+        const second = await Drafts.saveDraft({ draftType: 'PM', referenceId: 101, payload: { step: 2 }, userId: null });
+
+        expect(second.draft_id).toBe(first.draft_id);
+        expect((await Drafts.listDraftsByType(null, 'PM'))).toHaveLength(1);
+    });
+});
+
 describe('durability', () => {
     it('a draft survives a simulated page reload (connection reset)', async () => {
         const draft = await Drafts.saveDraft({ draftType: 'PM', referenceId: 55, payload: { x: 'y' }, userId: 'user-1' });

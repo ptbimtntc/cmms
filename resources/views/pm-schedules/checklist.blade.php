@@ -73,9 +73,19 @@
         </div>
     </div>
 
+    {{--
+        FreeDOMS offline-first PM Checklist Save (Task 6). Hidden by
+        default; shown by resources/js/pm/checklist.js only when a local
+        draft or "saved offline" state actually exists for this PM. No
+        layout/behavior change for anyone who never goes offline.
+    --}}
+    <div id="pm-checklist-draft-banner" class="mb-4 hidden rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800"></div>
+
     {{-- Checklist --}}
-    <form action="{{ route('pm-schedules.checklist.save', $pmSchedule) }}" method="POST">
+    <form id="pm-checklist-form" action="{{ route('pm-schedules.checklist.save', $pmSchedule) }}" method="POST">
         @csrf
+
+        <div id="pm-checklist-data" data-pm-schedule-id="{{ $pmSchedule->id }}" data-pm-status="{{ $pmSchedule->status }}"></div>
 
         <div class="max-h-[75vh] overflow-auto rounded-lg bg-white shadow">
 

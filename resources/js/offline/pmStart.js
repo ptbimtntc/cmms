@@ -13,9 +13,10 @@
 
 import { generateUuid } from './uuid.js';
 import { currentUserId } from './scope.js';
-import { csrfToken } from './csrf.js';
 import * as SyncQueue from './queue.js';
 import { clearLocalPmOverlay, getLocalPmOverlay, setLocalPmOverlay } from './masterData.js';
+import { sendQueuedOperation } from './sync.js';
+import { probeServerReachable } from './network.js';
 
 export const TRANSACTION_TYPE = 'PM_START';
 
@@ -26,46 +27,11 @@ export class PmStartBlockedError extends Error {
     }
 }
 
-/**
- * navigator.onLine is only ever a network HINT, never proof the server is
- * reachable (Task 4 section 6 / Task 3 section 18) — a device can be on a
- * Wi-Fi network with no real internet, or the server itself can be down.
- * This probes Laravel's own built-in, unauthenticated, side-effect-free
- * health route (`health: '/up'` in bootstrap/app.php) with a short
- * timeout so a genuinely offline device doesn't hang the UI waiting for
- * one.
- *
- * @param {number} timeoutMs
- * @returns {Promise<boolean>}
- */
-export async function probeServerReachable(timeoutMs = 3000) {
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        // The browser itself is confident there is no network — skip the
-        // round-trip entirely.
-        return false;
-    }
-
-    if (typeof fetch === 'undefined') {
-        return false;
-    }
-
-    try {
-        const response = await fetch('/up', {
-            method: 'GET',
-            cache: 'no-store',
-            signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout
-                ? AbortSignal.timeout(timeoutMs)
-                : undefined,
-        });
-
-        return response.ok;
-    } catch {
-        // Any thrown error here (network failure, DNS failure, timeout) —
-        // NOT an HTTP error status, fetch() only throws for those — means
-        // the server could not actually be reached.
-        return false;
-    }
-}
+// Re-exported for backward compatibility — the implementation moved to
+// network.js in Task 5 (it is a generic reachability check every offline
+// feature needs, not something PM_START-specific), but this import path
+// keeps working for any existing caller (e.g. resources/js/pm/start.js).
+export { probeServerReachable };
 
 /**
  * Minimal local guard against the most obvious case of Task 4 section 15
@@ -170,66 +136,15 @@ export { getLocalPmOverlay };
  * @param {string} operationUuid
  */
 export async function processQueuedOperation(operationUuid) {
-    const entry = await SyncQueue.getByUuid(operationUuid);
+    const { entry, body } = await sendQueuedOperation(operationUuid);
 
-    if (!entry) {
-        throw new Error(`No queued operation with operation_uuid ${operationUuid}.`);
+    if (
+        (body.status === 'processed' || body.status === 'already_processed')
+        && entry.transaction_type === TRANSACTION_TYPE
+        && entry.payload?.pm_schedule_id !== undefined
+    ) {
+        await clearLocalPmOverlay(entry.payload.pm_schedule_id);
     }
 
-    await SyncQueue.markSyncing(operationUuid);
-
-    let body;
-
-    try {
-        const response = await fetch('/api/sync', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-CSRF-TOKEN': csrfToken() ?? '',
-            },
-            body: JSON.stringify({
-                operation_uuid: entry.operation_uuid,
-                transaction_type: entry.transaction_type,
-                payload: entry.payload,
-                expected_state: entry.expected_state,
-            }),
-        });
-
-        body = await response.json();
-    } catch (error) {
-        // Network failure DURING the sync attempt itself — the operation
-        // must stay retryable, never be dropped (section 9/16).
-        await SyncQueue.markFailed(operationUuid, String(error?.message ?? error));
-        throw error;
-    }
-
-    switch (body.status) {
-        case 'processed':
-        case 'already_processed':
-            await SyncQueue.markSynced(operationUuid, body);
-
-            if (entry.transaction_type === TRANSACTION_TYPE && entry.payload?.pm_schedule_id !== undefined) {
-                await clearLocalPmOverlay(entry.payload.pm_schedule_id);
-            }
-
-            return body;
-
-        // A conflict is never force-resolved here (section 19) — it is
-        // recorded so a later task's UI can show and let the user resolve
-        // it.
-        case 'conflict':
-        case 'payload_mismatch':
-            await SyncQueue.markConflict(operationUuid, body);
-
-            return body;
-
-        default:
-            // validation_failed / forbidden / failed / in_progress / any
-            // unexpected status — recorded as failed-but-retained, never
-            // silently dropped.
-            await SyncQueue.markFailed(operationUuid, body.message ?? body.status ?? 'Unknown sync error');
-
-            return body;
-    }
+    return body;
 }

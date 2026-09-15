@@ -1,6 +1,11 @@
 import './pm/edit';
 import './checklist/index';
 import './pm/start';
+import './pm/save';
+import './pm/checklist';
+import './oil-audits/scan';
+import './oil-audits/entry';
+import './oil-audits/follow-up';
 
 import { registerServiceWorker } from './offline/sw-register.js';
 import * as FreeDOMSOffline from './offline/index.js';

@@ -16,4 +16,8 @@ export * as SyncQueue from './queue.js';
 export * as Drafts from './drafts.js';
 export * as MasterDataCache from './masterData.js';
 export * as PmStart from './pmStart.js';
+export * as PmSave from './pmSave.js';
+export * as PmChecklist from './pmChecklist.js';
+export * as OilAuditCreate from './oilAuditCreate.js';
+export * as OilAuditFollowUp from './oilAuditFollowUp.js';
 export { registerServiceWorker } from './sw-register.js';

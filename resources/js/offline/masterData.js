@@ -138,6 +138,128 @@ export async function clearLocalPmOverlay(id) {
 }
 
 /**
+ * Same idea as setLocalPmOverlay/getLocalPmOverlay/clearLocalPmOverlay
+ * above, but for PM_SAVE (Task 5) — kept as a SEPARATE field namespace
+ * (`local_save_*` / `pending_save_operation_uuid`, never touching
+ * `local_status` etc.) rather than extending the Task 4 fields, so a PM
+ * can independently show "started offline" AND "saved offline, waiting
+ * for sync" at once (a PIC can offline-Start a PM, then also offline-Save
+ * its Fill PM form, before either one has synced), and so Task 4's
+ * existing behavior/tests are untouched.
+ */
+export async function setLocalPmSaveOverlay(id, overlay) {
+    const existing = (await OfflineStorage.get(STORES.PM_SCHEDULES, id)) ?? { id };
+    const updated = { ...existing, ...overlay, id };
+
+    await OfflineStorage.put(STORES.PM_SCHEDULES, updated);
+
+    return updated;
+}
+
+export async function getLocalPmSaveOverlay(id) {
+    const record = await OfflineStorage.get(STORES.PM_SCHEDULES, id);
+
+    if (!record?.local_save_status) {
+        return null;
+    }
+
+    return record;
+}
+
+export async function clearLocalPmSaveOverlay(id) {
+    const existing = await OfflineStorage.get(STORES.PM_SCHEDULES, id);
+
+    if (!existing) {
+        return;
+    }
+
+    const { local_save_status, pending_save_operation_uuid, local_save_updated_at, ...rest } = existing;
+
+    await OfflineStorage.put(STORES.PM_SCHEDULES, rest);
+}
+
+/**
+ * Same idea again, but for PM_CHECKLIST_SAVE (Task 6) — its own separate
+ * field namespace (`local_checklist_*` / `pending_checklist_operation_uuid`),
+ * so a PM can independently show "started offline", "saved offline", AND
+ * "checklist saved offline" overlays at once without any of them
+ * colliding, and Task 4/5's existing fields/tests stay untouched.
+ */
+export async function setLocalPmChecklistOverlay(id, overlay) {
+    const existing = (await OfflineStorage.get(STORES.PM_SCHEDULES, id)) ?? { id };
+    const updated = { ...existing, ...overlay, id };
+
+    await OfflineStorage.put(STORES.PM_SCHEDULES, updated);
+
+    return updated;
+}
+
+export async function getLocalPmChecklistOverlay(id) {
+    const record = await OfflineStorage.get(STORES.PM_SCHEDULES, id);
+
+    if (!record?.local_checklist_status) {
+        return null;
+    }
+
+    return record;
+}
+
+export async function clearLocalPmChecklistOverlay(id) {
+    const existing = await OfflineStorage.get(STORES.PM_SCHEDULES, id);
+
+    if (!existing) {
+        return;
+    }
+
+    const { local_checklist_status, pending_checklist_operation_uuid, local_checklist_updated_at, ...rest } = existing;
+
+    await OfflineStorage.put(STORES.PM_SCHEDULES, rest);
+}
+
+/**
+ * Same "local overlay" idea again, but for Oil Audit Follow Up (Task 8) —
+ * kept in the generic MASTER_DATA store (via putMasterData/getMasterData)
+ * rather than PM_SCHEDULES, since it is keyed by oil_audit_id, not a PM
+ * Schedule id, and Oil Audits have no dedicated object store (Task 7
+ * deliberately didn't add one — see machine cache via "machines" category).
+ * This reuses that same generic cache instead of adding a new IndexedDB
+ * object store just for this overlay (Task 8 section 20 forbids schema
+ * changes unless truly required).
+ */
+const OIL_AUDIT_FOLLOW_UP_OVERLAY_CATEGORY = 'oil_audit_follow_up_local_status';
+
+export async function setLocalOilAuditFollowUpOverlay(oilAuditId, overlay) {
+    const existing = (await getMasterData(OIL_AUDIT_FOLLOW_UP_OVERLAY_CATEGORY, oilAuditId)) ?? {};
+    const updated = { ...existing, ...overlay, oil_audit_id: oilAuditId };
+
+    await putMasterData(OIL_AUDIT_FOLLOW_UP_OVERLAY_CATEGORY, oilAuditId, updated);
+
+    return updated;
+}
+
+export async function getLocalOilAuditFollowUpOverlay(oilAuditId) {
+    const record = await getMasterData(OIL_AUDIT_FOLLOW_UP_OVERLAY_CATEGORY, oilAuditId);
+
+    if (!record?.local_status) {
+        return null;
+    }
+
+    return record;
+}
+
+export async function clearLocalOilAuditFollowUpOverlay(oilAuditId) {
+    const existing = await getMasterData(OIL_AUDIT_FOLLOW_UP_OVERLAY_CATEGORY, oilAuditId);
+
+    if (!existing) {
+        return;
+    }
+
+    const { local_status, pending_operation_uuid, local_updated_at, ...rest } = existing;
+
+    await putMasterData(OIL_AUDIT_FOLLOW_UP_OVERLAY_CATEGORY, oilAuditId, rest);
+}
+
+/**
  * Small bookkeeping key/value pair — e.g. recording when a given category
  * was last downloaded, so a later task can decide whether to refresh it.
  */
