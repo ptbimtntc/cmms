@@ -23,8 +23,10 @@
             </div>
         </div>
 
-        <div class="flex shrink-0 items-center justify-end gap-3" x-data="{ open: false }">
-            <div class="relative">
+        <div class="flex shrink-0 items-center justify-end gap-3">
+            @include('partials.sync-status')
+
+            <div class="relative" x-data="{ open: false }">
                 <button
                     type="button"
                     @click="open = !open"

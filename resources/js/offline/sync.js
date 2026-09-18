@@ -55,8 +55,10 @@ export async function sendQueuedOperation(operationUuid) {
         body = await response.json();
     } catch (error) {
         // Network failure DURING the sync attempt itself — the operation
-        // must stay retryable, never be dropped.
-        await SyncQueue.markFailed(operationUuid, String(error?.message ?? error));
+        // must stay retryable, never be dropped. Tagged "network_error" (Task
+        // 9A) purely so a queue-draining engine can tell this apart from a
+        // business failure when deciding what is safe to auto-retry.
+        await SyncQueue.markFailed(operationUuid, String(error?.message ?? error), { statusCode: 'network_error' });
         throw error;
     }
 
@@ -76,8 +78,12 @@ export async function sendQueuedOperation(operationUuid) {
         default:
             // validation_failed / forbidden / failed / in_progress / any
             // unexpected status — recorded as failed-but-retained, never
-            // silently dropped.
-            await SyncQueue.markFailed(operationUuid, body.message ?? body.status ?? 'Unknown sync error');
+            // silently dropped. body.status is kept as last_error_status
+            // (Task 9A) so a queue-draining engine can tell a transient
+            // server failure ("failed"/"in_progress") apart from something
+            // that needs a human to fix (validation_failed/forbidden)
+            // without re-parsing the free-text error message.
+            await SyncQueue.markFailed(operationUuid, body.message ?? body.status ?? 'Unknown sync error', { statusCode: body.status ?? null });
             break;
     }
 

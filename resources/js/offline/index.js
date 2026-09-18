@@ -20,4 +20,5 @@ export * as PmSave from './pmSave.js';
 export * as PmChecklist from './pmChecklist.js';
 export * as OilAuditCreate from './oilAuditCreate.js';
 export * as OilAuditFollowUp from './oilAuditFollowUp.js';
+export * as SyncEngine from './syncEngine.js';
 export { registerServiceWorker } from './sw-register.js';

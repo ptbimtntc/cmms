@@ -24,6 +24,14 @@ export const QueueStatus = Object.freeze({
     CONFLICT: 'conflict',
 });
 
+let sequenceCounter = 0;
+
+function nextSequence() {
+    sequenceCounter += 1;
+
+    return sequenceCounter;
+}
+
 /**
  * Adds a new operation to the queue, OR returns the existing queued
  * operation unchanged if `operationUuid` is already present — enqueue()
@@ -59,6 +67,14 @@ export async function enqueue({ operationUuid, transactionType, payload, expecte
         status: QueueStatus.PENDING,
         attempt_count: 0,
         created_at: now,
+        // created_at alone (millisecond ISO string) is not enough to
+        // recover strict creation order — two operations enqueued in quick
+        // succession (e.g. PM_START immediately followed by PM_SAVE) can
+        // land in the same millisecond. sequence (Task 9A) is a
+        // monotonically increasing counter for THIS page session only, used
+        // purely as an ordering tie-breaker by a later task's queue
+        // drainer — never queried/indexed, so it needs no schema change.
+        sequence: nextSequence(),
         updated_at: now,
         last_attempt_at: null,
         last_error: null,
@@ -160,15 +176,28 @@ export async function markSyncing(operationUuid) {
  * — this module only records the outcome.
  */
 export function markSynced(operationUuid, result = {}) {
-    return patch(operationUuid, { status: QueueStatus.SYNCED, last_error: null, result });
+    return patch(operationUuid, { status: QueueStatus.SYNCED, last_error: null, last_error_status: null, result });
 }
 
-export function markFailed(operationUuid, errorMessage) {
-    return patch(operationUuid, { status: QueueStatus.FAILED, last_error: String(errorMessage ?? 'Unknown error') });
+/**
+ * `statusCode` (Task 9A) is the /api/sync response's own `status` value
+ * (e.g. "failed", "validation_failed", "forbidden") when this failure came
+ * from a server response, "network_error" when it came from the fetch()
+ * itself throwing, or omitted when the caller has no such code. It is
+ * purely an extra classification hint for a queue-draining engine to
+ * decide what is safe to retry automatically (section 4/24) — never used
+ * to change what sync.js itself does with the operation.
+ */
+export function markFailed(operationUuid, errorMessage, { statusCode } = {}) {
+    return patch(operationUuid, {
+        status: QueueStatus.FAILED,
+        last_error: String(errorMessage ?? 'Unknown error'),
+        last_error_status: statusCode ?? null,
+    });
 }
 
 export function markConflict(operationUuid, details = {}) {
-    return patch(operationUuid, { status: QueueStatus.CONFLICT, last_error: null, result: details });
+    return patch(operationUuid, { status: QueueStatus.CONFLICT, last_error: null, last_error_status: null, result: details });
 }
 
 /**
