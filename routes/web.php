@@ -18,6 +18,7 @@ use App\Http\Controllers\OilAuditController;
 use App\Http\Controllers\OilAuditReportController;
 use App\Http\Controllers\PMReportController;
 use App\Http\Controllers\PMScheduleController;
+use App\Http\Controllers\PMStatusBoardController;
 use App\Http\Controllers\ProblemReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrScannerController;
@@ -44,6 +45,17 @@ Route::get('/dashboard-guest', [DashboardGuestController::class, 'index'])->name
 Route::resource('machine-history', MachineHistoryController::class)->only(['index', 'show']);
 Route::get('/machine-history/{machineNumber}/detail/{pmSchedule}', [MachineHistoryController::class, 'detail'])->name('machine-history.detail');
 Route::get('/m/{machine}', [MachineHistoryController::class, 'show']);
+
+// Public PM Status Board — read-only, no login required (same guest pattern
+// as machine-history above). For Production team to check PM OPEN/CLOSED
+// status and GAP DAY before requesting a schedule shift. Reuses the
+// existing PM Schedule data/status; adds no new PM workflow.
+// Area is a route segment (not a filter) so each area gets its own public
+// URL and data never mixes across areas; whereIn 404s any area outside
+// wwd/bul instead of silently falling back to "all areas".
+Route::get('/pm-status/{area}', [PMStatusBoardController::class, 'index'])
+    ->name('pm-status.show')
+    ->whereIn('area', ['wwd', 'bul']);
 
 Route::get('/scan', [QrScannerController::class, 'index'])->name('qr.scan');
 

@@ -93,6 +93,39 @@
 
                 </a>
 
+                {{-- PM Status is split per area (no single "all area" page),
+                     so this is a small dropdown to the two area URLs rather
+                     than one link — picking a default area here would be
+                     arbitrary. --}}
+                <div class="relative" x-data="{ open: false }">
+                    <button type="button" @click="open = !open" @click.outside="open = false"
+                        class="flex items-center gap-1 text-slate-600 hover:text-blue-600 transition">
+
+                        PM Status
+
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                            <path d="m6 9 6 6 6-6" />
+                        </svg>
+
+                    </button>
+
+                    <div x-show="open" x-cloak x-transition
+                        class="absolute left-0 z-40 mt-2 w-32 rounded-xl border border-slate-200 bg-white py-2 shadow-lg">
+
+                        <a href="{{ route('pm-status.show', 'wwd') }}"
+                            class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-blue-600">
+                            WWD
+                        </a>
+
+                        <a href="{{ route('pm-status.show', 'bul') }}"
+                            class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-blue-600">
+                            BUL
+                        </a>
+
+                    </div>
+                </div>
+
             </div>
 
             {{-- Action --}}
