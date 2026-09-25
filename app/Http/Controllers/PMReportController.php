@@ -59,6 +59,12 @@ class PMReportController extends Controller
 
         $summary = PMReportKpiCalculator::fromStatusCounts($statusCounts);
 
+        // Jan-Sep trend charts always plot the active Year filter; "All
+        // Years" has no single year to bucket by, so it falls back to the
+        // current year rather than showing an ambiguous mix.
+        $trendYear = $year ?? Carbon::now()->year;
+        $trend = $this->monthlyTrend($user, $area, $machineType, $machine, $pic, $statuses, $search, $trendYear);
+
         $schedules = $query
             ->orderByDesc('plan_date')
             ->orderBy('machine_number')
@@ -73,6 +79,8 @@ class PMReportController extends Controller
 
         return view('reports.pm.index', [
             'summary' => $summary,
+            'trend' => $trend,
+            'trendYear' => $trendYear,
             'schedules' => $schedules,
             'years' => $this->availableYears($user, $year),
             'machineTypes' => (clone $optionsScope)->whereNotNull('machine_type')->distinct()->orderBy('machine_type')->pluck('machine_type'),
@@ -129,6 +137,24 @@ class PMReportController extends Controller
             });
         }
 
+        return $this->applyNonTemporalFilters($query, $machineType, $machine, $pic, $statuses, $search);
+    }
+
+    /**
+     * Machine type/machine/pic/status/search — every filter that narrows
+     * WHICH schedules count, as opposed to WHEN (year/month). Split out so
+     * the monthly trend chart (monthlyTrend()) can honor these same filters
+     * while defining its own month axis, independent of the year/month
+     * filter above it.
+     */
+    private function applyNonTemporalFilters(
+        Builder $query,
+        ?string $machineType,
+        ?string $machine,
+        ?string $pic,
+        array $statuses,
+        string $search
+    ): Builder {
         if ($machineType) {
             $query->where('machine_type', $machineType);
         }
@@ -153,6 +179,53 @@ class PMReportController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * Jan–Sep completion/closing % trend for the PM Report's summary
+     * charts. Honors every filter except year/month (those define the
+     * chart's own axis): Area/Machine Type/Machine/PIC/Status/Search still
+     * narrow which schedules count, same as the summary cards and table.
+     * One query for the whole year, bucketed by month in PHP — same
+     * approach as DashboardController::completionTrend(), portable across
+     * MySQL/SQLite and avoiding 9 separate round trips.
+     */
+    private function monthlyTrend(
+        User $user,
+        ?string $area,
+        ?string $machineType,
+        ?string $machine,
+        ?string $pic,
+        array $statuses,
+        string $search,
+        int $year
+    ): array {
+        $yearRecords = $this->applyNonTemporalFilters(
+            $this->scoped($user, $area),
+            $machineType,
+            $machine,
+            $pic,
+            $statuses,
+            $search
+        )
+            ->whereYear('plan_date', $year)
+            ->get(['plan_date', 'status']);
+
+        return collect(range(1, 9))->map(function (int $m) use ($yearRecords) {
+            $statusCounts = $yearRecords
+                ->filter(fn ($pm) => Carbon::parse($pm->plan_date)->month === $m)
+                ->countBy('status');
+
+            $kpi = PMReportKpiCalculator::fromStatusCounts($statusCounts);
+
+            return [
+                'month' => $m,
+                'label' => Carbon::create(null, $m, 1)->format('M'),
+                'has_data' => $kpi['total'] > 0,
+                'closing_percent' => $kpi['closing_percent'],
+                'completion_percent' => $kpi['completion_percent'],
+            ];
+        })->values()->all();
     }
 
     private function scoped(User $user, ?string $area): Builder

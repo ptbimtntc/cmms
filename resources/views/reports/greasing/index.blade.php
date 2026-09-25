@@ -1,15 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">Greasing Report</h1>
-            <p class="text-sm text-slate-500">Closing &amp; Completion KPI, trend, and greasing/finding detail for the selected period.</p>
-        </div>
-        <a href="{{ route('reports.index') }}"
-            class="inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-            ← Report Center
-        </a>
+    <div class="mb-6">
+        <h1 class="text-2xl font-semibold text-slate-800">Greasing Report</h1>
+        <p class="text-sm text-slate-500">Closing &amp; Completion, trend, and greasing/finding detail for the selected period.</p>
     </div>
 
     {{-- Filter --}}
@@ -54,7 +48,7 @@
             <div>
                 <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Area</label>
                 <select name="area" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                    <option value="" {{ $area ? '' : 'selected' }}>All</option>
+                    <option value="" {{ $area ? '' : 'selected' }}>All Area</option>
                     <option value="WWD" {{ $area === 'WWD' ? 'selected' : '' }}>WWD</option>
                     <option value="BUL" {{ $area === 'BUL' ? 'selected' : '' }}>BUL</option>
                 </select>

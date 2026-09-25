@@ -2,15 +2,9 @@
 
 @section('content')
 
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">Oil Audit Report</h1>
-            <p class="text-sm text-slate-500">Every machine in Oil Audit scope, one row each, with its latest audit.</p>
-        </div>
-        <a href="{{ route('reports.index') }}"
-            class="inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-            ← Report Center
-        </a>
+    <div class="mb-6">
+        <h1 class="text-2xl font-semibold text-slate-800">Oil Audit Report</h1>
+        <p class="text-sm text-slate-500">Every machine in Oil Audit scope, one row each, with its latest audit.</p>
     </div>
 
     {{-- ============ Filters ============ --}}
@@ -74,7 +68,48 @@
 
     {{-- ============ Oil Audit Analysis (confirmed via follow-up, scoped by the report filters) ============ --}}
     <h2 class="mb-3 text-lg font-semibold text-slate-800">Oil Audit Analysis</h2>
-    <p class="mb-4 text-xs text-slate-500">Mengikuti filter Area / Machine Type / Year / Month di atas. Search tidak memengaruhi analisa.</p>
+
+    {{-- Distribusi Finding — persentase tiap finding (Kapstan 1/2/3/4, Mainshaft, dst) dari seluruh temuan follow-up. --}}
+    <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4 flex items-start justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-800">Distribusi Finding</h2>
+                <p class="mt-0.5 text-xs text-slate-500">
+                    Persentase tiap bagian yang paling sering menjadi temuan follow-up
+                </p>
+            </div>
+            <span class="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                {{ $findingFrequency->sum('total') }} temuan
+            </span>
+        </div>
+
+        @if ($findingFrequency->isEmpty())
+            <p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
+                Belum ada finding follow-up pada scope filter ini.
+            </p>
+        @else
+            <div class="mx-auto flex max-w-2xl flex-col items-center gap-6 sm:flex-row sm:items-center">
+                <div class="h-56 w-56 shrink-0">
+                    <canvas id="findingDistributionChart"></canvas>
+                </div>
+
+                <ul class="w-full min-w-0 space-y-2">
+                    @foreach ($findingFrequency as $index => $row)
+                        <li class="flex items-center justify-between gap-3 text-sm">
+                            <span class="flex min-w-0 items-center gap-2">
+                                <span class="finding-legend-dot inline-block h-2.5 w-2.5 shrink-0 rounded-full" data-index="{{ $index }}"></span>
+                                <span class="truncate font-medium text-slate-700">{{ $row->finding }}</span>
+                            </span>
+                            <span class="shrink-0 font-semibold text-slate-800">
+                                {{ $row->percent }}% <span class="font-normal text-slate-400">({{ $row->total }})</span>
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </div>
+
     <div class="mb-6 grid gap-4 lg:grid-cols-2">
         {{-- Problem & Finding Paling Sering Muncul --}}
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -285,5 +320,53 @@
             {{ $machines->links() }}
         </div>
     @endif
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const findings = @json($findingFrequency);
+
+            // Fixed palette, one color per finding slot — Kapstan 1/2/3/4,
+            // Mainshaft, Innershaft, Lainnya, then the legacy "(tanpa
+            // detail)" placeholder, in whatever order they came back sorted
+            // by count. Indexed the same way for both the pie slices and
+            // the legend dots so they always match.
+            const palette = ['#2563eb', '#0284c7', '#7c3aed', '#db2777', '#f59e0b', '#10b981', '#64748b', '#94a3b8'];
+            const colors = findings.map((_, i) => palette[i % palette.length]);
+
+            document.querySelectorAll('.finding-legend-dot').forEach((dot) => {
+                dot.style.backgroundColor = colors[parseInt(dot.dataset.index, 10)];
+            });
+
+            const canvas = document.getElementById('findingDistributionChart');
+            if (canvas && findings.length > 0) {
+                new Chart(canvas, {
+                    type: 'pie',
+                    data: {
+                        labels: findings.map((f) => f.finding),
+                        datasets: [{
+                            data: findings.map((f) => f.total),
+                            backgroundColor: colors,
+                            borderWidth: 1,
+                            borderColor: '#ffffff',
+                        }],
+                    },
+                    options: {
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => {
+                                        const row = findings[ctx.dataIndex];
+                                        return row.finding + ': ' + row.percent + '% (' + row.total + ')';
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            }
+        });
+    </script>
 
 @endsection

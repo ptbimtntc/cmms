@@ -95,6 +95,21 @@ document.addEventListener('alpine:init', () => {
         $greasingActive = request()->routeIs('greasings.*');
         $profileActive = request()->routeIs('profile.*');
 
+        // Individual report routes — each links straight to its own report
+        // page from the sidebar now (no more intermediate Report Center hub).
+        $reportsPmActive = request()->routeIs('reports.pm');
+        $reportsGreasingActive = request()->routeIs('reports.greasing');
+        $reportsOilAuditActive = request()->routeIs('reports.oil-audit');
+        $reportsSparepartActive = request()->routeIs('reports.sparepart');
+        $reportsMachineActive = request()->routeIs('reports.machine');
+        $reportsProblemActive = request()->routeIs('reports.problem');
+        $reportsCostActive = request()->routeIs('reports.cost');
+
+        // Oil Audit is a WWD-only module (same role set as its own route
+        // middleware) — hide its report link for roles that could never
+        // open it, same rule the old Report Center hub used.
+        $oilAuditReportEligible = in_array($userRole, ['ADMIN', 'KOORDINATOR WWD', 'PIC WWD'], true);
+
         @endphp
         @php
         $machineHistoryActive = request()->routeIs('machine-history.*');
@@ -102,7 +117,8 @@ document.addEventListener('alpine:init', () => {
         <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $todayActivityActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
                         ($machineActive || $groupActive || $sparepartActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive ? 'master' :
-                        ($machineHistoryActive || $reportActive ? 'report' : 'system')) }}'
+                        ($machineHistoryActive || $reportActive ? 'report' : 'system')) }}',
+            openSubmenu: '{{ $reportActive ? 'reports' : '' }}'
         }">
             @php
             $groups = [
@@ -224,7 +240,8 @@ document.addEventListener('alpine:init', () => {
             <path d="M12 7v5l4 2" />',
             ],
             [
-            'route' => route('reports.index'),
+            'type' => 'submenu',
+            'key' => 'reports',
             'label' => 'Reports',
             'active' => $reportActive,
             // file-chart-column
@@ -240,6 +257,44 @@ document.addEventListener('alpine:init', () => {
             $userRole === 'PIC BUL' ||
             $userRole === 'KOORDINATOR WWD'||
             $userRole === 'KOORDINATOR BUL',
+            'children' => [
+            [
+            'route' => route('reports.pm'),
+            'label' => 'PM Report',
+            'active' => $reportsPmActive,
+            ],
+            [
+            'route' => route('reports.greasing'),
+            'label' => 'Greasing Report',
+            'active' => $reportsGreasingActive,
+            ],
+            [
+            'route' => route('reports.oil-audit'),
+            'label' => 'Oil Audit Report',
+            'active' => $reportsOilAuditActive,
+            'visible' => $oilAuditReportEligible,
+            ],
+            [
+            'route' => route('reports.sparepart'),
+            'label' => 'Sparepart Usage Report',
+            'active' => $reportsSparepartActive,
+            ],
+            [
+            'route' => route('reports.machine'),
+            'label' => 'Machine Report',
+            'active' => $reportsMachineActive,
+            ],
+            [
+            'route' => route('reports.problem'),
+            'label' => 'Problem Analysis Report',
+            'active' => $reportsProblemActive,
+            ],
+            [
+            'route' => route('reports.cost'),
+            'label' => 'Maintenance Cost Report',
+            'active' => $reportsCostActive,
+            ],
+            ],
             ],
             ],
             ],
@@ -437,6 +492,42 @@ document.addEventListener('alpine:init', () => {
                 <div x-show="openGroup === '{{ $group['key'] }}'" class="space-y-1 px-2 pb-2">
                     @foreach ($group['items'] as $item)
                     @if (!isset($item['visible']) || $item['visible'])
+                    @if (($item['type'] ?? 'link') === 'submenu')
+                    {{-- Sub-accordion: toggles independently of the parent group, revealing its own direct links below. --}}
+                    <button type="button"
+                        @click="openSubmenu = (openSubmenu === '{{ $item['key'] }}') ? '' : '{{ $item['key'] }}'"
+                        class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-all {{ $item['active'] ? 'text-sidebar-foreground' : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground' }}">
+                        <span class="flex min-w-0 items-center gap-3">
+                            <span
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-hover text-sm text-sidebar-foreground">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                                    class="h-4 w-4">
+                                    {!! $item['icon'] !!}
+                                </svg>
+                            </span>
+                            <span class="truncate">{{ $item['label'] }}</span>
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="h-4 w-4 shrink-0 transition-transform"
+                            :class="{ 'rotate-90': openSubmenu === '{{ $item['key'] }}' }">
+                            <path d="m9 18 6-6-6-6" />
+                        </svg>
+                    </button>
+
+                    <div x-show="openSubmenu === '{{ $item['key'] }}'"
+                        class="ml-4 space-y-1 border-l border-sidebar-border py-1 pl-4">
+                        @foreach ($item['children'] as $child)
+                        @if (!isset($child['visible']) || $child['visible'])
+                        <a href="{{ $child['route'] }}"
+                            class="block truncate rounded-lg px-3 py-2 text-sm transition-all {{ $child['active'] ? 'bg-sidebar-active text-white shadow-sm' : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground' }}">
+                            {{ $child['label'] }}
+                        </a>
+                        @endif
+                        @endforeach
+                    </div>
+                    @else
                     <a href="{{ $item['route'] }}"
                         class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all {{ $item['active'] ? 'bg-sidebar-active text-white shadow-sm' : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground' }}">
                         <span
@@ -449,6 +540,7 @@ document.addEventListener('alpine:init', () => {
                         </span>
                         <span class="truncate">{{ $item['label'] }}</span>
                     </a>
+                    @endif
                     @endif
                     @endforeach
                 </div>

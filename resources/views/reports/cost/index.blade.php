@@ -2,23 +2,17 @@
 
 @section('content')
 
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">Maintenance Cost Report</h1>
-            <p class="text-sm text-slate-500">Monthly cost trend and detail, sourced from real sparepart usage — the
+    <div class="mb-6">
+        <h1 class="text-2xl font-semibold text-slate-800">Maintenance Cost Report</h1>
+        <p class="text-sm text-slate-500">Monthly cost trend and detail, sourced from real sparepart usage — the
                 only maintenance cost currently tracked in FreeDOMS.</p>
-        </div>
-        <a href="{{ route('reports.index') }}"
-            class="inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-            ← Report Center
-        </a>
     </div>
 
     {{-- ============ Filters ============ --}}
     <form method="GET" class="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
         @if ($isAdmin)
             <select name="area" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="">ALL Areas</option>
+                <option value="">All Areas</option>
                 @foreach ($areas as $a)
                     <option value="{{ $a }}" {{ $selectedArea === $a ? 'selected' : '' }}>{{ $a }}</option>
                 @endforeach

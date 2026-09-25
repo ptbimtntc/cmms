@@ -2,15 +2,9 @@
 
 @section('content')
 
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">PM Report</h1>
-            <p class="text-sm text-slate-500">Detail, filter, and drill-down for every PM Schedule record.</p>
-        </div>
-        <a href="{{ route('reports.index') }}"
-            class="inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
-            ← Report Center
-        </a>
+    <div class="mb-6">
+        <h1 class="text-2xl font-semibold text-slate-800">PM Report</h1>
+        <p class="text-sm text-slate-500">Detail, filter, and drill-down for every PM Schedule record.</p>
     </div>
 
     {{-- ============ Filters ============ --}}
@@ -21,7 +15,7 @@
 
         @if ($isAdmin)
             <select name="area" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="">ALL Areas</option>
+                <option value="">All Areas</option>
                 @foreach ($areas as $a)
                     <option value="{{ $a }}" {{ $selectedArea === $a ? 'selected' : '' }}>{{ $a }}</option>
                 @endforeach
@@ -79,6 +73,27 @@
             Reset
         </a>
     </form>
+
+    {{-- ============ Trend Charts ============ --}}
+    <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-3 text-sm font-semibold text-slate-700">Completion Trend — {{ $trendYear }}
+                <span class="font-normal text-slate-400">(Jan–Sep)</span>
+            </div>
+            <div class="h-56">
+                <canvas id="pmCompletionTrendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-3 text-sm font-semibold text-slate-700">Closing Trend — {{ $trendYear }}
+                <span class="font-normal text-slate-400">(Jan–Sep)</span>
+            </div>
+            <div class="h-56">
+                <canvas id="pmClosingTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
 
     {{-- ============ Summary ============ --}}
     <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
@@ -243,5 +258,92 @@
             Predicted problems, spareparts, and confidence per machine will appear here once available. Not implemented yet.
         </p>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const trend = @json($trend);
+
+            const percentScale = {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: (v) => v + '%',
+                },
+            };
+
+            const tooltipLabel = (ctx) => ctx.raw === null ? 'No data' : ctx.raw + '%';
+
+            // Fixed 96% target reference line, drawn on top of the bars —
+            // same idea as the dashed target line on the Dashboard's trend
+            // chart, just orange here per request and pinned to 96 rather
+            // than a per-user target.
+            const targetLinePlugin = {
+                id: 'targetLine',
+                afterDatasetsDraw(chart) {
+                    const { ctx, chartArea, scales } = chart;
+                    const y = scales.y.getPixelForValue(96);
+
+                    ctx.save();
+                    ctx.strokeStyle = '#f97316';
+                    ctx.setLineDash([5, 4]);
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(chartArea.left, y);
+                    ctx.lineTo(chartArea.right, y);
+                    ctx.stroke();
+
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = '#f97316';
+                    ctx.font = 'bold 10px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('Target 96%', chartArea.left + 4, y - 5);
+                    ctx.restore();
+                },
+            };
+
+            new Chart(document.getElementById('pmCompletionTrendChart'), {
+                type: 'bar',
+                data: {
+                    labels: trend.map((t) => t.label),
+                    datasets: [{
+                        label: 'Completion %',
+                        data: trend.map((t) => t.has_data ? t.completion_percent : null),
+                        backgroundColor: '#2563eb',
+                        borderRadius: 4,
+                    }],
+                },
+                options: {
+                    scales: { y: percentScale },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: tooltipLabel } },
+                    },
+                },
+                plugins: [targetLinePlugin],
+            });
+
+            new Chart(document.getElementById('pmClosingTrendChart'), {
+                type: 'bar',
+                data: {
+                    labels: trend.map((t) => t.label),
+                    datasets: [{
+                        label: 'Closing %',
+                        data: trend.map((t) => t.has_data ? t.closing_percent : null),
+                        backgroundColor: '#0284c7',
+                        borderRadius: 4,
+                    }],
+                },
+                options: {
+                    scales: { y: percentScale },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: tooltipLabel } },
+                    },
+                },
+                plugins: [targetLinePlugin],
+            });
+        });
+    </script>
 
 @endsection

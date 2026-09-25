@@ -61,7 +61,14 @@ test('oil audit section is hidden when admin filters to BUL', function () {
     $response = $this->actingAs($admin)->get(route('dashboard', ['area' => 'BUL']));
 
     $response->assertOk();
-    $response->assertDontSee('Oil Audit');
+    // null hides the dashboard-oil-audit-card partial entirely (see
+    // DashboardController::oilAuditSummary). Checking the card's own
+    // stat labels — rather than the bare string "Oil Audit" — keeps this
+    // scoped to the dashboard body, since the sidebar's nav also links to
+    // an "Oil Audit Report" page on every authenticated screen.
+    expect($response->viewData('oilAudit'))->toBeNull();
+    $response->assertDontSee('Audited Today');
+    $response->assertDontSee('Critical Unresolved');
 });
 
 test('activity timeline and pm due next 7 days are fully removed from the dashboard', function () {

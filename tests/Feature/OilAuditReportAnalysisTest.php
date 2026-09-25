@@ -251,3 +251,113 @@ test('analysis is limited to the wwd nde/ndb oil-audit scope', function () {
     expect($response->viewData('repeatFindingMachines')->pluck('machine_number')->all())
         ->toBe(['IN-NDB']);
 });
+
+// ---------------------------------------------------------------------------
+// Finding frequency (pie chart) — same analysis scope, grouped by finding only
+// ---------------------------------------------------------------------------
+
+test('finding frequency groups by finding alone, across different problems', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = analysisMachine();
+
+    // Kapstan 1 shows up under two different problems — still one bucket.
+    analysisFinding($machine, [p('Bocor Seal', ['Kapstan 1'])]);
+    analysisFinding($machine, [p('Bearing Oblak', ['Kapstan 1'])]);
+    analysisFinding($machine, [p('Bocor Seal', ['Mainshaft'])]);
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit'));
+
+    $response->assertOk();
+    $byFinding = $response->viewData('findingFrequency')
+        ->mapWithKeys(fn ($row) => [$row->finding => (int) $row->total]);
+
+    expect($byFinding->all())->toBe([
+        'Kapstan 1' => 2,
+        'Mainshaft' => 1,
+    ]);
+});
+
+test('finding frequency percentages sum to 100 and reflect each share of the total', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = analysisMachine();
+
+    analysisFinding($machine, [p('Bocor Seal', ['Kapstan 1'])]);
+    analysisFinding($machine, [p('Bocor Seal', ['Kapstan 1'])]);
+    analysisFinding($machine, [p('Bocor Seal', ['Kapstan 1'])]);
+    analysisFinding($machine, [p('Bearing Oblak', ['Kapstan 2'])]);
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit'));
+
+    $frequency = $response->viewData('findingFrequency');
+    $kapstan1 = $frequency->firstWhere('finding', 'Kapstan 1');
+    $kapstan2 = $frequency->firstWhere('finding', 'Kapstan 2');
+
+    expect($kapstan1->percent)->toBe(75.0);
+    expect($kapstan2->percent)->toBe(25.0);
+    expect($frequency->sum('percent'))->toBe(100.0);
+});
+
+test('a legacy problem without any finding is grouped under the placeholder in finding frequency too', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = analysisMachine();
+
+    analysisFinding($machine, [p('Bocor Seal', [])]);
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit'));
+
+    $row = $response->viewData('findingFrequency')->firstWhere('finding', '(tanpa detail)');
+    expect($row)->not->toBeNull();
+    expect((int) $row->total)->toBe(1);
+});
+
+test('finding frequency follows the area / machine type / year / month filters', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = analysisMachine();
+
+    analysisFinding($machine, [p('Bocor Seal', ['Kapstan 1'])], '2025-01-10');
+    analysisFinding($machine, [p('Bocor Seal', ['Kapstan 2'])], '2026-08-10');
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit', ['year' => 2025]));
+
+    $response->assertOk();
+    expect($response->viewData('findingFrequency')->pluck('finding')->all())->toBe(['Kapstan 1']);
+});
+
+test('search does not affect finding frequency, same as the other analysis panels', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $matching = analysisMachine(['machine_number' => 'FIND-SEARCH-HIT']);
+    $other = analysisMachine(['machine_number' => 'FIND-OTHER']);
+
+    analysisFinding($matching, [p('Bocor Seal', ['Kapstan 1'])]);
+    analysisFinding($other, [p('Bearing Oblak', ['Kapstan 2'])]);
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit', ['search' => 'FIND-SEARCH-HIT']));
+
+    $response->assertOk();
+    expect($response->viewData('findingFrequency')->pluck('finding')->sort()->values()->all())
+        ->toBe(['Kapstan 1', 'Kapstan 2']);
+});
+
+test('the pie chart and legend render on the oil audit report page', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = analysisMachine();
+    analysisFinding($machine, [p('Bocor Seal', ['Kapstan 1'])]);
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit'));
+
+    $response->assertOk();
+    $response->assertSee('Distribusi Finding');
+    $response->assertSee('id="findingDistributionChart"', false);
+    $response->assertSee('Kapstan 1');
+    $response->assertSee("type: 'pie'", false);
+});
+
+test('an empty finding frequency shows a placeholder instead of an empty chart', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit'));
+
+    $response->assertOk();
+    $response->assertDontSee('id="findingDistributionChart"', false);
+    $response->assertSee('Belum ada finding follow-up pada scope filter ini.');
+});

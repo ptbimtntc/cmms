@@ -34,18 +34,6 @@ function makeReportPm(Machine $machine, array $overrides = []): PMSchedule
     ], $overrides));
 }
 
-test('report center no longer shows the old dummy content', function () {
-    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-
-    $response = $this->actingAs($admin)->get(route('reports.index'));
-
-    $response->assertOk();
-    $response->assertDontSee('Total Machines: 120');
-    $response->assertDontSee('Completed PM: 85');
-    $response->assertSee('PM Report');
-    $response->assertSee(route('reports.pm'), false);
-});
-
 test('pm report renders with a correct summary for admin', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $machine = makeReportMachine(['area' => 'WWD']);
@@ -241,4 +229,147 @@ test('unauthenticated users are redirected to login', function () {
     $response = $this->get(route('reports.pm'));
 
     $response->assertRedirect(route('login'));
+});
+
+// ---------------------------------------------------------------
+// Jan-Sep completion/closing trend charts
+// ---------------------------------------------------------------
+
+test('trend covers exactly january through september, in order', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026]));
+
+    $trend = $response->viewData('trend');
+    expect($trend)->toHaveCount(9);
+    expect(array_column($trend, 'label'))->toBe(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
+    expect(array_column($trend, 'month'))->toBe([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
+
+test('trend follows the selected year filter', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = makeReportMachine();
+
+    makeReportPm($machine, ['status' => 'FINISHED_ON_TIME', 'plan_date' => '2025-03-05']);
+    makeReportPm($machine, ['status' => 'OPEN', 'plan_date' => '2026-03-05']);
+
+    $response2025 = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2025]));
+    $response2026 = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026]));
+
+    expect($response2025->viewData('trendYear'))->toBe(2025);
+    $march2025 = collect($response2025->viewData('trend'))->firstWhere('month', 3);
+    expect($march2025['closing_percent'])->toBe(100.0);
+
+    expect($response2026->viewData('trendYear'))->toBe(2026);
+    $march2026 = collect($response2026->viewData('trend'))->firstWhere('month', 3);
+    expect($march2026['closing_percent'])->toBe(0.0);
+});
+
+test('trend defaults to the current year when "all years" is selected', function () {
+    Carbon::setTestNow(Carbon::parse('2026-09-25'));
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm'));
+
+    expect($response->viewData('trendYear'))->toBe(2026);
+
+    Carbon::setTestNow();
+});
+
+test('trend percentages match the same closing/completion formula as the summary cards', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = makeReportMachine();
+
+    makeReportPm($machine, ['status' => 'FINISHED_ON_TIME', 'plan_date' => '2026-05-10']);
+    makeReportPm($machine, ['status' => 'FINISHED', 'plan_date' => '2026-05-11']);
+    makeReportPm($machine, ['status' => 'OPEN', 'plan_date' => '2026-05-12']);
+    makeReportPm($machine, ['status' => 'MISSED', 'plan_date' => '2026-05-13']);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026]));
+
+    $may = collect($response->viewData('trend'))->firstWhere('month', 5);
+    expect($may['closing_percent'])->toBe(50.0);
+    expect($may['completion_percent'])->toBe(37.5);
+    expect($may['has_data'])->toBeTrue();
+});
+
+test('a month with no pm schedules has no data rather than a misleading 0%', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = makeReportMachine();
+    makeReportPm($machine, ['status' => 'FINISHED', 'plan_date' => '2026-05-10']);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026]));
+
+    $january = collect($response->viewData('trend'))->firstWhere('month', 1);
+    expect($january['has_data'])->toBeFalse();
+});
+
+test('trend respects the area filter', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $wwd = makeReportMachine(['area' => 'WWD']);
+    $bul = makeReportMachine(['area' => 'BUL']);
+
+    makeReportPm($wwd, ['status' => 'FINISHED', 'plan_date' => '2026-04-01']);
+    makeReportPm($bul, ['status' => 'OPEN', 'plan_date' => '2026-04-02']);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026, 'area' => 'WWD']));
+
+    $april = collect($response->viewData('trend'))->firstWhere('month', 4);
+    expect($april['closing_percent'])->toBe(100.0);
+});
+
+test('trend respects the status filter', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = makeReportMachine();
+
+    makeReportPm($machine, ['status' => 'FINISHED', 'plan_date' => '2026-04-01']);
+    makeReportPm($machine, ['status' => 'OPEN', 'plan_date' => '2026-04-02']);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026, 'status' => ['FINISHED']]));
+
+    $april = collect($response->viewData('trend'))->firstWhere('month', 4);
+    expect($april['closing_percent'])->toBe(100.0);
+});
+
+test('trend is not narrowed by the month filter — it always shows all of jan-sep', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = makeReportMachine();
+
+    makeReportPm($machine, ['status' => 'FINISHED', 'plan_date' => '2026-02-01']);
+    makeReportPm($machine, ['status' => 'FINISHED', 'plan_date' => '2026-07-01']);
+
+    // Filtering the table/summary to July only must not shrink the trend chart.
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026, 'month' => [7]]));
+
+    $trend = collect($response->viewData('trend'));
+    expect($trend)->toHaveCount(9);
+    expect($trend->firstWhere('month', 2)['has_data'])->toBeTrue();
+    expect($trend->firstWhere('month', 7)['has_data'])->toBeTrue();
+});
+
+test('the trend charts render on the page', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026]));
+
+    $response->assertOk();
+    $response->assertSee('id="pmCompletionTrendChart"', false);
+    $response->assertSee('id="pmClosingTrendChart"', false);
+    $response->assertSee('Completion Trend', false);
+    $response->assertSee('Closing Trend', false);
+});
+
+test('both trend charts draw a fixed 96% orange target line', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026]));
+    $html = $response->getContent();
+
+    $response->assertOk();
+    $response->assertSee('Target 96%', false);
+    $response->assertSee("getPixelForValue(96)", false);
+    $response->assertSee('#f97316', false);
+
+    // Both charts must register the plugin, not just one.
+    expect(substr_count($html, 'plugins: [targetLinePlugin]'))->toBe(2);
 });

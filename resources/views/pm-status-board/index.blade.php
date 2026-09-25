@@ -8,7 +8,7 @@
         <div>
             <h1 class="text-2xl font-bold">PM Status — {{ $currentArea }}</h1>
             <p class="text-slate-500">
-                Informasi status pelaksanaan Preventive Maintenance untuk kebutuhan koordinasi Produksi.
+                Informasi status pelaksanaan Preventive Maintenance.
             </p>
         </div>
 
@@ -22,6 +22,14 @@
                 </a>
             @endforeach
         </div>
+    </div>
+
+    {{-- LEGEND --}}
+    <div class="mb-6 rounded-lg border border-slate-200 bg-blue-50 p-4 text-sm text-slate-600">
+        <p class="font-medium text-slate-800 mb-2">ℹ️ Informasi</p>
+        <p><strong>GAP DAY</strong> = Today − Plan Date</p>
+        <p class="mt-1">Batas normal: <strong>-14 sampai +14 hari</strong></p>
+        <p class="mt-1 text-slate-500">GAP DAY merah menunjukkan sudah di luar batas ±14 hari, sebaiknya tidak dipilih untuk mesin pengganti.</p>
     </div>
 
     {{-- FILTER FORM — period only; area is fixed by the URL above. --}}
@@ -56,25 +64,7 @@
             </a>
         </div>
     </form>
-
-    {{-- SUMMARY --}}
-    <div class="mb-6 grid grid-cols-3 gap-4">
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs font-medium text-slate-400 uppercase tracking-wide">Total PM</div>
-            <div class="text-3xl font-bold text-slate-800">{{ $summary['total'] }}</div>
-        </div>
-
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs font-medium text-slate-400 uppercase tracking-wide">Open</div>
-            <div class="text-3xl font-bold text-orange-600">{{ $summary['open'] }}</div>
-        </div>
-
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs font-medium text-slate-400 uppercase tracking-wide">Closed</div>
-            <div class="text-3xl font-bold text-green-600">{{ $summary['closed'] }}</div>
-        </div>
-    </div>
-
+    
     {{-- DESKTOP TABLE --}}
     <div class="mb-4 hidden rounded-xl border border-slate-200 bg-white overflow-hidden md:block">
         <table class="w-full">
@@ -162,13 +152,6 @@
         @endforelse
     </div>
 
-    {{-- LEGEND --}}
-    <div class="mt-6 rounded-lg border border-slate-200 bg-blue-50 p-4 text-sm text-slate-600">
-        <p class="font-medium text-slate-800 mb-2">ℹ️ Informasi</p>
-        <p><strong>GAP DAY</strong> = Today − Plan Date</p>
-        <p class="mt-1">Batas normal: <strong>-14 sampai +14 hari</strong></p>
-        <p class="mt-1 text-slate-500">GAP DAY merah menunjukkan sudah di luar batas ±14 hari, tapi tidak mempengaruhi status
-            OPEN/CLOSED.</p>
-    </div>
+    
 
 @endsection

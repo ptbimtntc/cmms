@@ -141,6 +141,7 @@ class OilAuditReportController extends Controller
             'repeatFindingThreshold' => self::REPEAT_FINDING_THRESHOLD,
             'problemFrequency' => $this->problemFrequency(...$analysisFilters),
             'repeatFindingMachines' => $this->repeatFindingMachines(...$analysisFilters),
+            'findingFrequency' => $this->findingFrequency(...$analysisFilters),
         ]);
     }
 
@@ -281,6 +282,39 @@ class OilAuditReportController extends Controller
             ->orderByRaw($this->findingSql())
             ->limit(10)
             ->get();
+    }
+
+    /**
+     * Finding distribution for the pie chart — every distinct finding
+     * (Kapstan 1/2/3/4, Mainshaft, Innershaft, Lainnya, or the legacy
+     * MISSING_FINDING_LABEL placeholder) with its raw count and share of
+     * the total, so it's obvious which finding dominates. Same scope as
+     * problemFrequency() (analysisBase()), just grouped by finding alone
+     * instead of the problem+finding pair — unlimited, since the finding
+     * set is a small fixed enum, never a long tail worth truncating.
+     *
+     * @return Collection<int, object{finding: string, total: int, percent: float}>
+     */
+    private function findingFrequency(?string $area, ?string $machineType, ?int $year, array $months): Collection
+    {
+        $rows = $this->analysisBase($area, $machineType, $year, $months)
+            ->groupBy(DB::raw($this->findingSql()))
+            ->select(
+                DB::raw($this->findingSql().' as finding'),
+                DB::raw('COUNT(*) as total')
+            )
+            ->orderByDesc('total')
+            ->orderByRaw($this->findingSql())
+            ->get();
+
+        $grandTotal = (int) $rows->sum('total');
+
+        return $rows->map(function ($row) use ($grandTotal) {
+            $row->total = (int) $row->total;
+            $row->percent = $grandTotal > 0 ? round($row->total / $grandTotal * 100, 1) : 0.0;
+
+            return $row;
+        });
     }
 
     /**

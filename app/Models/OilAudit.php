@@ -17,7 +17,7 @@ class OilAudit extends Model
      */
     public const AREA = 'WWD';
 
-    public const MACHINE_TYPES = ['NDE', 'NDB'];
+    public const MACHINE_TYPES = ['NDE', 'NDB', 'NDE SC 2003/2007', 'NDE SW', 'NDE SW MONO', 'NDB ONO', 'NDB TRITON', 'NDB MOT'];
 
     public const CONDITION_LABELS = [
         'OKE' => 'Oke',

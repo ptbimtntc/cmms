@@ -22,7 +22,6 @@ use App\Http\Controllers\PMStatusBoardController;
 use App\Http\Controllers\ProblemReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrScannerController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SparepartController;
 use App\Http\Controllers\SparepartReportController;
 use App\Http\Controllers\SyncOperationController;
@@ -171,7 +170,6 @@ Route::middleware([
     Route::post('/pm-schedules/{pmSchedule}/start', [PMScheduleController::class, 'start'])->name('pm-schedules.start');
     Route::get('/pm-schedules/{pmSchedule}/pdf', [PMScheduleController::class, 'exportPdf'])->name('pm-schedules.pdf');
 
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/pm', [PMReportController::class, 'index'])->name('reports.pm');
     Route::get('/reports/greasing', [GreasingReportController::class, 'index'])->name('reports.greasing');
     Route::get('/reports/sparepart', [SparepartReportController::class, 'index'])->name('reports.sparepart');
