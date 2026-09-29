@@ -53,6 +53,10 @@ class GroupController extends Controller
     public function edit(Group $group)
     {
         $machines = Machine::with('group')
+            ->where(function ($query) use ($group) {
+                $query->whereNull('group_id')
+                    ->orWhere('group_id', $group->id);
+            })
             ->orderBy('machine_number')
             ->get();
 
