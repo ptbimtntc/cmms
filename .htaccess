@@ -2,8 +2,4 @@
     RewriteEngine On
     RewriteRule ^$ public/ [L]
     RewriteRule (.*) public/$1 [L]
-<<<<<<< HEAD
 </IfModule>
-=======
-</IfModule>
->>>>>>> 5dda833a70f4e6d016c5b572a7097833c4248005
