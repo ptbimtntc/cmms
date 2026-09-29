@@ -100,19 +100,39 @@ test('machines not touched (left unchecked and not previously in the group) are 
     expect($untouched->fresh()->group_id)->toBe($otherGroup->id);
 });
 
-test('edit group page lists machines with their current group assignment', function () {
+test('edit group page only lists unassigned machines and machines of the edited group', function () {
     $admin = assignmentUser('ADMIN');
     $group = Group::create(['name' => 'Line 1']);
     $otherGroup = Group::create(['name' => 'Line 2']);
-    $mine = assignmentMachine(['group_id' => $group->id, 'machine_number' => 'MC-MINE']);
-    $elsewhere = assignmentMachine(['group_id' => $otherGroup->id, 'machine_number' => 'MC-ELSEWHERE']);
+    assignmentMachine(['group_id' => $group->id, 'machine_number' => 'MC-MINE']);
+    assignmentMachine(['machine_number' => 'MC-FREE']);
+    assignmentMachine(['group_id' => $otherGroup->id, 'machine_number' => 'MC-ELSEWHERE']);
 
     $response = $this->actingAs($admin)->get(route('groups.edit', $group));
 
     $response->assertOk();
     $response->assertSee('MC-MINE');
-    $response->assertSee('MC-ELSEWHERE');
-    $response->assertSee('Line 2'); // hint showing where the other machine currently lives
+    $response->assertSee('MC-FREE');
+    $response->assertDontSee('MC-ELSEWHERE');
+    $response->assertViewHas('machines', fn ($machines) => $machines->pluck('machine_number')->sort()->values()->all() === ['MC-FREE', 'MC-MINE']);
+});
+
+test('saving the edit form with existing assignments keeps them and leaves other groups untouched', function () {
+    $admin = assignmentUser('ADMIN');
+    $group = Group::create(['name' => 'Line 1']);
+    $otherGroup = Group::create(['name' => 'Line 2']);
+    $mine = assignmentMachine(['group_id' => $group->id]);
+    $free = assignmentMachine();
+    $elsewhere = assignmentMachine(['group_id' => $otherGroup->id]);
+
+    $this->actingAs($admin)->put(route('groups.update', $group), [
+        'name' => 'Line 1',
+        'machine_ids' => [$mine->id, $free->id],
+    ])->assertRedirect(route('groups.index'));
+
+    expect($mine->fresh()->group_id)->toBe($group->id)
+        ->and($free->fresh()->group_id)->toBe($group->id)
+        ->and($elsewhere->fresh()->group_id)->toBe($otherGroup->id);
 });
 
 test('invalid machine id in the request is rejected by validation', function () {
