@@ -26,5 +26,7 @@ class DatabaseSeeder extends Seeder
                 'role' => User::ROLE_ADMIN,
             ]
         );
+
+        $this->call(MachineMaintenanceRequirementSeeder::class);
     }
 }

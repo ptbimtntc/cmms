@@ -17,6 +17,12 @@
 
             <div class="flex flex-col md:flex-row md:items-center gap-3">
 
+                <!-- ADD MANUAL BUTTON -->
+                <a href="{{ route('machine-measurements.create') }}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded shadow text-center">
+                    + Add Measurement
+                </a>
+
                 <!-- IMPORT FORM -->
                 <form action="{{ route('machine-measurements.import') }}" method="POST" enctype="multipart/form-data"
                     class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded shadow border">
@@ -50,8 +56,7 @@
 
                 </form>
 
-        </div>
-        </a>
+            </div>
 
         </div>
 

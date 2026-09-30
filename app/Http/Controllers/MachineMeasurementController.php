@@ -113,6 +113,7 @@ class MachineMeasurementController extends Controller
                     'machine_type'     => $request->machine_type,
                     'measurement_item' => trim($item),
                     'unit'             => $request->units[$index] ?? null,
+                    'standard'         => $request->standards[$index] ?? null,
                 ]);
             }
         }
@@ -155,6 +156,7 @@ class MachineMeasurementController extends Controller
             'machine_type'     => 'required',
             'measurement_item' => 'required',
             'unit'             => 'nullable',
+            'standard'         => 'nullable',
         ]);
 
         // cek duplicate selain data yang sedang diedit
@@ -179,6 +181,7 @@ class MachineMeasurementController extends Controller
             'machine_type'     => $request->machine_type,
             'measurement_item' => trim($request->measurement_item),
             'unit'             => trim($request->unit),
+            'standard'         => trim((string) $request->standard),
         ]);
 
         return redirect()

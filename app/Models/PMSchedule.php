@@ -138,13 +138,22 @@ class PMSchedule extends Model
         return $this->belongsTo(Area::class, 'area', 'name');
     }
 
+    /**
+     * Which machine types require an oil change is configured in the
+     * machine_maintenance_requirements table (managed via admin UI) rather
+     * than hardcoded here, so new machine types can be added without a code
+     * change. Result is cached per machine_type for the life of the request
+     * since this is called repeatedly for the same PM (edit form, PDF
+     * export, checklist validation).
+     */
     public function requiresOilChange(): bool
     {
-        return in_array($this->machine_type, [
-            'NDE',
-            'NDB',
-            'BFM',
-        ]);
+        static $cache = [];
+
+        return $cache[$this->machine_type] ??= MachineMaintenanceRequirement::query()
+            ->where('machine_type', $this->machine_type)
+            ->where('requires_oil_change', true)
+            ->exists();
     }
 
     /**

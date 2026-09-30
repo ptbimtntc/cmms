@@ -62,6 +62,7 @@ document.addEventListener('alpine:init', () => {
         $reportActive = request()->routeIs('reports.*');
         $userActive = request()->routeIs('users.*');
         $areaActive = request()->routeIs('areas.*');
+        $maintenanceRequirementActive = request()->routeIs('machine-maintenance-requirements.*');
         $dashboardActive = request()->routeIs('dashboard');
         $todayActivityActive = request()->routeIs('today-activity.*');
         $pmScheduleActive = request()->routeIs('pm-schedules.*');
@@ -414,6 +415,16 @@ document.addEventListener('alpine:init', () => {
             'icon' => '
             <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
             <circle cx="12" cy="10" r="3" />',
+            'visible' =>
+            $isAdmin,
+            ],
+            [
+            'route' => route('machine-maintenance-requirements.index'),
+            'label' => 'Oil Change Requirements',
+            'active' => $maintenanceRequirementActive,
+            // droplet (mirrors the Oil Change field this master data controls)
+            'icon' => '
+            <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C4 11.1 3 13 3 15a7 7 0 0 0 7 7z" />',
             'visible' =>
             $isAdmin,
             ],

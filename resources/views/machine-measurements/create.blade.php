@@ -60,13 +60,21 @@
 
                     <div id="measurement-wrapper">
 
-                        <div class="grid md:grid-cols-2 gap-3 mb-3">
+                        <div class="grid md:grid-cols-[1fr_1fr_1fr_auto] gap-3 mb-3 measurement-row">
 
                             <input type="text" name="measurements[]" placeholder="Measurement Item"
                                 class="border p-3 rounded">
 
                             <input type="text" name="units[]" placeholder="Unit (mm, °C, bar, mm/s)"
                                 class="border p-3 rounded">
+
+                            <input type="text" name="standards[]" placeholder="Standard"
+                                class="border p-3 rounded">
+
+                            <button type="button" onclick="removeMeasurement(this)"
+                                class="text-red-500 hover:text-red-700 px-2">
+                                Remove
+                            </button>
 
                         </div>
 
@@ -82,13 +90,20 @@
                 </div>
 
                 {{-- BUTTON --}}
-                <div class="mt-6">
+                <div class="mt-6 flex gap-3">
 
                     <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
 
                         Save
 
                     </button>
+
+                    <a href="{{ route('machine-measurements.index') }}"
+                        class="bg-gray-300 hover:bg-gray-400 px-5 py-2 rounded">
+
+                        Cancel
+
+                    </a>
 
                 </div>
 
@@ -104,7 +119,7 @@
             let wrapper = document.getElementById('measurement-wrapper');
 
             let html = `
-        <div class="grid md:grid-cols-2 gap-3 mb-3">
+        <div class="grid md:grid-cols-[1fr_1fr_1fr_auto] gap-3 mb-3 measurement-row">
 
             <input type="text"
                 name="measurements[]"
@@ -116,10 +131,29 @@
                 placeholder="Unit (mm, °C, bar, mm/s)"
                 class="border p-3 rounded">
 
+            <input type="text"
+                name="standards[]"
+                placeholder="Standard"
+                class="border p-3 rounded">
+
+            <button type="button" onclick="removeMeasurement(this)"
+                class="text-red-500 hover:text-red-700 px-2">
+                Remove
+            </button>
+
         </div>
     `;
 
             wrapper.insertAdjacentHTML('beforeend', html);
+        }
+
+        function removeMeasurement(button) {
+
+            let wrapper = document.getElementById('measurement-wrapper');
+
+            if (wrapper.querySelectorAll('.measurement-row').length > 1) {
+                button.closest('.measurement-row').remove();
+            }
         }
     </script>
 @endsection

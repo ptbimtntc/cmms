@@ -11,6 +11,7 @@ use App\Http\Controllers\ImportTemplateController;
 use App\Http\Controllers\MachineChecklistController;
 use App\Http\Controllers\MachineController;
 use App\Http\Controllers\MachineHistoryController;
+use App\Http\Controllers\MachineMaintenanceRequirementController;
 use App\Http\Controllers\MachineMeasurementController;
 use App\Http\Controllers\MachineProblemController;
 use App\Http\Controllers\MachineProblemFindingController;
@@ -111,6 +112,9 @@ Route::middleware([
             'edit',
             'update',
         ]);
+
+    Route::resource('machine-maintenance-requirements', MachineMaintenanceRequirementController::class)
+        ->except(['show']);
 });
 
 Route::middleware([

@@ -62,13 +62,25 @@
                 </div>
 
                 {{-- UNIT --}}
-                <div class="mb-6">
+                <div class="mb-4">
 
                     <label class="block mb-2">
                         Unit
                     </label>
 
                     <input type="text" name="unit" value="{{ old('unit', $machineMeasurement->unit) }}"
+                        class="w-full border p-3 rounded">
+
+                </div>
+
+                {{-- STANDARD --}}
+                <div class="mb-6">
+
+                    <label class="block mb-2">
+                        Standard
+                    </label>
+
+                    <input type="text" name="standard" value="{{ old('standard', $machineMeasurement->standard) }}"
                         class="w-full border p-3 rounded">
 
                 </div>
