@@ -232,21 +232,43 @@
 
                                 {{-- ADMIN --}}
                                 @if ($role == 'ADMIN')
-                                    <a href="{{ route('pm-schedules.edit', $pm->id) }}"
-                                        class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded">
-
-                                        Edit
-
-                                    </a>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                            class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded">
+                                            Edit
+                                        </a>
+                                        @if ($pm->status === 'IN_PROGRESS')
+                                            <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}"
+                                                method="POST"
+                                                onsubmit="return confirm('Revert this PM back to Open?')">
+                                                @csrf
+                                                <button type="submit"
+                                                    class="bg-slate-500 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded">
+                                                    Revert to Open
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
 
                                     {{-- KOORDINATOR --}}
                                 @elseif(str_starts_with($role, 'KOORDINATOR'))
-                                    <a href="{{ route('pm-schedules.edit', $pm->id) }}"
-                                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded">
-
-                                        Edit
-
-                                    </a>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded">
+                                            Edit
+                                        </a>
+                                        @if ($pm->status === 'IN_PROGRESS')
+                                            <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}"
+                                                method="POST"
+                                                onsubmit="return confirm('Revert this PM back to Open?')">
+                                                @csrf
+                                                <button type="submit"
+                                                    class="bg-slate-500 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded">
+                                                    Revert to Open
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
 
                                     {{-- PIC --}}
                                 @elseif(str_starts_with($role, 'PIC'))
@@ -385,11 +407,33 @@
                 {{-- Action --}}
                 <div class="mt-3 border-t border-slate-100 pt-3 text-right">
                     @if ($role == 'ADMIN')
-                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
-                            class="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-medium text-white hover:bg-yellow-600">Edit</a>
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                class="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-medium text-white hover:bg-yellow-600">Edit</a>
+                            @if ($pm->status === 'IN_PROGRESS')
+                                <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
+                                    onsubmit="return confirm('Revert this PM back to Open?')">
+                                    @csrf
+                                    <button type="submit"
+                                        class="rounded-lg bg-slate-500 px-4 py-2 text-xs font-medium text-white hover:bg-slate-600">Revert
+                                        to Open</button>
+                                </form>
+                            @endif
+                        </div>
                     @elseif(str_starts_with($role, 'KOORDINATOR'))
-                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
-                            class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700">Edit</a>
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700">Edit</a>
+                            @if ($pm->status === 'IN_PROGRESS')
+                                <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
+                                    onsubmit="return confirm('Revert this PM back to Open?')">
+                                    @csrf
+                                    <button type="submit"
+                                        class="rounded-lg bg-slate-500 px-4 py-2 text-xs font-medium text-white hover:bg-slate-600">Revert
+                                        to Open</button>
+                                </form>
+                            @endif
+                        </div>
                     @elseif(str_starts_with($role, 'PIC'))
                         @if (in_array($pm->status, ['OPEN', 'MISSED', 'IN_PROGRESS']))
                             <div class="flex flex-wrap items-center justify-end gap-2">

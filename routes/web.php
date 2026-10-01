@@ -153,6 +153,7 @@ Route::middleware([
     Route::resource('pm-schedules', PMScheduleController::class);
     Route::post('/pm-schedules/import', [PMScheduleController::class, 'import'])->name('pm-schedules.import');
     Route::post('/pm-schedules/{pmSchedule}/assign-pic', [PMScheduleController::class, 'assignPic'])->name('pm-schedules.assign-pic');
+    Route::post('/pm-schedules/{pmSchedule}/revert-to-open', [PMScheduleController::class, 'revertToOpen'])->name('pm-schedules.revert-to-open');
 
     // Manual Activity — start / edit / finish from the Activity Control
     // Panel. ADMIN / KOORDINATOR only; the controller re-checks the role and

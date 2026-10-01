@@ -25,6 +25,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
@@ -574,6 +575,41 @@ class PMScheduleController extends Controller
             )),
             PMStartService::OUTCOME_STARTED => back()->with('success', 'PM activity started at '.$result['started_at']->format('d M Y H:i').'.'),
         };
+    }
+
+    /**
+     * Revert to Open — undoes the OPEN -> IN_PROGRESS transition made by
+     * Start/Fill PM, for the case where a PM was started or filled by
+     * mistake and isn't actually going to happen (yet). ADMIN/KOORDINATOR
+     * only (enforced by the route's role middleware + area scoping below).
+     *
+     * Clears the same start markers PMStartService/PMScheduleSaveService set
+     * (start_time, actual_date, end_time, duration) and any work sessions,
+     * so the schedule looks exactly like a fresh OPEN one — it does NOT
+     * touch order_number/pic/remarks/measurements/problems/spareparts,
+     * which the PIC may still want when they fill it again.
+     */
+    public function revertToOpen(PMSchedule $pmSchedule)
+    {
+        $this->authorizeScheduleAccess($pmSchedule);
+
+        if ($pmSchedule->status !== 'IN_PROGRESS') {
+            return back()->with('warning', 'Only a PM that is In Progress can be reverted to Open.');
+        }
+
+        DB::transaction(function () use ($pmSchedule) {
+            $pmSchedule->workSessions()->delete();
+
+            $pmSchedule->update([
+                'status' => 'OPEN',
+                'start_time' => null,
+                'actual_date' => null,
+                'end_time' => null,
+                'duration' => null,
+            ]);
+        });
+
+        return back()->with('success', 'PM Schedule reverted to Open.');
     }
 
     private function authorizeScheduleAccess(PMSchedule $pmSchedule): void

@@ -70,29 +70,29 @@
                 PM Information
             </h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                <div>
+                <div class="min-w-0">
                     <label class="block mb-2 text-sm font-medium">
                         Order Number
                     </label>
 
                     <input value="{{ old('order_number', $pmSchedule->order_number) }}" readonly required
-                        name="order_number" type="text" class="w-full bg-gray-100 border rounded-2xl p-3">
+                        name="order_number" type="text" class="w-full min-w-0 bg-gray-100 border rounded-2xl p-3">
                 </div>
 
-                <div>
+                <div class="min-w-0">
                     <label class="block mb-2 text-sm font-medium">
                         Completion Date
                     </label>
 
                     <input name="completion_date_display" type="date" readonly
                         value="{{ $pmSchedule->actual_date ? \Carbon\Carbon::parse($pmSchedule->actual_date)->format('Y-m-d') : '' }}"
-                        class="w-full border rounded-2xl p-3 bg-gray-100">
+                        class="w-full min-w-0 border rounded-2xl p-3 bg-gray-100">
                     <p class="text-xs text-slate-500 mt-1">Displayed only when PM is completed</p>
                 </div>
 
-                <div>
+                <div class="min-w-0">
                     <label class="block mb-2 text-sm font-medium">
                         PIC PM
                     </label>
@@ -102,8 +102,7 @@
                     @endphp
 
                     <select name="pic"
-                        class="w-full rounded-2xl border border-gray-300 px-3 py-3
-    {{ !$canEditPic ? 'bg-gray-100 cursor-not-allowed' : '' }}"
+                        class="w-full min-w-0 rounded-2xl border border-gray-300 px-3 py-3 {{ !$canEditPic ? 'bg-gray-100 cursor-not-allowed' : '' }}"
                         {{ !$canEditPic ? 'disabled' : '' }}>
 
                         <option value="">-- Select PIC --</option>
