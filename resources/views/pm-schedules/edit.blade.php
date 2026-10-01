@@ -123,7 +123,7 @@
 
 
 
-                <div class="col-span-2">
+                <div class="lg:col-span-2">
                     <h4 class="mb-2 text-sm font-medium">PM Work Sessions</h4>
 
                     <div id="work-sessions" class="space-y-3">
