@@ -62,7 +62,7 @@ class PMReportController extends Controller
         $trend = $this->monthlyTrend($user, $area, $machineType, $machine, $pic, $statuses, $search, $trendYear);
 
         $schedules = $query
-            ->orderByDesc('plan_date')
+            ->orderBy('plan_date')
             ->orderBy('machine_number')
             ->paginate(20)
             ->withQueryString();

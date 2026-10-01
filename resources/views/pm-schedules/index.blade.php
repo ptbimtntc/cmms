@@ -1,5 +1,13 @@
 @extends('layouts.app')
 
+@php
+    // This table has a lot of columns (Area/Machine/Type/Plan Date/PIC/Due
+    // Date/Month/Year/Status/Action) and feels cramped under the shared
+    // max-w-7xl content width — let it use the full content area instead,
+    // same gutter/padding as every other page.
+    $contentMaxWidth = 'max-w-full';
+@endphp
+
 @section('content')
     <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>

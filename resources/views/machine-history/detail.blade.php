@@ -1,5 +1,18 @@
 @extends('layouts.app')
 
+@php
+    // Back goes to wherever this detail page was opened from: Report PM
+    // (preserving its filters/pagination via return_url) when the View
+    // button there set from=report-pm, otherwise the existing Machine
+    // History per-machine page — unchanged default behavior.
+    $cameFromReportPm = request()->query('from') === 'report-pm';
+    $reportPmReturnUrl = request()->query('return_url');
+
+    $backUrl = $cameFromReportPm && $reportPmReturnUrl && str_starts_with($reportPmReturnUrl, route('reports.pm'))
+        ? $reportPmReturnUrl
+        : ($cameFromReportPm ? route('reports.pm') : route('machine-history.show', $pmSchedule->machine_number));
+@endphp
+
 @section('content')
 
     {{-- ============ Header ============ --}}
@@ -21,7 +34,7 @@
                 </svg>
                 Export PDF
             </button>
-            <a href="{{ route('machine-history.show', $pmSchedule->machine_number) }}"
+            <a href="{{ $backUrl }}"
                 class="inline-flex w-fit items-center rounded-lg bg-slate-700 px-4 py-2 text-white">
                 ← Back
             </a>

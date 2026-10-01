@@ -56,10 +56,18 @@ document.addEventListener('alpine:init', () => {
         // covers every role that may see WWD-only menu items.
         $hasWwdArea = $authUser->hasArea('WWD');
 
+        // Machine History Detail opened via Report PM's View button keeps
+        // the PM Report environment active in the sidebar (and Machine
+        // History's own active state suppressed) instead of switching to
+        // Machine History — navigation context carried via ?from=report-pm
+        // from reports/pm/index.blade.php. Any other route, or this same
+        // route without that query param, is unaffected.
+        $cameFromReportPm = request()->routeIs('machine-history.detail') && request()->query('from') === 'report-pm';
+
         $machineActive = request()->routeIs('machines.*');
         $groupActive = request()->routeIs('groups.*');
         $sparepartActive = request()->routeIs('spareparts.*');
-        $reportActive = request()->routeIs('reports.*');
+        $reportActive = request()->routeIs('reports.*') || $cameFromReportPm;
         $userActive = request()->routeIs('users.*');
         $areaActive = request()->routeIs('areas.*');
         $maintenanceRequirementActive = request()->routeIs('machine-maintenance-requirements.*');
@@ -78,7 +86,7 @@ document.addEventListener('alpine:init', () => {
 
         // Individual report routes — each links straight to its own report
         // page from the sidebar now (no more intermediate Report Center hub).
-        $reportsPmActive = request()->routeIs('reports.pm');
+        $reportsPmActive = request()->routeIs('reports.pm') || $cameFromReportPm;
         $reportsGreasingActive = request()->routeIs('reports.greasing');
         $reportsOilAuditActive = request()->routeIs('reports.oil-audit');
         $reportsSparepartActive = request()->routeIs('reports.sparepart');
@@ -93,7 +101,7 @@ document.addEventListener('alpine:init', () => {
 
         @endphp
         @php
-        $machineHistoryActive = request()->routeIs('machine-history.*');
+        $machineHistoryActive = request()->routeIs('machine-history.*') && ! $cameFromReportPm;
         @endphp
         <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $todayActivityActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :

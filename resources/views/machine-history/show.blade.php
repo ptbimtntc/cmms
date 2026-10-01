@@ -41,8 +41,7 @@
         <div class="rounded-xl border bg-white p-4 shadow-sm">
             <div class="text-xs text-slate-500">PM Cycle</div>
             <div class="mt-1 text-lg font-semibold">
-                {{ $machine->pm_cycle_value }}
-                {{ strtoupper($machine->pm_cycle_unit) }}
+                {{ $machine->pm_cycle_unit ? $machine->pm_cycle_value.' '.strtoupper($machine->pm_cycle_unit) : '-' }}
             </div>
         </div>
 
@@ -58,14 +57,14 @@
             <div class="mt-1 text-lg font-semibold">
                 {{ $nextPm ? $nextPm->format('d-m-Y') : '-' }}
             </div>
-            @if (strtolower($machine->pm_cycle_unit) === 'hour')
+            @if ($machine->pm_cycle_unit && strtolower($machine->pm_cycle_unit) === 'hour')
                 <div class="mt-1 text-xs text-slate-500">Estimasi</div>
             @endif
         </div>
 
     </div>
 
-    @if (strtolower($machine->pm_cycle_unit) === 'hour')
+    @if ($machine->pm_cycle_unit && strtolower($machine->pm_cycle_unit) === 'hour')
         <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2 text-sm text-slate-700">
             Note: Next PM akan akurat jika mesin running non stop
         </div>
@@ -85,7 +84,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($pmHistories as $pm)
+                @forelse ($pmHistories as $pm)
                     <tr class="border-t">
                         <td class="px-4 py-3">
                             {{ \Carbon\Carbon::parse($pm->actual_date)->format('d-m-Y') }}
@@ -141,7 +140,13 @@
                             </a>
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="6" class="px-4 py-10 text-center text-sm text-slate-500">
+                            No PM history found.
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>

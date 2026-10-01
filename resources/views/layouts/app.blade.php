@@ -68,7 +68,10 @@
             @endif
 
             <main class="flex-1 overflow-y-auto {{ $hideSidebar ?? false ? '' : 'lg:ml-72' }}">
-                <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+                {{-- $contentMaxWidth lets an individual page opt into a wider
+                content area (e.g. a dense table) without affecting every
+                other page, which keeps the max-w-7xl default. --}}
+                <div class="mx-auto {{ $contentMaxWidth ?? 'max-w-7xl' }} p-4 sm:p-6 lg:p-8">
                     @if ($fullWidth ?? false)
                         @yield('content')
                     @else

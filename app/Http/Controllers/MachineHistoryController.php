@@ -178,11 +178,13 @@ class MachineHistoryController extends Controller
             ->where('pm_schedule_id', $pmSchedule->id)
             ->get();
 
-        $lastPm = PMSchedule::where('machine_number', $pmSchedule->machine_number)
-            ->whereNotNull('actual_date')
-            ->where('actual_date', '<', $pmSchedule->actual_date)
-            ->latest('actual_date')
-            ->value('actual_date');
+        $lastPm = $pmSchedule->actual_date
+            ? PMSchedule::where('machine_number', $pmSchedule->machine_number)
+                ->whereNotNull('actual_date')
+                ->where('actual_date', '<', $pmSchedule->actual_date)
+                ->latest('actual_date')
+                ->value('actual_date')
+            : null;
 
         $lastPm = $lastPm ? Carbon::parse($lastPm) : null;
 

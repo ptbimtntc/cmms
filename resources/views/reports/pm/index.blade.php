@@ -177,7 +177,7 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <a href="{{ route('machine-history.detail', ['machineNumber' => $pm->machine_number, 'pmSchedule' => $pm->id]) }}"
+                                    <a href="{{ route('machine-history.detail', ['machineNumber' => $pm->machine_number, 'pmSchedule' => $pm->id, 'from' => 'report-pm', 'return_url' => request()->fullUrl()]) }}"
                                         class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
                                         View
                                     </a>
@@ -237,7 +237,7 @@
                     </div>
 
                     <div class="mt-3 border-t border-slate-100 pt-3 text-right">
-                        <a href="{{ route('machine-history.detail', ['machineNumber' => $pm->machine_number, 'pmSchedule' => $pm->id]) }}"
+                        <a href="{{ route('machine-history.detail', ['machineNumber' => $pm->machine_number, 'pmSchedule' => $pm->id, 'from' => 'report-pm', 'return_url' => request()->fullUrl()]) }}"
                             class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
                             View
                         </a>
