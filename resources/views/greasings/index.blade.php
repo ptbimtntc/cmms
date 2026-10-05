@@ -173,9 +173,11 @@
                                         </button>
                                     @endif
                                 @endif
+                                @unless (auth()->user()->isSupervisor())
                                 <a href="{{ route('greasings.execute', $greasing->id) }}" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-700">
                                     {{ ! auth()->user()->isAdmin() && $greasing->status !== 'OPEN' ? 'Edit' : 'Execute' }}
                                 </a>
+                                @endunless
                                 @if (auth()->user()->isAdmin() || auth()->user()->isKoordinator())
                                 <a href="{{ route('greasings.edit', $greasing->id) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
                                     Edit
@@ -273,9 +275,11 @@
                                 data-id="{{ $greasing->id }}" data-group="{{ $greasing->group->name ?? '' }}">START</button>
                         @endif
                     @endif
+                    @unless (auth()->user()->isSupervisor())
                     <a href="{{ route('greasings.execute', $greasing->id) }}" class="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-emerald-700">
                         {{ ! auth()->user()->isAdmin() && $greasing->status !== 'OPEN' ? 'Edit' : 'Execute' }}
                     </a>
+                    @endunless
                     @if (auth()->user()->isAdmin() || auth()->user()->isKoordinator())
                         <a href="{{ route('greasings.edit', $greasing->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
                             Edit

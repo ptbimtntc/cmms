@@ -78,7 +78,7 @@
     <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="mb-3 text-sm font-semibold text-slate-700">Completion Trend — {{ $trendYear }}
-                <span class="font-normal text-slate-400">(Jan–Sep)</span>
+                <span class="font-normal text-slate-400">(Jan–Dec)</span>
             </div>
             <div class="h-56">
                 <canvas id="pmCompletionTrendChart"></canvas>
@@ -87,7 +87,7 @@
 
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="mb-3 text-sm font-semibold text-slate-700">Closing Trend — {{ $trendYear }}
-                <span class="font-normal text-slate-400">(Jan–Sep)</span>
+                <span class="font-normal text-slate-400">(Jan–Dec)</span>
             </div>
             <div class="h-56">
                 <canvas id="pmClosingTrendChart"></canvas>

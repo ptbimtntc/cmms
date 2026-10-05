@@ -58,8 +58,8 @@ class DashboardController extends Controller
         // other role is already fixed to one area/pic by applyScopeTo().
         // Allowed values come from the live Area master list, never a
         // hardcoded array, so a newly added area is filterable immediately.
-        $activeAreaNames = Area::active()->pluck('name');
-        $area = $user->isAdmin() && $activeAreaNames->contains($request->input('area'))
+        $activeAreaNames = $user->selectableAreaNames();
+        $area = $user->seesAllAreas() && $activeAreaNames->contains($request->input('area'))
             ? $request->input('area')
             : null;
 
@@ -76,7 +76,7 @@ class DashboardController extends Controller
         $statusSubtitle = collect([
             $year,
             $month ? Carbon::create(null, $month, 1)->format('F') : 'All Months',
-            $area ?: ($user->isAdmin() ? 'All Areas' : null),
+            $area ?: ($user->seesAllAreas() ? 'All Areas' : null),
         ])->filter()->implode(' · ');
 
         // --- Completion by Area (current month) ---
@@ -104,7 +104,7 @@ class DashboardController extends Controller
         $greasingSubtitle = collect([
             $greasingYear,
             $greasingMonth ? Carbon::create(null, $greasingMonth, 1)->format('F') : 'All Months',
-            $area ?: ($user->isAdmin() ? 'All Areas' : null),
+            $area ?: ($user->seesAllAreas() ? 'All Areas' : null),
         ])->filter()->implode(' · ');
 
         // --- Oil Audit (WWD-only module; null hides the section entirely) ---
@@ -125,7 +125,7 @@ class DashboardController extends Controller
             'selectedYear' => $year,
             'selectedMonth' => $month,
             'selectedArea' => $area,
-            'isAdmin' => $user->isAdmin(),
+            'isAdmin' => $user->seesAllAreas(),
             'pmTargetPercent' => self::PM_TARGET_PERCENT,
             'greasing' => $greasing,
             'greasingYears' => $greasingYears,
@@ -281,7 +281,7 @@ class DashboardController extends Controller
 
     private function userAreaMatches(User $user, string $area): bool
     {
-        return ($user->isKoordinator() || $user->isPic()) ? $user->hasArea($area) : true;
+        return ($user->isKoordinator() || $user->isPic() || $user->isSupervisor()) ? $user->hasArea($area) : true;
     }
 
     /**
@@ -448,7 +448,7 @@ class DashboardController extends Controller
      */
     private function oilAuditSummary(User $user, ?string $area): ?array
     {
-        if (! $user->isAdmin() && ! $user->hasArea(self::OIL_AUDIT_AREA)) {
+        if (! $user->hasArea(self::OIL_AUDIT_AREA)) {
             return null;
         }
 

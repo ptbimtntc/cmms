@@ -80,8 +80,14 @@ class Greasing extends Model
      */
     public function scopeVisibleToUser(Builder $query, User $user): Builder
     {
-        if ($user->isAdmin()) {
-            return $query;
+        if ($user->seesAllAreas()) {
+            if (($restricted = $user->restrictedAreaNames()) === null) {
+                return $query;
+            }
+
+            return $query->where(fn (Builder $q) => $q
+                ->whereDoesntHave('group.area')
+                ->orWhereHas('group.area', fn (Builder $qa) => $qa->whereIn('areas.name', $restricted)));
         }
 
         if ((! $user->isKoordinator() && ! $user->isPic()) || ! $user->area) {
@@ -107,8 +113,10 @@ class Greasing extends Model
      */
     public function isAccessibleBy(User $user): bool
     {
-        if ($user->isAdmin()) {
-            return true;
+        if ($user->seesAllAreas()) {
+            $area = $this->inferredArea();
+
+            return $area === null || $user->hasArea($area);
         }
 
         if ((! $user->isKoordinator() && ! $user->isPic()) || ! $user->area) {

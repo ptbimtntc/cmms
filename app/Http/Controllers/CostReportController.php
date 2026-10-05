@@ -26,7 +26,7 @@ class CostReportController extends Controller
             ->filter(fn ($m) => $m >= 1 && $m <= 12)
             ->values()
             ->all();
-        $area = $user->isAdmin() && Area::active()->pluck('name')->contains($request->input('area'))
+        $area = $user->seesAllAreas() && $user->selectableAreaNames()->contains($request->input('area'))
             ? $request->input('area')
             : null;
         $machine = $request->input('machine') ?: null;
@@ -66,7 +66,7 @@ class CostReportController extends Controller
             'total_cost' => $totalCost,
             'sparepart_cost' => $sparepartCost,
             'top_machine' => $topMachineRow ? ['label' => $topMachineRow->label, 'cost' => (float) $topMachineRow->cost] : null,
-            'cost_by_area' => Area::active()->orderBy('name')->pluck('name')->mapWithKeys(
+            'cost_by_area' => $user->selectableAreaNames()->mapWithKeys(
                 fn (string $a) => [$a => (float) ($costByAreaRows->get($a)->cost ?? 0)]
             ),
         ];
@@ -132,8 +132,8 @@ class CostReportController extends Controller
             'years' => $years,
             'machines' => $machines,
             'machineTypes' => $machineTypes,
-            'areas' => Area::active()->orderBy('name')->pluck('name'),
-            'isAdmin' => $user->isAdmin(),
+            'areas' => $user->selectableAreaNames(),
+            'isAdmin' => $user->seesAllAreas(),
             'selectedYear' => $year,
             'selectedMonths' => $months,
             'selectedArea' => $area,

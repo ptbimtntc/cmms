@@ -18,12 +18,15 @@
             <div class="flex flex-col md:flex-row md:items-center gap-3">
 
                 <!-- ADD MANUAL BUTTON -->
+                @unless (auth()->user()->isSupervisor())
                 <a href="{{ route('machine-measurements.create') }}"
                     class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded shadow text-center">
                     + Add Measurement
                 </a>
+                @endunless
 
                 <!-- IMPORT FORM -->
+                @unless (auth()->user()->isSupervisor())
                 <form action="{{ route('machine-measurements.import') }}" method="POST" enctype="multipart/form-data"
                     class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded shadow border">
 
@@ -55,6 +58,7 @@
                     </button>
 
                 </form>
+                @endunless
 
             </div>
 
@@ -192,6 +196,7 @@
 
                                 <div class="flex justify-center gap-2">
 
+                                    @unless (auth()->user()->isSupervisor())
                                     <a href="{{ route('machine-measurements.edit', $measurement->id) }}"
                                         class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">
                                         Edit
@@ -208,6 +213,7 @@
                                         </button>
 
                                     </form>
+                                    @endunless
 
                                 </div>
 
@@ -247,6 +253,7 @@
                         </div>
                     </div>
                     <div class="mt-3 flex gap-2 border-t pt-3">
+                        @unless (auth()->user()->isSupervisor())
                         <a href="{{ route('machine-measurements.edit', $measurement->id) }}"
                             class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
                             Edit
@@ -259,6 +266,7 @@
                                 Delete
                             </button>
                         </form>
+                        @endunless
                     </div>
                 </div>
             @empty

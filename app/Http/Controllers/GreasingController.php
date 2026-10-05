@@ -8,6 +8,7 @@ use App\Models\Area;
 use App\Models\Greasing;
 use App\Models\GreasingFinding;
 use App\Models\Group;
+use App\Models\Machine;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -31,9 +32,9 @@ class GreasingController extends Controller
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('pic', 'like', '%' . $request->search . '%')
-                  ->orWhere('cycle', 'like', '%' . $request->search . '%')
-                  ->orWhere('order_number', 'like', '%' . $request->search . '%');
+                $q->where('pic', 'like', '%'.$request->search.'%')
+                    ->orWhere('cycle', 'like', '%'.$request->search.'%')
+                    ->orWhere('order_number', 'like', '%'.$request->search.'%');
             });
         }
 
@@ -148,7 +149,7 @@ class GreasingController extends Controller
         ]);
 
         try {
-            Excel::import(new GreasingScheduleImport(), $request->file('file'));
+            Excel::import(new GreasingScheduleImport, $request->file('file'));
         } catch (\Throwable $e) {
             report($e);
 
@@ -355,9 +356,13 @@ class GreasingController extends Controller
     {
         $this->authorizeGreasingAccess($greasing);
 
-        $greasing->load(['group', 'findings' => fn ($q) => $q->latest('id')]);
+        $greasing->load(['group', 'findings' => fn ($q) => $q->with('machine')->latest('id')]);
 
-        return view('greasings.execute', compact('greasing'));
+        $machines = $greasing->group_id
+            ? Machine::where('group_id', $greasing->group_id)->orderBy('machine_number')->get(['id', 'machine_number'])
+            : collect();
+
+        return view('greasings.execute', compact('greasing', 'machines'));
     }
 
     public function storeExecution(Request $request, Greasing $greasing)
@@ -399,6 +404,49 @@ class GreasingController extends Controller
     }
 
     /**
+     * Add one finding: machine (must belong to this schedule's Group),
+     * free-text area, and free-text remarks (stored in `finding`).
+     */
+    public function storeFinding(Request $request, Greasing $greasing)
+    {
+        $this->authorizeGreasingAccess($greasing);
+
+        $validated = $request->validate([
+            'machine_id' => [
+                'required',
+                Rule::exists('machines', 'id')->where('group_id', $greasing->group_id),
+            ],
+            'finding_area' => 'required|string|max:255',
+            'remarks' => 'required|string|max:1000',
+        ]);
+
+        $greasing->findings()->create([
+            'machine_id' => $validated['machine_id'],
+            'finding_area' => trim($validated['finding_area']),
+            'finding' => trim($validated['remarks']),
+            'status' => 'OPEN',
+        ]);
+
+        return back()->with('success', 'Finding added successfully');
+    }
+
+    /**
+     * Only ADMIN and KOORDINATOR may delete a finding. Checked here, not
+     * just in the view, so a PIC cannot do it with a manual request.
+     */
+    public function destroyFinding(Greasing $greasing, GreasingFinding $finding)
+    {
+        $this->authorizeGreasingAccess($greasing);
+
+        abort_unless(auth()->user()->hasRole([User::ROLE_ADMIN, User::ROLE_KOORDINATOR]), 403);
+        abort_unless($finding->greasing_id === $greasing->id, 404);
+
+        $finding->delete();
+
+        return back()->with('success', 'Finding deleted successfully');
+    }
+
+    /**
      * Toggle a single finding's status. Deliberately does not touch the
      * parent Greasing's status — finding status and schedule status are
      * independent by design.
@@ -410,10 +458,14 @@ class GreasingController extends Controller
         abort_unless($finding->greasing_id === $greasing->id, 404);
 
         $validated = $request->validate([
-            'status' => ['required', Rule::in(GreasingFinding::STATUSES)],
-            'action' => 'nullable|string|max:2000',
+            // Without an explicit status (Execute page) the finding is closed
+            // by filling Action, so Action becomes mandatory.
+            'status' => ['nullable', Rule::in(GreasingFinding::STATUSES)],
+            'action' => [$request->filled('status') ? 'nullable' : 'required', 'string', 'max:2000'],
             'action_date' => 'nullable|date',
         ]);
+
+        $validated['status'] ??= 'COMPLETED';
 
         $finding->update([
             'status' => $validated['status'],

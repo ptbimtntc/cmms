@@ -14,6 +14,8 @@ class GreasingFinding extends Model
 
     protected $fillable = [
         'greasing_id',
+        'machine_id',
+        'finding_area',
         'finding',
         'action_date',
         'action',
@@ -30,5 +32,10 @@ class GreasingFinding extends Model
     public function greasing(): BelongsTo
     {
         return $this->belongsTo(Greasing::class);
+    }
+
+    public function machine(): BelongsTo
+    {
+        return $this->belongsTo(Machine::class);
     }
 }

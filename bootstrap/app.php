@@ -1,12 +1,14 @@
 <?php
 
+use App\Http\Middleware\EnsureUserHasArea;
+use App\Http\Middleware\RoleMiddleware;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use App\Http\Middleware\RoleMiddleware;
-use App\Http\Middleware\EnsureUserHasArea;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,10 +18,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
+            'auth' => Authenticate::class,
             'role' => RoleMiddleware::class,
             'area' => EnsureUserHasArea::class,
         ]);
+
+        // Authorize by role before route-model binding resolves, so a
+        // forbidden role (e.g. view-only SUPERVISOR) gets 403 on a write
+        // URL regardless of whether the target record exists.
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: RoleMiddleware::class,
+        );
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Flips OPEN/IN_PROGRESS PM schedules to MISSED once their due_date

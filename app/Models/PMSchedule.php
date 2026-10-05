@@ -111,8 +111,8 @@ class PMSchedule extends Model
      */
     public function isAccessibleBy(User $user): bool
     {
-        if ($user->isAdmin()) {
-            return true;
+        if ($user->seesAllAreas()) {
+            return $user->hasArea($this->area);
         }
 
         if ((! $user->isKoordinator() && ! $user->isPic()) || ! $user->area) {

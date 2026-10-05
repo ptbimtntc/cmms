@@ -3,6 +3,7 @@
 use App\Models\Area;
 use App\Models\Greasing;
 use App\Models\Group;
+use App\Models\Machine;
 use App\Models\User;
 use App\Services\GreasingKpiCalculator;
 
@@ -257,4 +258,86 @@ test('area filter on the greasing report is admin-only', function () {
 
     $response->assertOk();
     $response->assertDontSee('name="area"', false);
+});
+
+function findingReportFixture(): array
+{
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $group = Group::create(['name' => 'FR Group '.uniqid()]);
+    $m1 = Machine::create(['machine_number' => 'M-001', 'group_id' => $group->id, 'area' => 'WWD', 'machine_type' => 'PUMP']);
+    $m2 = Machine::create(['machine_number' => 'M-015', 'group_id' => $group->id, 'area' => 'WWD', 'machine_type' => 'PUMP']);
+    $make = fn (string $plan) => Greasing::create([
+        'group_id' => $group->id, 'cycle' => '4W', 'plan_date' => $plan,
+        'due_date' => Greasing::calculateDueDate($plan), 'status' => 'OPEN',
+    ]);
+    $aug = $make('2026-08-01');
+    $sep = $make('2026-09-01');
+
+    $aug->findings()->create(['machine_id' => $m1->id, 'finding_area' => 'Kapstan', 'finding' => 'Nipple bocor', 'status' => 'COMPLETED', 'action_date' => '2026-08-05']);
+    $aug->findings()->create(['machine_id' => $m1->id, 'finding_area' => 'kapstan ', 'finding' => 'Bearing kasar', 'status' => 'OPEN']);
+    $aug->findings()->create(['machine_id' => $m2->id, 'finding_area' => 'Gearbox', 'finding' => 'Oil seal bocor', 'status' => 'OPEN']);
+    $sep->findings()->create(['machine_id' => $m2->id, 'finding_area' => 'Gearbox', 'finding' => 'Sep issue', 'status' => 'OPEN']);
+    $sep->findings()->create(['machine_id' => $m2->id, 'finding_area' => 'Gearbox', 'finding' => 'Sep issue 2', 'status' => 'OPEN']);
+    $sep->findings()->create(['finding' => 'Legacy finding', 'status' => 'OPEN']);
+
+    return [$admin, $group, $aug, $sep];
+}
+
+test('finding report shows summary, ranking and detail columns', function () {
+    [$admin] = findingReportFixture();
+
+    $response = $this->actingAs($admin)->get(route('reports.greasing', ['period_type' => 'yearly', 'year' => 2026]));
+
+    $response->assertOk();
+    expect($response->viewData('findingSummary'))
+        ->total->toBe(6)
+        ->top_machine->label->toBe('M-015')
+        ->top_machine->total->toBe(3)
+        ->top_area->label->toBe('Gearbox')
+        ->top_area->total->toBe(3);
+    $response->assertSeeInOrder(['Machine', 'Finding Area', 'Remarks', 'Status', 'Action Date']);
+    $response->assertSee('Nipple bocor');
+});
+
+test('finding summary follows the active filter', function () {
+    [$admin] = findingReportFixture();
+
+    $response = $this->actingAs($admin)->get(route('reports.greasing', [
+        'period_type' => 'monthly', 'month' => [8], 'year' => 2026,
+    ]));
+
+    expect($response->viewData('findingSummary'))
+        ->total->toBe(3)
+        ->top_machine->label->toBe('M-001')
+        ->top_machine->total->toBe(2)
+        ->top_area->label->toBe('Kapstan')
+        ->top_area->total->toBe(2);
+});
+
+test('legacy findings without machine or area render safely', function () {
+    [$admin] = findingReportFixture();
+
+    $this->actingAs($admin)->get(route('reports.greasing', [
+        'period_type' => 'monthly', 'month' => [9], 'year' => 2026,
+    ]))->assertOk()->assertSee('Legacy finding');
+});
+
+test('empty finding report has no top machine or area', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $response = $this->actingAs($admin)->get(route('reports.greasing', ['period_type' => 'yearly', 'year' => 2026]));
+
+    expect($response->viewData('findingSummary'))->total->toBe(0)->top_machine->toBeNull()->top_area->toBeNull();
+});
+
+test('greasing report table shows only the six simplified columns with finding count', function () {
+    [$admin] = findingReportFixture();
+
+    $response = $this->actingAs($admin)->get(route('reports.greasing', ['period_type' => 'yearly', 'year' => 2026]));
+
+    $response->assertSeeInOrder(['Action Date', 'Group', 'Order Number', 'PIC', 'Status', 'Finding']);
+    $response->assertSee('[ 3 Findings ]', false);
+    $html = $response->getContent();
+    $head = substr($html, strpos($html, 'id="greasing-report-panel"'), 3000);
+    expect($head)->not->toContain('>Plan Date<')->not->toContain('>Cycle<')->not->toContain('>Remarks<')->not->toContain('>Area<');
 });

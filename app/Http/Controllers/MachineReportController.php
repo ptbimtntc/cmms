@@ -38,7 +38,7 @@ class MachineReportController extends Controller
     {
         $user = $request->user();
 
-        $area = $user->isAdmin() && Area::active()->pluck('name')->contains($request->input('area'))
+        $area = $user->seesAllAreas() && $user->selectableAreaNames()->contains($request->input('area'))
             ? $request->input('area')
             : null;
         $machineType = $request->input('machine_type') ?: null;
@@ -121,8 +121,8 @@ class MachineReportController extends Controller
             'machineTypes' => $machineTypes,
             'statuses' => $statuses,
             'groups' => $groups,
-            'areas' => Area::active()->orderBy('name')->pluck('name'),
-            'isAdmin' => $user->isAdmin(),
+            'areas' => $user->selectableAreaNames(),
+            'isAdmin' => $user->seesAllAreas(),
             'selectedArea' => $area,
             'selectedMachineType' => $machineType,
             'selectedStatuses' => $selectedStatuses,
@@ -223,6 +223,12 @@ class MachineReportController extends Controller
     {
         if ($user->isKoordinator() || $user->isPic()) {
             return $user->area?->name;
+        }
+
+        if (($restricted = $user->restrictedAreaNames()) !== null && $area === null) {
+            // Restricted supervisor with no explicit filter: keep the
+            // WWD-only Gearbox metric only when WWD is among their areas.
+            return in_array('WWD', $restricted, true) ? null : $restricted[0];
         }
 
         return $area;

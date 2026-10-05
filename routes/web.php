@@ -119,7 +119,7 @@ Route::middleware([
 
 Route::middleware([
     'auth',
-    'role:ADMIN,KOORDINATOR',
+    'role:ADMIN,KOORDINATOR,SUPERVISOR',
 ])->group(function () {
     Route::resource('machines', MachineController::class);
     Route::put('/machines/{machine}', [MachineController::class, 'update'])->name('machines.update');
@@ -173,7 +173,7 @@ Route::middleware([
 
 Route::middleware([
     'auth',
-    'role:ADMIN,KOORDINATOR,PIC',
+    'role:ADMIN,KOORDINATOR,PIC,SUPERVISOR',
 ])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -198,7 +198,9 @@ Route::middleware([
     Route::post('/greasings/{greasing}/start', [GreasingController::class, 'start'])->name('greasings.start');
     Route::get('/greasings/{greasing}/execute', [GreasingController::class, 'execute'])->name('greasings.execute');
     Route::post('/greasings/{greasing}/execute', [GreasingController::class, 'storeExecution'])->name('greasings.execute.store');
+    Route::post('/greasings/{greasing}/findings', [GreasingController::class, 'storeFinding'])->name('greasings.findings.store');
     Route::patch('/greasings/{greasing}/findings/{finding}', [GreasingController::class, 'updateFinding'])->name('greasings.findings.update');
+    Route::delete('/greasings/{greasing}/findings/{finding}', [GreasingController::class, 'destroyFinding'])->name('greasings.findings.destroy');
 });
 
 // Oil Audit is a permanent WWD-only business rule (see OilAudit::AREA), not
@@ -207,7 +209,7 @@ Route::middleware([
 // OilAuditController itself has no per-user area check of its own.
 Route::middleware([
     'auth',
-    'role:ADMIN,KOORDINATOR,PIC',
+    'role:ADMIN,KOORDINATOR,PIC,SUPERVISOR',
     'area:WWD',
 ])->group(function () {
     Route::get('/oil-audits/scan', [OilAuditController::class, 'scan'])->name('oil-audits.scan');

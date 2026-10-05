@@ -232,7 +232,7 @@ test('unauthenticated users are redirected to login', function () {
 });
 
 // ---------------------------------------------------------------
-// Jan-Sep completion/closing trend charts
+// Jan-Dec completion/closing trend charts
 // ---------------------------------------------------------------
 
 test('trend covers exactly january through september, in order', function () {
@@ -241,9 +241,9 @@ test('trend covers exactly january through september, in order', function () {
     $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026]));
 
     $trend = $response->viewData('trend');
-    expect($trend)->toHaveCount(9);
-    expect(array_column($trend, 'label'))->toBe(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
-    expect(array_column($trend, 'month'))->toBe([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect($trend)->toHaveCount(12);
+    expect(array_column($trend, 'label'))->toBe(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+    expect(array_column($trend, 'month'))->toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 });
 
 test('trend follows the selected year filter', function () {
@@ -342,7 +342,7 @@ test('trend is not narrowed by the month filter — it always shows all of jan-s
     $response = $this->actingAs($admin)->get(route('reports.pm', ['year' => 2026, 'month' => [7]]));
 
     $trend = collect($response->viewData('trend'));
-    expect($trend)->toHaveCount(9);
+    expect($trend)->toHaveCount(12);
     expect($trend->firstWhere('month', 2)['has_data'])->toBeTrue();
     expect($trend->firstWhere('month', 7)['has_data'])->toBeTrue();
 });
@@ -367,7 +367,7 @@ test('both trend charts draw a fixed 96% orange target line', function () {
 
     $response->assertOk();
     $response->assertSee('Target 96%', false);
-    $response->assertSee("getPixelForValue(96)", false);
+    $response->assertSee('getPixelForValue(96)', false);
     $response->assertSee('#f97316', false);
 
     // Both charts must register the plugin, not just one.

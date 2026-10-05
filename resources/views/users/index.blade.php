@@ -59,7 +59,11 @@
                         <span class="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                             {{ $user->area->name }}
                         </span>
-                    @elseif ($user->isAdmin())
+                    @elseif ($user->isSupervisor() && $user->areas->isNotEmpty())
+                        <span class="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                            {{ $user->areas->pluck('name')->join(', ') }}
+                        </span>
+                    @elseif ($user->seesAllAreas())
                         <span class="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                             All Areas
                         </span>
@@ -132,7 +136,9 @@
                     <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">{{ $user->role }}</span>
                     @if ($user->area)
                         <span class="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $user->area->name }}</span>
-                    @elseif ($user->isAdmin())
+                    @elseif ($user->isSupervisor() && $user->areas->isNotEmpty())
+                        <span class="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $user->areas->pluck('name')->join(', ') }}</span>
+                    @elseif ($user->seesAllAreas())
                         <span class="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">All Areas</span>
                     @endif
                 </div>

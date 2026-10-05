@@ -44,7 +44,7 @@ class PMScheduleController extends Controller
         // FILTER AREA — ADMIN may pass an explicit ?area=, everyone else is
         // scoped to their own area/pic by AreaAuthorizationScope (ADMIN,
         // KOORDINATOR, PIC — see App\Support\AreaAuthorizationScope).
-        $adminAreaFilter = $user->isAdmin() && $request->filled('area')
+        $adminAreaFilter = $user->seesAllAreas() && $request->filled('area')
             ? $request->area
             : null;
 
@@ -110,6 +110,7 @@ class PMScheduleController extends Controller
         // GET UNIQUE AREAS
         $areas = PMSchedule::select('area')
             ->whereNotNull('area')
+            ->when($user->restrictedAreaNames(), fn ($q, $names) => $q->whereIn('area', $names))
             ->distinct()
             ->orderBy('area')
             ->pluck('area');

@@ -67,7 +67,7 @@
                 @include('partials.topbar', ['pageTitle' => $pageTitle])
             @endif
 
-            <main class="flex-1 overflow-y-auto {{ $hideSidebar ?? false ? '' : 'lg:ml-72' }}">
+            <main class="flex-1 overflow-y-auto overscroll-y-contain {{ $hideSidebar ?? false ? '' : 'lg:ml-72' }}">
                 {{-- $contentMaxWidth lets an individual page opt into a wider
                 content area (e.g. a dense table) without affecting every
                 other page, which keeps the max-w-7xl default. --}}

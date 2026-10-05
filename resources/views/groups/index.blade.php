@@ -7,9 +7,11 @@
             <p class="text-sm text-slate-500">Manage machine group master data</p>
         </div>
 
+        @unless (auth()->user()->isSupervisor())
         <a href="{{ route('groups.create') }}" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
             Add Group
         </a>
+        @endunless
     </div>
 
     @if (session('success'))
@@ -55,6 +57,7 @@
                         <td class="px-4 py-3 text-sm text-slate-700">{{ $group->machines_count }}</td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-2">
+                                @unless (auth()->user()->isSupervisor())
                                 <a href="{{ route('groups.edit', $group->id) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
                                     Edit
                                 </a>
@@ -66,6 +69,7 @@
                                         Delete
                                     </button>
                                 </form>
+                                @endunless
                             </div>
                         </td>
                     </tr>
@@ -90,6 +94,7 @@
                     </div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                    @unless (auth()->user()->isSupervisor())
                     <a href="{{ route('groups.edit', $group->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
                         Edit
                     </a>
@@ -101,6 +106,7 @@
                             Delete
                         </button>
                     </form>
+                    @endunless
                 </div>
             </div>
         @empty

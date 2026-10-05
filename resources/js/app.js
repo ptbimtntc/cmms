@@ -8,6 +8,7 @@ import './oil-audits/entry';
 import './oil-audits/follow-up';
 
 import './offline/syncUi.js';
+import './pull-to-refresh.js';
 
 import { registerServiceWorker } from './offline/sw-register.js';
 import * as FreeDOMSOffline from './offline/index.js';

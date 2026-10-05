@@ -204,15 +204,8 @@
         </div>
     </div>
 
-    {{-- Greasing Report (~75%) + Finding Report (~25%) side by side.
-         `items-start` keeps this panel at its own natural height — Finding
-         Report can have MORE entries than Greasing has rows (one greasing
-         may have several findings), so letting the grid stretch both to
-         the taller one would inflate this panel too. Finding Report's
-         height is instead pinned to match this panel's real rendered
-         height via the small script below, and scrolls internally. --}}
-    <div class="grid items-start gap-4 lg:grid-cols-4">
-        <div id="greasing-report-panel" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-3">
+    <div class="space-y-4">
+        <div id="greasing-report-panel" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ">
             <div class="border-b border-slate-200 px-4 py-3">
                 <h2 class="text-sm font-semibold text-slate-800">Greasing Report</h2>
             </div>
@@ -222,26 +215,19 @@
                 <table class="min-w-full divide-y divide-slate-200">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Plan Date</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action Date</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Area</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Group</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Cycle</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Order Number</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">PIC</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Remarks</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Finding</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse ($greasings as $greasing)
                             <tr class="hover:bg-slate-50">
-                                <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->plan_date->format('d M Y') }}</td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->action_date ? $greasing->action_date->format('d M Y') : '-' }}</td>
-                                <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->group?->area?->name ?? '-' }}</td>
                                 <td class="px-3 py-2 text-sm font-semibold text-slate-800">{{ $greasing->group->name ?? '-' }}</td>
-                                <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->cycle }}</td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->order_number ?? '-' }}</td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $greasing->pic ?? '-' }}</td>
                                 <td class="px-3 py-2">
@@ -254,7 +240,6 @@
                                         {{ $greasing->status }}
                                     </span>
                                 </td>
-                                <td class="max-w-50 truncate px-3 py-2 text-sm text-slate-500" title="{{ $greasing->remarks }}">{{ $greasing->remarks ?? '-' }}</td>
                                 <td class="px-3 py-2 text-sm">
                                     @if ($greasing->findings_count > 0)
                                         <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">[ {{ $greasing->findings_count }} {{ \Illuminate\Support\Str::plural('Finding', $greasing->findings_count) }} ]</span>
@@ -265,7 +250,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="px-3 py-8 text-center text-sm text-slate-500">No greasing schedule found for this period</td>
+                                <td colspan="6" class="px-3 py-8 text-center text-sm text-slate-500">No greasing schedule found for this period</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -279,7 +264,7 @@
                         <div class="mb-3 flex items-start justify-between gap-2">
                             <div class="min-w-0">
                                 <div class="truncate text-sm font-semibold text-slate-800">{{ $greasing->group->name ?? '-' }}</div>
-                                <div class="text-xs text-slate-500">{{ $greasing->cycle }} • {{ $greasing->order_number ?? '-' }}</div>
+                                <div class="text-xs text-slate-500">{{ $greasing->order_number ?? '-' }}</div>
                             </div>
                             <span @class([
                                 'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold',
@@ -292,14 +277,6 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
-                            <div>
-                                <div class="text-slate-400">Area</div>
-                                <div class="font-medium text-slate-700">{{ $greasing->group?->area?->name ?? '-' }}</div>
-                            </div>
-                            <div>
-                                <div class="text-slate-400">Plan Date</div>
-                                <div class="font-medium text-slate-700">{{ $greasing->plan_date->format('d M Y') }}</div>
-                            </div>
                             <div>
                                 <div class="text-slate-400">Action Date</div>
                                 <div class="font-medium text-slate-700">{{ $greasing->action_date ? $greasing->action_date->format('d M Y') : '-' }}</div>
@@ -318,12 +295,6 @@
                                     @endif
                                 </div>
                             </div>
-                            @if ($greasing->remarks)
-                                <div class="col-span-2">
-                                    <div class="text-slate-400">Remarks</div>
-                                    <div class="font-medium text-slate-700">{{ $greasing->remarks }}</div>
-                                </div>
-                            @endif
                         </div>
                     </div>
                 @empty
@@ -336,98 +307,97 @@
             </div>
         </div>
 
-        <div id="finding-report-panel" class="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-1">
+        <div id="finding-report-panel" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 px-4 py-3">
                 <h2 class="text-sm font-semibold text-slate-800">Finding Report</h2>
             </div>
-            <div class="max-h-140 min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto lg:max-h-none">
-                @forelse ($findings as $finding)
-                    <div @class([
-                        'space-y-1 border-l-4 p-3 text-xs',
-                        'border-amber-400 bg-amber-50/40' => $finding->status === 'OPEN',
-                        'border-emerald-400 bg-emerald-50/40' => $finding->status === 'COMPLETED',
-                    ])>
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="font-semibold text-slate-800">{{ $finding->greasing->group->name ?? '-' }}</span>
-                            <span @class([
-                                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                                'bg-emerald-600 text-white' => $finding->status === 'COMPLETED',
-                                'bg-amber-500 text-white' => $finding->status === 'OPEN',
-                            ])>
-                                {{ $finding->status === 'COMPLETED' ? '✓ ' : '● ' }}{{ $finding->status }}
-                            </span>
-                        </div>
-                        <p class="text-slate-500">Cycle: {{ $finding->greasing->cycle }}</p>
-                        <p class="text-slate-500">Order Number: {{ $finding->greasing->order_number ?? '-' }}</p>
-                        <p class="text-slate-500">PIC: {{ $finding->greasing->pic ?? '-' }}</p>
-                        <p class="text-slate-500">Plan Date: {{ $finding->greasing->plan_date->format('d M Y') }}</p>
-                        <p class="text-slate-700">Finding: {{ $finding->finding }}</p>
 
-                        @if ($finding->status === 'OPEN')
-                            <form action="{{ route('greasings.findings.update', [$finding->greasing, $finding]) }}" method="POST" class="mt-2 space-y-2 rounded-lg border border-amber-200 bg-white p-2">
-                                @csrf
-                                @method('PATCH')
-
-                                <div>
-                                    <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Action Date</label>
-                                    <input type="date" name="action_date" value="{{ optional($finding->action_date)->format('Y-m-d') }}"
-                                        class="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-500 focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Action</label>
-                                    <input type="text" name="action" value="{{ $finding->action }}" placeholder="Action taken"
-                                        class="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-500 focus:outline-none">
-                                </div>
-
-                                <div class="flex items-center gap-2">
-                                    <select name="status" class="flex-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700">
-                                        <option value="OPEN" selected>OPEN</option>
-                                        <option value="COMPLETED">COMPLETED</option>
-                                    </select>
-                                    <button class="rounded bg-slate-700 px-3 py-1 text-xs font-medium text-white transition hover:bg-slate-800">
-                                        Save
-                                    </button>
-                                </div>
-                            </form>
+            <div class="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Total Finding</p>
+                    <p class="mt-1 text-xl font-semibold text-slate-800">{{ $findingSummary['total'] }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Top Problem Machine</p>
+                    <p class="mt-1 text-xl font-semibold text-slate-800">
+                        @if ($findingSummary['top_machine'])
+                            {{ $findingSummary['top_machine']->label }} <span class="text-sm font-medium text-slate-500">— {{ $findingSummary['top_machine']->total }} {{ \Illuminate\Support\Str::plural('Finding', $findingSummary['top_machine']->total) }}</span>
                         @else
-                            <p class="text-slate-500">Action: {{ $finding->action ?? '-' }}</p>
-                            <p class="text-slate-400">Action Date: {{ $finding->action_date ? $finding->action_date->format('d M Y') : '-' }}</p>
+                            -
                         @endif
-                    </div>
-                @empty
-                    <p class="p-4 text-xs text-slate-500">No finding recorded for this period.</p>
-                @endforelse
+                    </p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Top Finding Area</p>
+                    <p class="mt-1 text-xl font-semibold text-slate-800">
+                        @if ($findingSummary['top_area'])
+                            {{ $findingSummary['top_area']->label }} <span class="text-sm font-medium text-slate-500">— {{ $findingSummary['top_area']->total }} {{ \Illuminate\Support\Str::plural('Finding', $findingSummary['top_area']->total) }}</span>
+                        @else
+                            -
+                        @endif
+                    </p>
+                </div>
             </div>
-            <div class="border-t border-slate-100 p-2 text-xs">
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Machine</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Finding Area</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Remarks</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action Date</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Follow Up</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        @forelse ($findings as $finding)
+                            <tr class="align-top hover:bg-slate-50">
+                                <td class="px-3 py-2 text-sm font-semibold text-slate-800">{{ $finding->machine?->machine_number ?? '-' }}</td>
+                                <td class="px-3 py-2 text-sm text-slate-700">{{ $finding->finding_area ?? '-' }}</td>
+                                <td class="px-3 py-2 text-sm text-slate-700">
+                                    {{ $finding->finding }}
+                                    @if ($finding->action)
+                                        <p class="mt-1 text-xs text-slate-500">Action: {{ $finding->action }}</p>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span @class([
+                                        'rounded-full px-2.5 py-1 text-xs font-semibold',
+                                        'bg-emerald-100 text-emerald-700' => $finding->status === 'COMPLETED',
+                                        'bg-amber-100 text-amber-700' => $finding->status === 'OPEN',
+                                    ])>{{ $finding->status }}</span>
+                                </td>
+                                <td class="px-3 py-2 text-sm text-slate-700">{{ $finding->action_date ? $finding->action_date->format('d M Y') : '-' }}</td>
+                                <td class="px-3 py-2">
+                                    @if ($finding->status === 'OPEN')
+                                        <form action="{{ route('greasings.findings.update', [$finding->greasing, $finding]) }}" method="POST" class="flex min-w-64 flex-wrap items-center gap-1">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="status" value="COMPLETED">
+                                            <input type="date" name="action_date" value="{{ optional($finding->action_date)->format('Y-m-d') }}"
+                                                class="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-500 focus:outline-none">
+                                            <input type="text" name="action" value="{{ $finding->action }}" placeholder="Action taken" required
+                                                class="min-w-0 flex-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-500 focus:outline-none">
+                                            <button class="rounded bg-slate-700 px-3 py-1 text-xs font-medium text-white transition hover:bg-slate-800">Save</button>
+                                        </form>
+                                    @else
+                                        <span class="text-xs text-slate-400">-</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-3 py-8 text-center text-sm text-slate-500">No finding recorded for this period.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="border-t border-slate-100 p-3">
                 {{ $findings->links() }}
             </div>
         </div>
     </div>
-
-    <script>
-        // Finding Report can hold more entries than Greasing Report has rows
-        // (one greasing may have several findings), so it can't just be left
-        // to size itself — it's pinned to Greasing Report's actual rendered
-        // height (lg and up, where they sit side by side) and scrolls
-        // internally past that. Re-measured on resize and whenever Greasing
-        // Report's own height changes (e.g. web fonts finishing load).
-        (function () {
-            const source = document.getElementById('greasing-report-panel');
-            const target = document.getElementById('finding-report-panel');
-            if (!source || !target) return;
-
-            const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
-
-            function syncHeight () {
-                target.style.height = isDesktop() ? source.offsetHeight + 'px' : '';
-            }
-
-            syncHeight();
-            window.addEventListener('resize', syncHeight);
-            if (window.ResizeObserver) {
-                new ResizeObserver(syncHeight).observe(source);
-            }
-        })();
-    </script>
 @endsection

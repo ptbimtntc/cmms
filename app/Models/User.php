@@ -7,8 +7,10 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -33,11 +35,18 @@ class User extends Authenticatable
 
     public const ROLE_GUEST = 'GUEST';
 
+    /**
+     * View-only role. Sees every area unless one or more areas are assigned
+     * (see areas()), in which case it sees only those.
+     */
+    public const ROLE_SUPERVISOR = 'SUPERVISOR';
+
     public const ROLES = [
         self::ROLE_ADMIN,
         self::ROLE_KOORDINATOR,
         self::ROLE_PIC,
         self::ROLE_GUEST,
+        self::ROLE_SUPERVISOR,
     ];
 
     /**
@@ -131,6 +140,63 @@ class User extends Authenticatable
         return $this->role === self::ROLE_GUEST;
     }
 
+    public function isSupervisor(): bool
+    {
+        return $this->role === self::ROLE_SUPERVISOR;
+    }
+
+    /**
+     * Visibility (not permission) across areas: ADMIN and SUPERVISOR (the
+     * latter possibly narrowed to its assigned areas, see restrictedAreaNames()).
+     * Used by data scoping and area filters; write permission is still
+     * gated by role middleware and isAdmin()/isKoordinator() checks.
+     */
+    public function seesAllAreas(): bool
+    {
+        return $this->isAdmin() || $this->isSupervisor();
+    }
+
+    /**
+     * Areas assigned to a SUPERVISOR (zero, one or many).
+     */
+    public function areas(): BelongsToMany
+    {
+        return $this->belongsToMany(Area::class, 'area_user');
+    }
+
+    /**
+     * Names of the only areas this user may see, or null when unrestricted
+     * (ADMIN, or a SUPERVISOR with no area assigned).
+     *
+     * @return list<string>|null
+     */
+    public function restrictedAreaNames(): ?array
+    {
+        if (! $this->isSupervisor()) {
+            return null;
+        }
+
+        $names = $this->areas->pluck('name')->all();
+
+        return $names === [] ? null : $names;
+    }
+
+    /**
+     * Active area names offered in an Area filter for a user who sees all
+     * areas, already narrowed to the supervisor's assigned areas.
+     *
+     * @return Collection<int, string>
+     */
+    public function selectableAreaNames(): Collection
+    {
+        $names = Area::active()->orderBy('name')->pluck('name');
+        $restricted = $this->restrictedAreaNames();
+
+        return $restricted === null
+            ? $names
+            : $names->filter(fn (string $name) => in_array($name, $restricted, true))->values();
+    }
+
     public function isActive(): bool
     {
         return $this->is_active === true;
@@ -152,16 +218,17 @@ class User extends Authenticatable
     }
 
     /**
-     * True for ADMIN unconditionally (ADMIN accesses every area), otherwise
+     * True for ADMIN unconditionally, a SUPERVISOR for every area unless restricted to assigned ones, otherwise
      * true only if this user's own area matches the one given.
      */
     public function hasArea(Area|string $area): bool
     {
-        if ($this->isAdmin()) {
-            return true;
-        }
-
         $name = $area instanceof Area ? $area->name : $area;
+
+        if ($this->seesAllAreas()) {
+            return $this->restrictedAreaNames() === null
+                || in_array($name, $this->restrictedAreaNames(), true);
+        }
 
         return $this->area?->name === $name;
     }

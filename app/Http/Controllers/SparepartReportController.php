@@ -28,7 +28,7 @@ class SparepartReportController extends Controller
             ->filter(fn ($m) => $m >= 1 && $m <= 12)
             ->values()
             ->all();
-        $area = $user->isAdmin() && Area::active()->pluck('name')->contains($request->input('area'))
+        $area = $user->seesAllAreas() && $user->selectableAreaNames()->contains($request->input('area'))
             ? $request->input('area')
             : null;
         $machine = $request->input('machine') ?: null;
@@ -121,8 +121,8 @@ class SparepartReportController extends Controller
             'machineTypes' => $machineTypes,
             'segments' => $segments,
             'statuses' => self::STATUSES,
-            'areas' => Area::active()->orderBy('name')->pluck('name'),
-            'isAdmin' => $user->isAdmin(),
+            'areas' => $user->selectableAreaNames(),
+            'isAdmin' => $user->seesAllAreas(),
             'selectedYear' => $year,
             'selectedMonths' => $months,
             'selectedArea' => $area,

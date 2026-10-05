@@ -13,6 +13,7 @@
         <div class="flex flex-col md:flex-row md:items-center gap-3">
 
             <!-- IMPORT FORM -->
+            @unless (auth()->user()->isSupervisor())
             <form action="{{ route('machine-problems.import') }}" method="POST" enctype="multipart/form-data"
                 class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded shadow border">
 
@@ -44,6 +45,7 @@
                 </button>
 
             </form>
+            @endunless
 
         </div>
     </div>
@@ -175,6 +177,7 @@
 
                         <div class="flex justify-center gap-2">
 
+                            @unless (auth()->user()->isSupervisor())
                             <a href="{{ route('machine-problems.edit', $p->id) }}"
                                 class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">
                                 Edit
@@ -191,6 +194,7 @@
                                 </button>
 
                             </form>
+                            @endunless
 
                         </div>
 
@@ -228,6 +232,7 @@
                     <div class="font-medium text-gray-700">{{ $p->category }}</div>
                 </div>
                 <div class="mt-3 flex gap-2 border-t pt-3">
+                    @unless (auth()->user()->isSupervisor())
                     <a href="{{ route('machine-problems.edit', $p->id) }}"
                         class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
                         Edit
@@ -240,6 +245,7 @@
                             Delete
                         </button>
                     </form>
+                    @endunless
                 </div>
             </div>
         @empty

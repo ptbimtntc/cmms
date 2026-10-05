@@ -41,7 +41,7 @@ class GreasingReportController extends Controller
         // Greasing::scopeVisibleToUser() (see applyVisibility()). Allowed
         // values come from the live Area master list, never a hardcoded
         // array.
-        $area = $user->isAdmin() && Area::active()->pluck('name')->contains($request->input('area'))
+        $area = $user->seesAllAreas() && $user->selectableAreaNames()->contains($request->input('area'))
             ? $request->input('area')
             : null;
 
@@ -53,7 +53,7 @@ class GreasingReportController extends Controller
         // the (array) cast.
         $statuses = array_values(array_intersect((array) $request->input('status', []), Greasing::STATUSES));
         $search = trim((string) $request->input('search', ''));
-        $isAdmin = $user->isAdmin();
+        $isAdmin = $user->seesAllAreas();
         $isPic = $user->isPic();
 
         // --- KPI (single source of truth: GreasingKpiCalculator) ---
@@ -96,8 +96,8 @@ class GreasingReportController extends Controller
             ->paginate(15, ['*'], 'greasing_page')
             ->withQueryString();
 
-        // --- Finding Report table (from greasing_findings, same filtered scope) ---
-        $findings = GreasingFinding::query()
+        // --- Finding Report (greasing_findings, same filtered scope) ---
+        $findingQuery = fn () => GreasingFinding::query()
             ->whereHas('greasing', function (Builder $query) use ($user, $periodType, $year, $selectedMonths, $area, $groupId, $cycle, $pic, $statuses, $search) {
                 $this->applyFilters(
                     $this->applyVisibility($query, $user, $area),
@@ -110,8 +110,32 @@ class GreasingReportController extends Controller
                     $statuses,
                     $search
                 );
-            })
-            ->with('greasing.group')
+            });
+
+        $findingSummary = [
+            'total' => $findingQuery()->count(),
+            // Legacy findings without a machine / area are left out of the
+            // "top" rankings (nothing meaningful to rank) but still count
+            // toward the total. Ties break alphabetically for a stable result.
+            'top_machine' => $findingQuery()
+                ->join('machines', 'machines.id', '=', 'greasing_findings.machine_id')
+                ->selectRaw('machines.machine_number as label, count(*) as total')
+                ->groupBy('machines.id', 'machines.machine_number')
+                ->orderByDesc('total')
+                ->orderBy('label')
+                ->first(),
+            'top_area' => $findingQuery()
+                ->whereNotNull('finding_area')
+                ->whereRaw("trim(finding_area) <> ''")
+                ->selectRaw('min(trim(finding_area)) as label, count(*) as total')
+                ->groupByRaw('lower(trim(finding_area))')
+                ->orderByDesc('total')
+                ->orderBy('label')
+                ->first(),
+        ];
+
+        $findings = $findingQuery()
+            ->with(['greasing.group', 'machine'])
             ->orderByDesc('id')
             ->paginate(15, ['*'], 'finding_page')
             ->withQueryString();
@@ -156,13 +180,14 @@ class GreasingReportController extends Controller
         $groups = Group::whereIn('id', $groupIds)->orderBy('name')->get(['id', 'name']);
         $cycles = (clone $optionsScope)->whereNotNull('cycle')->distinct()->orderBy('cycle')->pluck('cycle');
         $pics = (clone $optionsScope)->whereNotNull('pic')->distinct()->orderBy('pic')->pluck('pic');
-        $areas = Area::active()->orderBy('name')->pluck('name');
+        $areas = $user->selectableAreaNames();
 
         return view('reports.greasing.index', compact(
             'kpi',
             'monthlyTrend',
             'greasings',
             'findings',
+            'findingSummary',
             'periodType',
             'year',
             'selectedMonths',

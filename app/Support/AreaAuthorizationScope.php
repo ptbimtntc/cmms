@@ -37,7 +37,11 @@ final class AreaAuthorizationScope
         ?string $picColumn = null,
         ?string $adminAreaFilter = null,
     ): Builder {
-        if ($user->isAdmin()) {
+        if ($user->seesAllAreas()) {
+            if (($restricted = $user->restrictedAreaNames()) !== null) {
+                $query->whereIn($areaColumn, $restricted);
+            }
+
             return $adminAreaFilter
                 ? $query->where($areaColumn, $adminAreaFilter)
                 : $query;

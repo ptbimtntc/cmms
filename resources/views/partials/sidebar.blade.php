@@ -50,6 +50,7 @@ document.addEventListener('alpine:init', () => {
         $isAdmin = $authUser->isAdmin();
         $isKoordinator = $authUser->isKoordinator();
         $isPic = $authUser->isPic();
+        $isSupervisor = $authUser->isSupervisor();
         // Oil Audit is a permanent WWD-only business rule (see
         // OilAudit::AREA), not general area authorization — hasArea()
         // already returns true unconditionally for ADMIN, so this one flag
@@ -138,7 +139,7 @@ document.addEventListener('alpine:init', () => {
             'icon' => '
             <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />',
             'visible' =>
-            $isAdmin || $isKoordinator,
+            $isAdmin || $isKoordinator || $isSupervisor,
             ],
             [
             'route' => route('pm-schedules.index'),
@@ -152,7 +153,7 @@ document.addEventListener('alpine:init', () => {
             <path d="M3 10h18" />
             <path d="m9 16 2 2 4-4" />',
             'visible' =>
-            $isAdmin || $isKoordinator || $isPic,
+            $isAdmin || $isKoordinator || $isPic || $isSupervisor,
             ],
             [
             'route' => route('oil-audits.scan'),
@@ -163,7 +164,7 @@ document.addEventListener('alpine:init', () => {
             'icon' => '
             <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C4 11.1 3 13 3 15a7 7 0 0 0 7 7z" />',
             'visible' =>
-            $hasWwdArea,
+            $hasWwdArea && ! $isSupervisor,
             ],
             [
             'route' => route('oil-audits.report'),
@@ -175,7 +176,7 @@ document.addEventListener('alpine:init', () => {
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
             <path d="m9 14 2 2 4-4" />',
             'visible' =>
-            $hasWwdArea,
+            $hasWwdArea && ! $isSupervisor,
             ],
             [
             'route' => route('greasings.index'),
@@ -190,7 +191,7 @@ document.addEventListener('alpine:init', () => {
             <path d="m5 19-3 3" />
             <path d="m14 4 6 6" />',
             'visible' =>
-            $isAdmin || $isKoordinator || $isPic,
+            $isAdmin || $isKoordinator || $isPic || $isSupervisor,
             ],
             ],
             ],
@@ -227,7 +228,7 @@ document.addEventListener('alpine:init', () => {
             <path d="M12 18v-6" />
             <path d="M16 18v-3" />',
             'visible' =>
-            $isAdmin || $isKoordinator || $isPic,
+            $isAdmin || $isKoordinator || $isPic || $isSupervisor,
             'children' => [
             [
             'route' => route('reports.pm'),
@@ -299,7 +300,7 @@ document.addEventListener('alpine:init', () => {
             <rect x="4" y="4" width="16" height="16" rx="2" />
             <rect x="9" y="9" width="6" height="6" />',
             'visible' =>
-            $isAdmin || $isKoordinator,
+            $isAdmin || $isKoordinator || $isSupervisor,
             ],
             [
             'route' => route('groups.index'),
@@ -311,7 +312,7 @@ document.addEventListener('alpine:init', () => {
             <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
             <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />',
             'visible' =>
-            $isAdmin || $isKoordinator,
+            $isAdmin || $isKoordinator || $isSupervisor,
             ],
             [
             'route' => route('spareparts.index'),
@@ -336,7 +337,7 @@ document.addEventListener('alpine:init', () => {
             <path d="m13.5 4.5 2 2" />
             <path d="m4.5 13.5 2 2" />',
             'visible' =>
-            $isAdmin || $isKoordinator,
+            $isAdmin || $isKoordinator || $isSupervisor,
             ],
             [
             'route' => route('machine-checklists.index'),
@@ -350,7 +351,7 @@ document.addEventListener('alpine:init', () => {
             <path d="M13 12h8" />
             <path d="M13 18h8" />',
             'visible' =>
-            $isAdmin || $isKoordinator,
+            $isAdmin || $isKoordinator || $isSupervisor,
             ],
             [
             'route' => route('machine-problems.index'),
@@ -362,7 +363,7 @@ document.addEventListener('alpine:init', () => {
             <path d="M12 9v4" />
             <path d="M12 17h.01" />',
             'visible' =>
-            $isAdmin || $isKoordinator,
+            $isAdmin || $isKoordinator || $isSupervisor,
             ],
             [
             'route' => route('machine-problem-findings.index'),

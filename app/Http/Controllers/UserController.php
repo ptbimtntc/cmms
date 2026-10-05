@@ -14,7 +14,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('area')->latest()->paginate(20);
+        $users = User::with(['area', 'areas'])->latest()->paginate(20);
 
         return view('users.index', compact('users'));
     }
@@ -31,7 +31,7 @@ class UserController extends Controller
     {
         $validated = $this->validated($request);
 
-        User::create([
+        $user = User::create([
             'name' => Str::title(strtolower(trim($validated['name']))),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -39,6 +39,8 @@ class UserController extends Controller
             'area_id' => $validated['area_id'],
             'is_active' => true,
         ]);
+
+        $user->areas()->sync($validated['area_ids']);
 
         return redirect()
             ->route('users.index')
@@ -100,6 +102,7 @@ class UserController extends Controller
         }
 
         $user->update($data);
+        $user->areas()->sync($validated['area_ids']);
 
         $message = ! empty($validated['password'])
             ? 'User updated successfully. Password has been changed.'
@@ -163,13 +166,21 @@ class UserController extends Controller
             $rules['remove_avatar'] = ['nullable', 'boolean'];
         }
 
+        // SUPERVISOR may be given zero (= all areas), one or many areas.
+        $rules['area_ids'] = ['nullable', 'array'];
+        $rules['area_ids.*'] = ['integer', Rule::exists('areas', 'id')->where('is_active', true)];
+
         $validated = $request->validate($rules);
 
-        // ADMIN and GUEST are never restricted to one area, regardless of
+        // ADMIN, SUPERVISOR and GUEST never use the single area, regardless of
         // what the form submitted (Area field is hidden for those roles).
         $validated['area_id'] = in_array($validated['role'], [User::ROLE_KOORDINATOR, User::ROLE_PIC], true)
             ? $validated['area_id']
             : null;
+
+        $validated['area_ids'] = $validated['role'] === User::ROLE_SUPERVISOR
+            ? array_values(array_unique($validated['area_ids'] ?? []))
+            : [];
 
         return $validated;
     }

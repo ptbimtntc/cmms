@@ -356,7 +356,8 @@
             </div>
 
             {{-- Area — only meaningful for KOORDINATOR/PIC; ADMIN implicitly
-                 accesses every area, GUEST has no area. Options come from
+                 accesses every area, GUEST has no area, SUPERVISOR uses
+                 the multi-select below. Options come from
                  the Area master list (see Area Management), never
                  hardcoded. --}}
             <div id="areaField">
@@ -391,12 +392,39 @@
                 @enderror
             </div>
 
+            {{-- Areas — SUPERVISOR only: none checked = all areas, otherwise
+                 limited to the checked areas. --}}
+            <div id="supervisorAreasField" style="display: none">
+                <label class="mb-2 block text-sm font-medium text-slate-700">
+                    Areas <span class="font-normal text-slate-500">(leave empty for all areas)</span>
+                </label>
+
+                <div class="flex flex-wrap gap-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    @foreach ($areas as $area)
+                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                            <input
+                                type="checkbox"
+                                name="area_ids[]"
+                                value="{{ $area->id }}"
+                                @checked(in_array($area->id, array_map('intval', (array) old('area_ids', $user->areas->pluck('id')->all()))))
+                            >
+                            {{ $area->name }}
+                        </label>
+                    @endforeach
+                </div>
+
+                @error('area_ids.*')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
             <script>
                 function toggleAreaField(role) {
                     const field = document.getElementById('areaField');
                     const needsArea = role === 'KOORDINATOR' || role === 'PIC';
                     field.style.display = needsArea ? '' : 'none';
                     document.getElementById('area_id').required = needsArea;
+                    document.getElementById('supervisorAreasField').style.display = role === 'SUPERVISOR' ? '' : 'none';
                 }
                 toggleAreaField(document.getElementById('role')?.value ?? '{{ $user->role }}');
             </script>

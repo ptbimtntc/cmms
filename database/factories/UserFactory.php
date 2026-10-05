@@ -71,6 +71,11 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => User::ROLE_PIC]);
     }
 
+    public function supervisor(): static
+    {
+        return $this->state(fn () => ['role' => User::ROLE_SUPERVISOR, 'area_id' => null]);
+    }
+
     public function guest(): static
     {
         return $this->state(fn () => ['role' => User::ROLE_GUEST, 'area_id' => null]);

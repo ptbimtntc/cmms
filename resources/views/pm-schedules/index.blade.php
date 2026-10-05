@@ -69,7 +69,7 @@
             placeholder="Search..."
             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-40">
 
-        @if (auth()->user()->role == 'ADMIN')
+        @if (auth()->user()->seesAllAreas())
             <select name="area" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                 <option value="">All Areas</option>
                 @foreach ($areas as $area)
@@ -130,6 +130,8 @@
                         </th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                             Machine</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Order Number</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Type
                         </th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Plan
@@ -154,6 +156,7 @@
                         <tr class="hover:bg-slate-50">
                             <td class="px-4 py-3 text-slate-600">{{ $pm->area }}</td>
                             <td class="px-4 py-3 font-medium text-slate-800">{{ $pm->machine_number }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ $pm->order_number ?? '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $pm->machine_type }}</td>
                             <td class="px-4 py-3 text-slate-600">
                                 {{ $pm->plan_date ? \Carbon\Carbon::parse($pm->plan_date)->format('d-m-Y') : '-' }}</td>
@@ -256,6 +259,15 @@
                                                 </button>
                                             </form>
                                         @endif
+                                        <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
+                                            onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">
+                                                Delete
+                                            </button>
+                                        </form>
                                     </div>
 
                                     {{-- KOORDINATOR --}}
@@ -276,6 +288,15 @@
                                                 </button>
                                             </form>
                                         @endif
+                                        <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
+                                            onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">
+                                                Delete
+                                            </button>
+                                        </form>
                                     </div>
 
                                     {{-- PIC --}}
@@ -427,6 +448,13 @@
                                         to Open</button>
                                 </form>
                             @endif
+                            <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
+                                onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                    class="rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Delete</button>
+                            </form>
                         </div>
                     @elseif(str_starts_with($role, 'KOORDINATOR'))
                         <div class="flex flex-wrap items-center justify-end gap-2">
@@ -441,6 +469,13 @@
                                         to Open</button>
                                 </form>
                             @endif
+                            <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
+                                onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                    class="rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Delete</button>
+                            </form>
                         </div>
                     @elseif(str_starts_with($role, 'PIC'))
                         @if (in_array($pm->status, ['OPEN', 'MISSED', 'IN_PROGRESS']))

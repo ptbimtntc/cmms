@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\Area;
 use App\Models\Greasing;
 use App\Models\Group;
+use App\Models\Machine;
 use App\Models\User;
 
 function makeGreasing(array $attributes = []): Greasing
@@ -284,4 +286,89 @@ test('admin always sees Execute label on the execute link regardless of status',
     // rather than asserting "Edit" is absent from the page entirely.
     preg_match('/href="[^"]*'.$greasing->id.'\/execute"[^>]*>\s*(\w+)\s*</', $response->getContent(), $matches);
     expect($matches[1] ?? null)->toBe('Execute');
+});
+
+function findingFixture(string $role = User::ROLE_ADMIN): array
+{
+    $areaId = Area::firstOrCreate(['name' => 'WWD'], ['slug' => 'wwd', 'is_active' => true])->id;
+    $user = User::factory()->create(['role' => $role, 'area_id' => $areaId]);
+    $group = Group::create(['name' => 'Finding Group '.uniqid()]);
+    $other = Group::create(['name' => 'Other Group '.uniqid()]);
+    $machine = Machine::create(['machine_number' => 'M-'.uniqid(), 'group_id' => $group->id, 'area' => 'WWD', 'machine_type' => 'PUMP']);
+    $foreign = Machine::create(['machine_number' => 'X-'.uniqid(), 'group_id' => $other->id, 'area' => 'WWD', 'machine_type' => 'PUMP']);
+    $greasing = Greasing::create([
+        'group_id' => $group->id, 'cycle' => '4W', 'plan_date' => '2026-08-01',
+        'due_date' => Greasing::calculateDueDate('2026-08-01'), 'status' => 'OPEN',
+    ]);
+
+    return [$user, $greasing, $machine, $foreign];
+}
+
+test('finding is saved with machine, area and remarks', function () {
+    [$user, $greasing, $machine] = findingFixture();
+
+    $this->actingAs($user)->post(route('greasings.findings.store', $greasing), [
+        'machine_id' => $machine->id, 'finding_area' => 'Kapstan', 'remarks' => 'Nipple rusak',
+    ])->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('greasing_findings', [
+        'greasing_id' => $greasing->id, 'machine_id' => $machine->id,
+        'finding_area' => 'Kapstan', 'finding' => 'Nipple rusak', 'status' => 'OPEN',
+    ]);
+});
+
+test('finding rejects machine from another group and missing fields', function () {
+    [$user, $greasing, , $foreign] = findingFixture();
+
+    $this->actingAs($user)->post(route('greasings.findings.store', $greasing), [
+        'machine_id' => $foreign->id, 'finding_area' => 'Kapstan', 'remarks' => 'x',
+    ])->assertSessionHasErrors('machine_id');
+
+    $this->actingAs($user)->post(route('greasings.findings.store', $greasing), [])
+        ->assertSessionHasErrors(['machine_id', 'finding_area', 'remarks']);
+
+    expect($greasing->findings()->count())->toBe(0);
+});
+
+test('execute page lists only machines of the group', function () {
+    [$user, $greasing, $machine, $foreign] = findingFixture();
+
+    $this->actingAs($user)->get(route('greasings.execute', $greasing))
+        ->assertSee($machine->machine_number)
+        ->assertDontSee($foreign->machine_number);
+});
+
+test('admin and koordinator can delete a finding, parent stays', function (string $role) {
+    [$user, $greasing, $machine] = findingFixture($role);
+    $finding = $greasing->findings()->create(['machine_id' => $machine->id, 'finding_area' => 'A', 'finding' => 'r', 'status' => 'OPEN']);
+
+    $this->actingAs($user)->delete(route('greasings.findings.destroy', [$greasing, $finding]))->assertRedirect();
+
+    $this->assertModelMissing($finding);
+    $this->assertModelExists($greasing);
+})->with([User::ROLE_ADMIN, User::ROLE_KOORDINATOR]);
+
+test('pic cannot delete a finding', function () {
+    [$user, $greasing, $machine] = findingFixture();
+    $pic = User::factory()->create(['role' => User::ROLE_PIC, 'name' => 'Pic Person', 'area_id' => $user->area_id]);
+    $greasing->update(['pic' => $pic->name]);
+    $finding = $greasing->findings()->create(['machine_id' => $machine->id, 'finding_area' => 'A', 'finding' => 'r', 'status' => 'OPEN']);
+
+    $this->actingAs($pic)->delete(route('greasings.findings.destroy', [$greasing, $finding]))->assertForbidden();
+
+    $this->assertModelExists($finding);
+});
+
+test('saving only an action completes the finding', function () {
+    [$user, $greasing, $machine] = findingFixture();
+    $finding = $greasing->findings()->create(['machine_id' => $machine->id, 'finding_area' => 'A', 'finding' => 'r', 'status' => 'OPEN']);
+
+    $this->actingAs($user)->patch(route('greasings.findings.update', [$greasing, $finding]), ['action' => 'ganti nipple'])
+        ->assertSessionHasNoErrors();
+
+    expect($finding->fresh())->status->toBe('COMPLETED')->action->toBe('ganti nipple')->action_date->not->toBeNull();
+
+    $other = $greasing->findings()->create(['finding' => 'x', 'status' => 'OPEN']);
+    $this->actingAs($user)->patch(route('greasings.findings.update', [$greasing, $other]), [])
+        ->assertSessionHasErrors('action');
 });

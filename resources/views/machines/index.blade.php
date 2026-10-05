@@ -7,6 +7,7 @@
             <p class="text-sm text-slate-500">Manage machine master data</p>
         </div>
 
+        @unless (auth()->user()->isSupervisor())
         <form action="{{ route('machines.import') }}" method="POST" enctype="multipart/form-data"
             class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:flex-row sm:items-center">
             @csrf
@@ -21,6 +22,7 @@
                 Import
             </button>
         </form>
+        @endunless
     </div>
 
     @if ($errors->has('file'))
@@ -130,6 +132,7 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-2">
+                                @unless (auth()->user()->isSupervisor())
                                 <a href="{{ route('machines.edit', $m->id) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
                                     Edit
                                 </a>
@@ -141,6 +144,7 @@
                                         Delete
                                     </button>
                                 </form>
+                                @endunless
                             </div>
                         </td>
                     </tr>
@@ -174,6 +178,7 @@
                     </div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                    @unless (auth()->user()->isSupervisor())
                     <a href="{{ route('machines.edit', $m->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
                         Edit
                     </a>
@@ -185,6 +190,7 @@
                             Delete
                         </button>
                     </form>
+                    @endunless
                 </div>
             </div>
         @empty
