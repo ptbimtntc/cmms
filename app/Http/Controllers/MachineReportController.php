@@ -22,11 +22,15 @@ class MachineReportController extends Controller
      *   1. The machine_problems catalog only has Mainshaft/Innershaft
      *      categories for machine_type NDE (WWD) and BF/BFM (BUL) — SHX has
      *      neither category at all.
-     *   2. OilAuditController::AUDIT_MACHINE_TYPES (an independent,
-     *      business-rule-driven WWD gearbox/shaft-auditing scope) is
-     *      exactly ['NDE', 'NDB'] — also excluding SHX.
+     *   2. OilAuditController's audit scope (an independent, business-rule-
+     *      driven WWD gearbox/shaft-auditing scope, now backed by
+     *      OilAudit::machineTypes() — see that method) was exactly
+     *      ['NDE', 'NDB'] when this list was written — also excluding SHX.
      * Both agree: for WWD, NDE (+NDB, per the Oil Audit precedent, though no
-     * real NDB machines exist yet) are gearbox machines; SHX is not.
+     * real NDB machines exist yet) are gearbox machines; SHX is not. Kept as
+     * its own literal constant deliberately — this "gearbox machine" concept
+     * is independent of Oil Audit scope and must not silently change if the
+     * Oil Audit machine-type whitelist is ever edited via its admin UI.
      */
     private const GEARBOX_MACHINE_TYPES = ['NDE', 'NDB'];
 

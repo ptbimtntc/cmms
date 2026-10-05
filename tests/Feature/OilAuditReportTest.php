@@ -9,7 +9,7 @@ function reportOilAuditMachine(array $overrides = []): Machine
     return Machine::create(array_merge([
         'machine_number' => 'MC-'.uniqid(),
         'area' => 'WWD',
-        'machine_type' => 'NDE',
+        'machine_type' => oilAuditMachineType(),
         'status' => 'ACTIVE',
     ], $overrides));
 }
@@ -138,10 +138,10 @@ test('a machine that has never been audited still appears with a safe placeholde
 test('nde and ndb machines are both fully represented, exactly once each, regardless of audit history', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
-    $ndeAudited = reportOilAuditMachine(['machine_number' => 'MC-NDE-1', 'machine_type' => 'NDE']);
-    reportOilAuditMachine(['machine_number' => 'MC-NDE-2', 'machine_type' => 'NDE']);
-    $ndbAudited = reportOilAuditMachine(['machine_number' => 'MC-NDB-1', 'machine_type' => 'NDB']);
-    reportOilAuditMachine(['machine_number' => 'MC-NDB-2', 'machine_type' => 'NDB']);
+    $ndeAudited = reportOilAuditMachine(['machine_number' => 'MC-NDE-1', 'machine_type' => oilAuditMachineType('NDE SW')]);
+    reportOilAuditMachine(['machine_number' => 'MC-NDE-2', 'machine_type' => oilAuditMachineType('NDE SW')]);
+    $ndbAudited = reportOilAuditMachine(['machine_number' => 'MC-NDB-1', 'machine_type' => oilAuditMachineType('NDB ONO')]);
+    reportOilAuditMachine(['machine_number' => 'MC-NDB-2', 'machine_type' => oilAuditMachineType('NDB ONO')]);
     // A non-scope machine type must never appear.
     reportOilAuditMachine(['machine_number' => 'MC-SHX', 'machine_type' => 'SHX']);
 
@@ -187,10 +187,10 @@ test('area bul filter returns no rows since oil audit scope is fixed to wwd', fu
 
 test('machine type filter narrows to the selected type', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-    $nde = reportOilAuditMachine(['machine_type' => 'NDE']);
-    $ndb = reportOilAuditMachine(['machine_type' => 'NDB']);
+    $nde = reportOilAuditMachine(['machine_type' => oilAuditMachineType('NDE SW')]);
+    $ndb = reportOilAuditMachine(['machine_type' => oilAuditMachineType('NDB ONO')]);
 
-    $response = $this->actingAs($admin)->get(route('reports.oil-audit', ['machine_type' => 'NDB']));
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit', ['machine_type' => 'NDB ONO']));
 
     $response->assertOk();
     expect($response->viewData('machines')->pluck('machine_number')->all())->toBe([$ndb->machine_number]);

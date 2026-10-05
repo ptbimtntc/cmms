@@ -29,12 +29,23 @@ class DashboardController extends Controller
 
     /**
      * Oil Audit is a WWD-only module (see OilAuditController::AUDIT_AREA /
-     * AUDIT_MACHINE_TYPES and its route middleware) — BUL roles never had
+     * auditMachineTypes() and its route middleware) — BUL roles never had
      * access to it, so the dashboard must not show it to them either.
      */
     private const OIL_AUDIT_AREA = 'WWD';
 
-    private const OIL_AUDIT_MACHINE_TYPES = ['NDE', 'NDB'];
+    /**
+     * Machine-type whitelist is DB-backed (machine_maintenance_requirements)
+     * via OilAudit::machineTypes(), so it can't be a class constant — use
+     * this method wherever the old OIL_AUDIT_MACHINE_TYPES constant
+     * (previously a stale, truncated ['NDE', 'NDB']) was referenced.
+     *
+     * @return array<int, string>
+     */
+    private static function oilAuditMachineTypes(): array
+    {
+        return OilAudit::machineTypes();
+    }
 
     public function index(Request $request)
     {
@@ -451,7 +462,7 @@ class DashboardController extends Controller
         }
 
         $base = fn () => OilAudit::where('area', self::OIL_AUDIT_AREA)
-            ->whereIn('machine_type', self::OIL_AUDIT_MACHINE_TYPES);
+            ->whereIn('machine_type', self::oilAuditMachineTypes());
 
         return [
             'today' => $base()->whereDate('audited_at', today())->count(),
@@ -459,7 +470,7 @@ class DashboardController extends Controller
             'critical' => $base()->where('condition', 'KRITIS')->whereDoesntHave('followUp')->count(),
             'machines_audited' => $base()->distinct('machine_id')->count('machine_id'),
             'total_machines' => Machine::where('area', self::OIL_AUDIT_AREA)
-                ->whereIn('machine_type', self::OIL_AUDIT_MACHINE_TYPES)
+                ->whereIn('machine_type', self::oilAuditMachineTypes())
                 ->count(),
         ];
     }

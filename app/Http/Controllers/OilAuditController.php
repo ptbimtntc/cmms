@@ -21,12 +21,22 @@ class OilAuditController extends Controller
 {
     use HandlesActivityConflict;
 
-    // Single source of truth moved to OilAudit::AREA / OilAudit::MACHINE_TYPES
+    // Single source of truth moved to OilAudit::AREA / OilAudit::machineTypes()
     // (Task 2 — reused by the offline sync handler); kept as local aliases
     // so the rest of this controller's code is untouched.
     private const AUDIT_AREA = OilAudit::AREA;
 
-    private const AUDIT_MACHINE_TYPES = OilAudit::MACHINE_TYPES;
+    /**
+     * Machine-type whitelist is DB-backed (machine_maintenance_requirements),
+     * so it can't be a class constant — use this method wherever the old
+     * self::AUDIT_MACHINE_TYPES constant used to be referenced.
+     *
+     * @return array<int, string>
+     */
+    private static function auditMachineTypes(): array
+    {
+        return OilAudit::machineTypes();
+    }
 
     /**
      * The activity source ("OIL_AUDIT", "PM", ...) this PIC currently has
@@ -80,7 +90,7 @@ class OilAuditController extends Controller
             // (only the fields OIL_AUDIT_CREATE actually needs), never the
             // whole machines table.
             'offlineMachines' => Machine::where('area', self::AUDIT_AREA)
-                ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+                ->whereIn('machine_type', self::auditMachineTypes())
                 ->orderBy('machine_number')
                 ->get(['id', 'machine_number', 'machine_type', 'area']),
             'offlineConditions' => OilAudit::CONDITION_LABELS,
@@ -187,7 +197,7 @@ class OilAuditController extends Controller
         $machine = Machine::with('latestOilAudit.followUp')
             ->where('machine_number', trim($machineNumber))
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->firstOrFail();
 
         return view('oil-audits.entry', compact('machine'));
@@ -199,7 +209,7 @@ class OilAuditController extends Controller
 
         $machine = Machine::whereKey($validated['machine_id'])
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->firstOrFail();
         $user = $request->user();
 
@@ -266,20 +276,20 @@ class OilAuditController extends Controller
 
         $areas = Machine::query()
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->select('area')
             ->distinct()
             ->orderBy('area')
             ->pluck('area');
         $machineTypes = Machine::query()
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->select('machine_type')
             ->distinct()
             ->orderBy('machine_type')
             ->pluck('machine_type');
         $pics = OilAudit::where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->whereNotNull('audited_by_name')
             ->select('audited_by_name')
             ->distinct()
@@ -288,7 +298,7 @@ class OilAuditController extends Controller
 
         $pendingAudits = OilAudit::query()
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->requiringFollowUp()
             ->whereDoesntHave('followUp')
             ->with('machine')
@@ -324,7 +334,7 @@ class OilAuditController extends Controller
     {
         return OilAudit::query()
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->when($request->filled('search'), function (Builder $query) use ($request) {
                 $search = $request->string('search')->trim()->toString();
 
@@ -402,7 +412,7 @@ class OilAuditController extends Controller
     {
         $machine = Machine::where('machine_number', trim($machineNumber))
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('machine_type', self::auditMachineTypes())
             ->firstOrFail();
         $audits = $machine->oilAudits()
             ->with('followUp.problems.findings')

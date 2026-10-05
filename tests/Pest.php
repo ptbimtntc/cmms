@@ -50,6 +50,26 @@ function something()
 }
 
 /**
+ * Oil Audit's machine-type scope is sourced from machine_maintenance_
+ * requirements (App\Models\OilAudit::machineTypes()) rather than a
+ * hardcoded list. RefreshDatabase gives every test a fresh, empty copy of
+ * that table, so any test that creates a machine/audit and expects it to
+ * be "in Oil Audit scope" must first register its machine_type here.
+ * firstOrCreate() so repeated calls with the same type inside one test
+ * (e.g. several machines of the same type) don't collide on the unique
+ * constraint.
+ */
+function oilAuditMachineType(string $machineType = 'NDE SW'): string
+{
+    App\Models\MachineMaintenanceRequirement::firstOrCreate(
+        ['machine_type' => $machineType],
+        ['requires_oil_change' => true]
+    );
+
+    return $machineType;
+}
+
+/**
  * Translates an OLD-style combined role label (e.g. "KOORDINATOR WWD",
  * "PIC BUL") into the new, separate role + Area attributes (role and area
  * are no longer combined — see App\Models\User / App\Models\Area). Several

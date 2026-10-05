@@ -19,7 +19,7 @@ function analysisMachine(array $overrides = []): Machine
     return Machine::create(array_merge([
         'machine_number' => 'MC-'.uniqid(),
         'area' => 'WWD',
-        'machine_type' => 'NDE',
+        'machine_type' => oilAuditMachineType(),
         'status' => 'ACTIVE',
     ], $overrides));
 }
@@ -189,8 +189,8 @@ test('the repeat panel counts follow-up events regardless of problem sameness', 
 
 test('the analysis follows the Area / Machine Type / Year / Month filters', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-    $nde = analysisMachine(['machine_number' => 'AUG-NDE', 'machine_type' => 'NDE']);
-    $ndb = analysisMachine(['machine_number' => 'AUG-NDB', 'machine_type' => 'NDB']);
+    $nde = analysisMachine(['machine_number' => 'AUG-NDE', 'machine_type' => oilAuditMachineType('NDE SW')]);
+    $ndb = analysisMachine(['machine_number' => 'AUG-NDB', 'machine_type' => oilAuditMachineType('NDB ONO')]);
 
     analysisFinding($nde, [p('Bocor Seal', ['Kapstan 1'])], '2026-08-10 09:00:00');
     analysisFinding($nde, [p('Bocor Seal', ['Kapstan 1'])], '2026-08-11 09:00:00');
@@ -199,7 +199,7 @@ test('the analysis follows the Area / Machine Type / Year / Month filters', func
     analysisFinding($ndb, [p('Bearing Oblak', ['Kapstan 2'])], '2026-08-13 09:00:00');
 
     $response = $this->actingAs($admin)->get(route('reports.oil-audit', [
-        'machine_type' => 'NDE',
+        'machine_type' => 'NDE SW',
         'year' => 2026,
         'month' => 8,
     ]));
@@ -232,9 +232,9 @@ test('search does not affect the analysis panels', function () {
 test('analysis is limited to the wwd nde/ndb oil-audit scope', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
-    $inScope = analysisMachine(['machine_number' => 'IN-NDB', 'machine_type' => 'NDB']);
+    $inScope = analysisMachine(['machine_number' => 'IN-NDB', 'machine_type' => oilAuditMachineType('NDB ONO')]);
     $wrongType = analysisMachine(['machine_number' => 'OUT-SHX', 'machine_type' => 'SHX']);
-    $wrongArea = analysisMachine(['machine_number' => 'OUT-BUL', 'area' => 'BUL', 'machine_type' => 'NDE']);
+    $wrongArea = analysisMachine(['machine_number' => 'OUT-BUL', 'area' => 'BUL', 'machine_type' => oilAuditMachineType('NDE SW')]);
 
     analysisFinding($inScope, [p('Bocor Seal', ['Kapstan 1'])]);
     analysisFinding($inScope, [p('Bocor Seal', ['Kapstan 1'])]);

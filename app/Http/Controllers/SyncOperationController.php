@@ -478,7 +478,7 @@ class SyncOperationController extends Controller
 
         $machine = Machine::whereKey($validated['machine_id'])
             ->where('area', OilAudit::AREA)
-            ->whereIn('machine_type', OilAudit::MACHINE_TYPES)
+            ->whereIn('machine_type', OilAudit::machineTypes())
             ->first();
 
         if (! $machine) {

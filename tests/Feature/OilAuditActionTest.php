@@ -10,7 +10,7 @@ function actionOilAuditMachine(array $overrides = []): Machine
     return Machine::create(array_merge([
         'machine_number' => 'MC-'.uniqid(),
         'area' => 'WWD',
-        'machine_type' => 'NDE',
+        'machine_type' => oilAuditMachineType(),
         'status' => 'ACTIVE',
     ], $overrides));
 }
@@ -126,10 +126,10 @@ test('machines never audited do not appear on the action page at all', function 
 
 test('nde and ndb machines with multiple audits each show every audit record as a separate row', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-    $nde = actionOilAuditMachine(['machine_number' => 'MC-NDE-1', 'machine_type' => 'NDE']);
-    $ndb = actionOilAuditMachine(['machine_number' => 'MC-NDB-1', 'machine_type' => 'NDB']);
-    actionOilAuditMachine(['machine_number' => 'MC-NDE-2', 'machine_type' => 'NDE']);
-    actionOilAuditMachine(['machine_number' => 'MC-NDB-2', 'machine_type' => 'NDB']);
+    $nde = actionOilAuditMachine(['machine_number' => 'MC-NDE-1', 'machine_type' => oilAuditMachineType('NDE SW')]);
+    $ndb = actionOilAuditMachine(['machine_number' => 'MC-NDB-1', 'machine_type' => oilAuditMachineType('NDB ONO')]);
+    actionOilAuditMachine(['machine_number' => 'MC-NDE-2', 'machine_type' => oilAuditMachineType('NDE SW')]);
+    actionOilAuditMachine(['machine_number' => 'MC-NDB-2', 'machine_type' => oilAuditMachineType('NDB ONO')]);
 
     actionOilAudit($nde, ['audited_at' => '2026-08-01']);
     actionOilAudit($nde, ['audited_at' => '2026-08-05']);
@@ -286,13 +286,13 @@ test('average action duration only counts findings with an action date', functio
 
 test('filters still work on the action page', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-    $nde = actionOilAuditMachine(['machine_type' => 'NDE']);
-    $ndb = actionOilAuditMachine(['machine_type' => 'NDB']);
+    $nde = actionOilAuditMachine(['machine_type' => oilAuditMachineType('NDE SW')]);
+    $ndb = actionOilAuditMachine(['machine_type' => oilAuditMachineType('NDB ONO')]);
 
     actionOilAudit($nde);
     actionOilAudit($ndb);
 
-    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['machine_type' => 'NDB']));
+    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['machine_type' => 'NDB ONO']));
 
     $response->assertOk();
     expect($response->viewData('audits')->pluck('machine_number')->all())->toBe([$ndb->machine_number]);

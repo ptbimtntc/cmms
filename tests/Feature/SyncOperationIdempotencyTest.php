@@ -15,7 +15,7 @@ function idemMachine(array $overrides = []): Machine
     return Machine::create(array_merge([
         'machine_number' => 'MC-'.uniqid(),
         'area' => 'WWD',
-        'machine_type' => 'NDE',
+        'machine_type' => oilAuditMachineType(),
         'status' => 'ACTIVE',
     ], $overrides));
 }

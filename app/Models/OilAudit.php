@@ -20,7 +20,29 @@ class OilAudit extends Model
      */
     public const AREA = 'WWD';
 
-    public const MACHINE_TYPES = ['NDE', 'NDB', 'NDE SC 2003/2007', 'NDE SW', 'NDE SW MONO', 'NDB ONO', 'NDB TRITON', 'NDB MOT'];
+    /**
+     * Which machine types are in Oil Audit scope now comes from the same
+     * machine_maintenance_requirements master data PMSchedule::
+     * requiresOilChange() reads (admin-managed, "requires_oil_change" flag)
+     * instead of a second hardcoded list — a separately maintained copy
+     * previously drifted out of sync with reality (see OilAuditReportController
+     * git history) and silently emptied the Oil Audit report. Area itself
+     * stays hardcoded (see AREA docblock above); only the machine-type
+     * whitelist is sourced from master data. Deliberately NOT cached
+     * (unlike PMSchedule::requiresOilChange()) — this is called across many
+     * different query contexts per request/test, and a function-static
+     * cache would survive a test's DB rollback and leak stale results into
+     * the next test run in the same process.
+     *
+     * @return array<int, string>
+     */
+    public static function machineTypes(): array
+    {
+        return MachineMaintenanceRequirement::query()
+            ->where('requires_oil_change', true)
+            ->pluck('machine_type')
+            ->all();
+    }
 
     public const CONDITION_LABELS = [
         'OKE' => 'Oke',
@@ -143,7 +165,7 @@ class OilAudit extends Model
     public function isInAuditScope(): bool
     {
         return $this->area === self::AREA
-            && in_array($this->machine_type, self::MACHINE_TYPES, true);
+            && in_array($this->machine_type, self::machineTypes(), true);
     }
 
     /**

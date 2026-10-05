@@ -38,17 +38,24 @@ class OilAuditReportController extends Controller
 
     /**
      * Oil Audit is a WWD-only module — this is an unconditional business
-     * rule, not a user-selectable filter. These two constants are
-     * intentionally kept identical to OilAuditController::AUDIT_AREA /
-     * AUDIT_MACHINE_TYPES rather than re-derived independently: after
-     * inspecting Machine, MachineChecklist, and MachineProblem, there is no
-     * other column/master table anywhere that encodes "which machine types
-     * are in Oil Audit scope" — this pair of constants IS the single
-     * existing source of truth for that scope.
+     * rule, not a user-selectable filter. Area stays hardcoded (see
+     * OilAudit::AREA); the machine-type whitelist is DB-backed
+     * (machine_maintenance_requirements) via OilAudit::machineTypes(), so it
+     * can't be a class constant — use self::auditMachineTypes() wherever the
+     * old AUDIT_MACHINE_TYPES constant was referenced. Sourcing both from
+     * OilAudit ensures this report's scope can never drift out of sync with
+     * OilAuditController's scope again (it previously hardcoded a stale,
+     * truncated machine-type list).
      */
-    private const AUDIT_AREA = 'WWD';
+    private const AUDIT_AREA = OilAudit::AREA;
 
-    private const AUDIT_MACHINE_TYPES = ['NDE', 'NDB'];
+    /**
+     * @return array<int, string>
+     */
+    private static function auditMachineTypes(): array
+    {
+        return OilAudit::machineTypes();
+    }
 
     /**
      * MACHINE-CENTRIC: 1 row = 1 machine, always — regardless of whether
@@ -108,8 +115,8 @@ class OilAuditReportController extends Controller
         $optionsScope = $this->baseScope()->when($area, fn (Builder $q) => $q->where('area', $area));
         $machineTypes = (clone $optionsScope)->distinct()->orderBy('machine_type')->pluck('machine_type');
 
-        $minDate = OilAudit::where('area', self::AUDIT_AREA)->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)->min('audited_at');
-        $maxDate = OilAudit::where('area', self::AUDIT_AREA)->whereIn('machine_type', self::AUDIT_MACHINE_TYPES)->max('audited_at');
+        $minDate = OilAudit::where('area', self::AUDIT_AREA)->whereIn('machine_type', self::auditMachineTypes())->min('audited_at');
+        $maxDate = OilAudit::where('area', self::AUDIT_AREA)->whereIn('machine_type', self::auditMachineTypes())->max('audited_at');
         $years = $minDate
             ? range((int) Carbon::parse($maxDate)->format('Y'), (int) Carbon::parse($minDate)->format('Y'))
             : [];
@@ -149,7 +156,7 @@ class OilAuditReportController extends Controller
     {
         return Machine::query()
             ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::AUDIT_MACHINE_TYPES);
+            ->whereIn('machine_type', self::auditMachineTypes());
     }
 
     /**
@@ -238,7 +245,7 @@ class OilAuditReportController extends Controller
                 'oil_audit_follow_up_problems.id'
             )
             ->where('oil_audits.area', self::AUDIT_AREA)
-            ->whereIn('oil_audits.machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('oil_audits.machine_type', self::auditMachineTypes())
             ->when($area, fn (Builder $q) => $q->where('oil_audits.area', $area))
             ->when($machineType, fn (Builder $q) => $q->where('oil_audits.machine_type', $machineType))
             ->when($year, fn (Builder $q) => $q->whereYear('oil_audits.audited_at', $year))
@@ -333,7 +340,7 @@ class OilAuditReportController extends Controller
         return OilAuditFollowUp::query()
             ->join('oil_audits', 'oil_audits.id', '=', 'oil_audit_follow_ups.oil_audit_id')
             ->where('oil_audits.area', self::AUDIT_AREA)
-            ->whereIn('oil_audits.machine_type', self::AUDIT_MACHINE_TYPES)
+            ->whereIn('oil_audits.machine_type', self::auditMachineTypes())
             ->when($area, fn (Builder $q) => $q->where('oil_audits.area', $area))
             ->when($machineType, fn (Builder $q) => $q->where('oil_audits.machine_type', $machineType))
             ->when($year, fn (Builder $q) => $q->whereYear('oil_audits.audited_at', $year))

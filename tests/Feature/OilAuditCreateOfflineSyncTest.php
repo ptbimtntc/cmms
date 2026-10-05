@@ -25,7 +25,7 @@ function offlineOaMachine(array $overrides = []): Machine
     return Machine::create(array_merge([
         'machine_number' => 'MC-'.uniqid(),
         'area' => 'WWD',
-        'machine_type' => 'NDE',
+        'machine_type' => oilAuditMachineType(),
         'status' => 'ACTIVE',
     ], $overrides));
 }
@@ -43,7 +43,7 @@ function offlineOaPayload(int $machineId, string $uuid, string $condition = 'OKE
 
 test('the stored audit\'s machine snapshot always comes from the server\'s Machine record, never anything the client could send', function () {
     $pic = User::factory()->create([...roleAttributes('PIC WWD'), 'name' => 'Budi']);
-    $machine = offlineOaMachine(['machine_number' => 'REAL-001', 'machine_type' => 'NDE', 'area' => 'WWD']);
+    $machine = offlineOaMachine(['machine_number' => 'REAL-001', 'machine_type' => oilAuditMachineType('NDE SW'), 'area' => 'WWD']);
 
     $payload = offlineOaPayload($machine->id, (string) Str::uuid(), 'KRITIS');
     // Attempt to smuggle a different snapshot in — the payload envelope
@@ -62,7 +62,7 @@ test('the stored audit\'s machine snapshot always comes from the server\'s Machi
     $audit = OilAudit::first();
 
     expect($audit->machine_number)->toBe('REAL-001')
-        ->and($audit->machine_type)->toBe('NDE')
+        ->and($audit->machine_type)->toBe('NDE SW')
         ->and($audit->area)->toBe('WWD');
 });
 
