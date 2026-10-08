@@ -2,6 +2,21 @@
 
 @section('title', 'Machine History')
 
+@php
+    // Opened from Report Machine's View button (from=report-machine): Back
+    // returns to that report with its filters (return_url, only trusted
+    // when it points at the report itself), and the context is carried on
+    // to the PM detail pages. Otherwise unchanged default behavior.
+    $cameFromReportMachine = auth()->check() && request()->query('from') === 'report-machine';
+    $reportMachineReturnUrl = request()->query('return_url');
+    $reportMachineReturnUrl = is_string($reportMachineReturnUrl) && str_starts_with($reportMachineReturnUrl, route('reports.machine'))
+        ? $reportMachineReturnUrl
+        : route('reports.machine');
+    $detailContext = $cameFromReportMachine
+        ? ['from' => 'report-machine', 'return_url' => $reportMachineReturnUrl]
+        : [];
+@endphp
+
 @section('content')
 
     <div class="mb-6 flex flex-row items-center justify-between gap-3">
@@ -16,7 +31,7 @@
         <div>
             @php
                 $backRoute = auth()->check() && auth()->user()->role !== 'guest'
-                    ? route('machine-history.index')
+                    ? ($cameFromReportMachine ? $reportMachineReturnUrl : route('machine-history.index'))
                     : route('qr.scan');
             @endphp
             <a href="{{ $backRoute }}"
@@ -129,7 +144,7 @@
                             <a href="{{ route('machine-history.detail', [
                                 'machineNumber' => $machine->machine_number,
                                 'pmSchedule' => $pm->id,
-                            ]) }}"
+                            ] + $detailContext) }}"
                                 class="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -211,7 +226,7 @@
                     <a href="{{ route('machine-history.detail', [
                         'machineNumber' => $machine->machine_number,
                         'pmSchedule' => $pm->id,
-                    ]) }}"
+                    ] + $detailContext) }}"
                         class="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-blue-700">
                         <svg xmlns="http://www.w3.org/2000/svg" class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">

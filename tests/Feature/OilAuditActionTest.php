@@ -284,16 +284,60 @@ test('average action duration only counts findings with an action date', functio
         ->and($summary['average_action_duration'])->toBe(3.0);
 });
 
-test('filters still work on the action page', function () {
+test('area and machine type filters are no longer offered on the action page', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-    $nde = actionOilAuditMachine(['machine_type' => oilAuditMachineType('NDE SW')]);
-    $ndb = actionOilAuditMachine(['machine_type' => oilAuditMachineType('NDB ONO')]);
+    actionOilAudit(actionOilAuditMachine());
 
-    actionOilAudit($nde);
-    actionOilAudit($ndb);
+    $this->actingAs($admin)->get(route('oil-audits.report'))
+        ->assertOk()
+        ->assertDontSee('name="area"', false)
+        ->assertDontSee('name="machine_type"', false)
+        ->assertSee('name="date_from"', false)
+        ->assertSee('name="date_to"', false);
+});
 
-    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['machine_type' => 'NDB ONO']));
+test('audit date range filter narrows the action page', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $old = actionOilAudit(actionOilAuditMachine(), ['audited_at' => '2026-09-01 10:00:00']);
+    $mid = actionOilAudit(actionOilAuditMachine(), ['audited_at' => '2026-09-15 23:30:00']);
+    $new = actionOilAudit(actionOilAuditMachine(), ['audited_at' => '2026-10-05 08:00:00']);
+
+    $ids = fn (array $query) => $this->actingAs($admin)->get(route('oil-audits.report', $query))
+        ->viewData('audits')->pluck('id')->sort()->values()->all();
+
+    expect($ids(['date_from' => '2026-09-10', 'date_to' => '2026-09-15']))->toBe([$mid->id])
+        ->and($ids(['date_from' => '2026-09-10']))->toBe([$mid->id, $new->id])
+        ->and($ids(['date_to' => '2026-09-01']))->toBe([$old->id])
+        ->and($ids(['date_from' => 'not-a-date', 'date_to' => '2026-13-45']))->toBe([$old->id, $mid->id, $new->id]);
+});
+
+test('other filters still work on the action page', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $kritis = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS']);
+    actionOilAudit(actionOilAuditMachine(), ['condition' => 'OKE']);
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['condition' => 'KRITIS']));
 
     $response->assertOk();
-    expect($response->viewData('audits')->pluck('machine_number')->all())->toBe([$ndb->machine_number]);
+    expect($response->viewData('audits')->pluck('id')->all())->toBe([$kritis->id]);
+});
+
+test('month filter accepts several months and a legacy single month', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $sep = actionOilAudit(actionOilAuditMachine(), ['audited_at' => '2026-09-10 10:00:00']);
+    $oct = actionOilAudit(actionOilAuditMachine(), ['audited_at' => '2026-10-05 10:00:00']);
+    $nov = actionOilAudit(actionOilAuditMachine(), ['audited_at' => '2026-11-02 10:00:00']);
+
+    $ids = fn (array $query) => $this->actingAs($admin)->get(route('oil-audits.report', $query))
+        ->viewData('audits')->pluck('id')->sort()->values()->all();
+
+    expect($ids(['month' => [9, 11]]))->toBe([$sep->id, $nov->id])
+        ->and($ids(['month' => '10']))->toBe([$oct->id])
+        ->and($ids(['month' => [10], 'year' => 2026]))->toBe([$oct->id])
+        ->and($ids(['month' => ['x', '13', '0']]))->toBe([$sep->id, $oct->id, $nov->id]);
+
+    $this->actingAs($admin)->get(route('oil-audits.report', ['month' => [9, 11]]))
+        ->assertOk()
+        ->assertSee('Bulan (2)');
+    $this->actingAs($admin)->get(route('oil-audits.report'))->assertSee('Semua bulan');
 });

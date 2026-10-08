@@ -35,6 +35,8 @@ class PMScheduleController extends Controller
 {
     use HandlesActivityConflict;
 
+    private const PIC_FILTER_UNASSIGNED = '__UNASSIGNED__';
+
     public function index(Request $request)
     {
         $query = PMSchedule::query();
@@ -49,6 +51,15 @@ class PMScheduleController extends Controller
             : null;
 
         AreaAuthorizationScope::apply($query, $user, 'area', 'pic', $adminAreaFilter);
+
+        // PIC filter — ADMIN / KOORDINATOR / SUPERVISOR only (a PIC is already
+        // limited to their own rows). Options are the PICs actually assigned
+        // within the user's area scope (and the selected Area filter).
+        $canFilterPic = ! $user->isPic();
+        $picFilterOptions = $canFilterPic
+            ? (clone $query)->whereNotNull('pic')->where('pic', '!=', '')
+                ->distinct()->orderBy('pic')->pluck('pic')
+            : collect();
 
         $picsByArea = Area::active()->orderBy('name')->get()
             ->mapWithKeys(fn (Area $area) => [
@@ -70,6 +81,14 @@ class PMScheduleController extends Controller
         // FILTER MACHINE TYPE
         if ($request->filled('machine_type')) {
             $query->where('machine_type', $request->machine_type);
+        }
+
+        // FILTER PIC — a specific PIC name, or UNASSIGNED for schedules that
+        // have no PIC yet. Ignored for the PIC role.
+        if ($canFilterPic && $request->filled('pic') && is_string($request->pic)) {
+            $request->pic === self::PIC_FILTER_UNASSIGNED
+                ? $query->where(fn ($q) => $q->whereNull('pic')->orWhere('pic', ''))
+                : $query->where('pic', $request->pic);
         }
 
         // FILTER STATUS — status[] / plan_month[] arrive as arrays from the
@@ -128,7 +147,9 @@ class PMScheduleController extends Controller
             'years',
             'machineTypes',
             'areas',
-            'picsByArea'
+            'picsByArea',
+            'canFilterPic',
+            'picFilterOptions'
         ));
     }
 

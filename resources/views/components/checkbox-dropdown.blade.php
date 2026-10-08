@@ -4,6 +4,7 @@
     'options',
     'selected' => [],
     'autoSubmit' => false,
+    'allLabel' => null,
 ])
 
 @php
@@ -14,6 +15,7 @@
     // has an internal comma) would get its json_encode() flags silently
     // swapped out from under it.
     $selectedAsStrings = array_values(array_map('strval', $selected));
+    $allText = $allLabel ?? 'All '.$label;
 @endphp
 
 {{--
@@ -52,7 +54,7 @@
         {{-- Text is also rendered server-side (not just via x-text) so the
              correct label is visible immediately even if Alpine hasn't
              finished initializing yet — x-text keeps it live afterwards. --}}
-        <span x-text="selected.length ? '{{ $label }} (' + selected.length + ')' : 'All {{ $label }}'">{{ count($selected) ? $label.' ('.count($selected).')' : 'All '.$label }}</span>
+        <span x-text="selected.length ? '{{ $label }} (' + selected.length + ')' : @js($allText)">{{ count($selected) ? $label.' ('.count($selected).')' : $allText }}</span>
         <svg class="h-4 w-4 shrink-0 text-slate-400" :class="open ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.293l3.71-4.06a.75.75 0 111.08 1.04l-4.25 4.65a.75.75 0 01-1.08 0l-4.25-4.65a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
         </svg>

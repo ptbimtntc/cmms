@@ -1,8 +1,16 @@
 @extends('layouts.app')
 
+@php
+    // Wide data table: use the full content width instead of max-w-7xl.
+    $contentMaxWidth = 'max-w-full';
+@endphp
+
 @section('title', 'Oil Audit Action')
 
 @section('content')
+    @php
+        $canDeleteAudit = auth()->user()->isAdmin() || auth()->user()->isKoordinator();
+    @endphp
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Audit Oli</p>
@@ -66,30 +74,27 @@
 
     <form method="GET" class="mb-5 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
         <input name="search" value="{{ request('search') }}" placeholder="Cari nomor mesin, tipe, atau temuan" class="w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 sm:min-w-[220px] sm:flex-1">
-        <select name="area" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:w-auto">
-            <option value="">Semua area</option>
-            @foreach ($areas as $a)
-                <option value="{{ $a }}" @selected(request('area') === $a)>{{ $a }}</option>
-            @endforeach
-        </select>
-        <select name="machine_type" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:w-auto">
-            <option value="">Semua tipe mesin</option>
-            @foreach ($machineTypes as $type)
-                <option value="{{ $type }}" @selected(request('machine_type') === $type)>{{ $type }}</option>
-            @endforeach
-        </select>
+        <label class="flex w-full items-center gap-2 text-sm text-slate-600 sm:w-auto">
+            <span class="shrink-0">Tanggal audit</span>
+            <input type="date" name="date_from" value="{{ request('date_from') }}" aria-label="Dari tanggal audit" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:flex-none">
+            <span class="shrink-0">s/d</span>
+            <input type="date" name="date_to" value="{{ request('date_to') }}" aria-label="Sampai tanggal audit" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:flex-none">
+        </label>
         <select name="year" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:w-auto">
             <option value="">Semua tahun</option>
             @foreach (range(now()->year, now()->year - 5) as $y)
                 <option value="{{ $y }}" @selected((string) request('year') === (string) $y)>{{ $y }}</option>
             @endforeach
         </select>
-        <select name="month" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:w-auto">
-            <option value="">Semua bulan</option>
-            @foreach (range(1, 12) as $m)
-                <option value="{{ $m }}" @selected((string) request('month') === (string) $m)>{{ \Carbon\Carbon::create(null, $m, 1)->format('F') }}</option>
-            @endforeach
-        </select>
+        <div class="w-full sm:w-auto">
+            <x-checkbox-dropdown
+                name="month"
+                label="Bulan"
+                all-label="Semua bulan"
+                :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
+                :selected="collect((array) request('month'))->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && $m >= 1 && $m <= 12)->map(fn ($m) => (int) $m)->unique()->values()->all()"
+            />
+        </div>
         <select name="condition" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:w-auto">
             <option value="">Semua kondisi</option>
             @foreach (\App\Models\OilAudit::CONDITION_LABELS as $value => $label)
@@ -123,7 +128,7 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Audit Date</th>
+                            <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Audit Date</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Number</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Type</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Area</th>
@@ -138,13 +143,13 @@
                         @foreach ($audits as $audit)
                             @php($colors = $audit->conditionColor())
                             <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-slate-600">{{ $audit->audited_at->format('d-m-Y') }}</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $audit->audited_at->format('d-m-Y') }}</td>
                                 <td class="px-4 py-3 font-medium text-slate-800">{{ $audit->machine_number }}</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $audit->machine_type }}</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $audit->area }}</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $audit->audited_by_name ?: '-' }}</td>
                                 <td class="px-4 py-3">
-                                    <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $colors['badge'] }}">
+                                    <span class="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold {{ $colors['badge'] }}">
                                         {{ $audit->conditionLabel() }}
                                     </span>
                                 </td>
@@ -167,7 +172,16 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">View</a>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">View</a>
+                                        @if ($canDeleteAudit)
+                                            <form method="POST" action="{{ route('oil-audits.destroy', $audit) }}" onsubmit="return confirm('Hapus temuan audit oli mesin {{ $audit->machine_number }} ({{ $audit->audited_at->format('d-m-Y') }})? Tindak lanjutnya juga akan terhapus.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700">Delete</button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -216,7 +230,16 @@
                         @else
                             <span class="text-xs text-slate-400">&nbsp;</span>
                         @endif
-                        <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Buka riwayat</a>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Buka riwayat</a>
+                            @if ($canDeleteAudit)
+                                <form method="POST" action="{{ route('oil-audits.destroy', $audit) }}" onsubmit="return confirm('Hapus temuan audit oli mesin {{ $audit->machine_number }} ({{ $audit->audited_at->format('d-m-Y') }})? Tindak lanjutnya juga akan terhapus.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50">Delete</button>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                 </article>
             @endforeach

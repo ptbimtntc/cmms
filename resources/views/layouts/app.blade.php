@@ -61,7 +61,7 @@
 
         {{-- Margin statis lg:ml-72, karena sidebar SELALU full width di desktop.
         Di mobile margin 0 karena sidebar jadi overlay/drawer. --}}
-        <div class="flex min-h-0 flex-1 flex-col">
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
 
             @if (!($hideTopbar ?? false))
                 @include('partials.topbar', ['pageTitle' => $pageTitle])

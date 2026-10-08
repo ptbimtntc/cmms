@@ -17,6 +17,11 @@ class RoleMiddleware
     private const SUPERVISOR_VIEW_ROUTES = [
         'dashboard',
         'pm-schedules.pdf',
+        // Oil Audit pages are viewable; their forms are rendered disabled.
+        'oil-audits.scan',
+        'oil-audits.entry',
+        'oil-audits.report',
+        'oil-audits.history',
     ];
 
     public function handle(

@@ -274,20 +274,6 @@ class OilAuditController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $areas = Machine::query()
-            ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::auditMachineTypes())
-            ->select('area')
-            ->distinct()
-            ->orderBy('area')
-            ->pluck('area');
-        $machineTypes = Machine::query()
-            ->where('area', self::AUDIT_AREA)
-            ->whereIn('machine_type', self::auditMachineTypes())
-            ->select('machine_type')
-            ->distinct()
-            ->orderBy('machine_type')
-            ->pluck('machine_type');
         $pics = OilAudit::where('area', self::AUDIT_AREA)
             ->whereIn('machine_type', self::auditMachineTypes())
             ->whereNotNull('audited_by_name')
@@ -315,8 +301,6 @@ class OilAuditController extends Controller
 
         return view('oil-audits.action', compact(
             'audits',
-            'areas',
-            'machineTypes',
             'pics',
             'summary',
             'pendingAudits',
@@ -330,6 +314,40 @@ class OilAuditController extends Controller
      * followUp.problems relations) — never on Machine — since the base
      * model is OilAudit itself.
      */
+    /**
+     * Months (1-12) picked in the multi-select Month filter. A single
+     * legacy `?month=5` still works through the array cast.
+     *
+     * @return list<int>
+     */
+    private function selectedMonths(Request $request): array
+    {
+        return collect((array) $request->input('month'))
+            ->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && (int) $m >= 1 && (int) $m <= 12)
+            ->map(fn ($m) => (int) $m)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The given Y-m-d date string, or null when missing/malformed (so a bad
+     * query param is ignored instead of erroring).
+     */
+    private function validDate(mixed $value): ?string
+    {
+        if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', $value)->format('Y-m-d') === $value ? $value : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private function filteredAuditQuery(Request $request): Builder
     {
         return OilAudit::query()
@@ -355,20 +373,24 @@ class OilAuditController extends Controller
                 });
             })
             ->when(
-                $request->filled('area'),
-                fn (Builder $query) => $query->where('area', $request->input('area'))
+                $this->validDate($request->input('date_from')),
+                fn (Builder $query, string $date) => $query->whereDate('audited_at', '>=', $date)
             )
             ->when(
-                $request->filled('machine_type'),
-                fn (Builder $query) => $query->where('machine_type', $request->input('machine_type'))
+                $this->validDate($request->input('date_to')),
+                fn (Builder $query, string $date) => $query->whereDate('audited_at', '<=', $date)
             )
             ->when(
                 $request->filled('year'),
                 fn (Builder $query) => $query->whereYear('audited_at', (int) $request->input('year'))
             )
             ->when(
-                $request->filled('month'),
-                fn (Builder $query) => $query->whereMonth('audited_at', (int) $request->input('month'))
+                $this->selectedMonths($request) !== [],
+                fn (Builder $query) => $query->where(function (Builder $q) use ($request) {
+                    foreach ($this->selectedMonths($request) as $month) {
+                        $q->orWhereMonth('audited_at', $month);
+                    }
+                })
             )
             ->when(
                 $request->filled('condition'),
@@ -493,6 +515,26 @@ class OilAuditController extends Controller
         app(OilAuditFollowUpService::class)->update($followUp, $validated);
 
         return back()->with('success', 'Tindak lanjut berhasil diperbarui.');
+    }
+
+    /**
+     * Deletes one Oil Audit finding (audit record) from the Action list.
+     * ADMIN / KOORDINATOR only; area (WWD) is guaranteed by the route's
+     * 'area:WWD' middleware. Its follow-up (problems + findings) is removed
+     * by the FK cascade chain.
+     */
+    public function destroy(Request $request, OilAudit $oilAudit): RedirectResponse
+    {
+        abort_unless(
+            $request->user()->isAdmin() || $request->user()->isKoordinator(),
+            403,
+            'Hanya Admin atau Koordinator WWD yang dapat menghapus temuan audit oli.'
+        );
+        abort_unless($oilAudit->isInAuditScope(), 404);
+
+        $oilAudit->delete();
+
+        return back()->with('success', 'Temuan audit oli berhasil dihapus.');
     }
 
     public function destroyFollowUp(Request $request, OilAudit $oilAudit): RedirectResponse

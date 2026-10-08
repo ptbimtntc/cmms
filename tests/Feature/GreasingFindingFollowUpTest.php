@@ -19,24 +19,11 @@ function followUpGreasing(array $attributes = []): Greasing
     ], $attributes));
 }
 
-test('open finding shows a follow-up form on the finding report', function () {
+test('finding report lists findings without an inline follow-up column', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $greasing = followUpGreasing();
-    $finding = $greasing->findings()->create(['finding' => 'Grease point blocked', 'status' => 'OPEN']);
-
-    $response = $this->actingAs($admin)->get(route('reports.greasing', [
-        'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
-    ]));
-
-    $response->assertOk();
-    $response->assertSee(route('greasings.findings.update', [$greasing, $finding]), false);
-    $response->assertSee('Grease point blocked');
-});
-
-test('completed finding does not show a follow-up form', function () {
-    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-    $greasing = followUpGreasing();
-    $finding = $greasing->findings()->create([
+    $open = $greasing->findings()->create(['finding' => 'Grease point blocked', 'status' => 'OPEN']);
+    $done = $greasing->findings()->create([
         'finding' => 'Already fixed leak',
         'status' => 'COMPLETED',
         'action' => 'seal replaced',
@@ -47,9 +34,12 @@ test('completed finding does not show a follow-up form', function () {
         'period_type' => 'monthly', 'month' => 8, 'year' => 2026,
     ]));
 
-    $response->assertOk();
-    $response->assertDontSee(route('greasings.findings.update', [$greasing, $finding]), false);
-    $response->assertSee('seal replaced');
+    $response->assertOk()
+        ->assertSee('Grease point blocked')
+        ->assertSee('seal replaced')
+        ->assertDontSee('Follow Up')
+        ->assertDontSee(route('greasings.findings.update', [$greasing, $open]), false)
+        ->assertDontSee(route('greasings.findings.update', [$greasing, $done]), false);
 });
 
 test('action date and action can be filled when following up a finding', function () {

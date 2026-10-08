@@ -65,10 +65,15 @@ document.addEventListener('alpine:init', () => {
         // route without that query param, is unaffected.
         $cameFromReportPm = request()->routeIs('machine-history.detail') && request()->query('from') === 'report-pm';
 
+        // Same idea for Report Machine's View button (?from=report-machine):
+        // the Machine History pages it opens keep Report Machine active.
+        $cameFromReportMachine = request()->routeIs('machine-history.show', 'machine-history.detail')
+            && request()->query('from') === 'report-machine';
+
         $machineActive = request()->routeIs('machines.*');
         $groupActive = request()->routeIs('groups.*');
         $sparepartActive = request()->routeIs('spareparts.*');
-        $reportActive = request()->routeIs('reports.*') || $cameFromReportPm;
+        $reportActive = request()->routeIs('reports.*') || $cameFromReportPm || $cameFromReportMachine;
         $userActive = request()->routeIs('users.*');
         $areaActive = request()->routeIs('areas.*');
         $maintenanceRequirementActive = request()->routeIs('machine-maintenance-requirements.*');
@@ -91,7 +96,7 @@ document.addEventListener('alpine:init', () => {
         $reportsGreasingActive = request()->routeIs('reports.greasing');
         $reportsOilAuditActive = request()->routeIs('reports.oil-audit');
         $reportsSparepartActive = request()->routeIs('reports.sparepart');
-        $reportsMachineActive = request()->routeIs('reports.machine');
+        $reportsMachineActive = request()->routeIs('reports.machine') || $cameFromReportMachine;
         $reportsProblemActive = request()->routeIs('reports.problem');
         $reportsCostActive = request()->routeIs('reports.cost');
 
@@ -102,7 +107,7 @@ document.addEventListener('alpine:init', () => {
 
         @endphp
         @php
-        $machineHistoryActive = request()->routeIs('machine-history.*') && ! $cameFromReportPm;
+        $machineHistoryActive = request()->routeIs('machine-history.*') && ! $cameFromReportPm && ! $cameFromReportMachine;
         @endphp
         <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $todayActivityActive || $pmScheduleActive || $oilAuditActive || $oilAuditActionActive || $greasingActive ? 'main' :
@@ -164,7 +169,7 @@ document.addEventListener('alpine:init', () => {
             'icon' => '
             <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C4 11.1 3 13 3 15a7 7 0 0 0 7 7z" />',
             'visible' =>
-            $hasWwdArea && ! $isSupervisor,
+            $hasWwdArea,
             ],
             [
             'route' => route('oil-audits.report'),
@@ -176,7 +181,7 @@ document.addEventListener('alpine:init', () => {
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
             <path d="m9 14 2 2 4-4" />',
             'visible' =>
-            $hasWwdArea && ! $isSupervisor,
+            $hasWwdArea,
             ],
             [
             'route' => route('greasings.index'),

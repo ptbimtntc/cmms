@@ -51,7 +51,14 @@
             </div>
         @endif
 
+        @php
+            $viewOnly = auth()->user()->isSupervisor();
+        @endphp
+
         <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            @if ($viewOnly)
+                <p class="mb-4 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-600">Mode lihat saja — Supervisor tidak dapat menyimpan hasil pengecekan.</p>
+            @endif
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h2 class="text-xl font-bold text-slate-900">Bagaimana kondisi oli mesin?</h2>
@@ -60,7 +67,7 @@
                 <span class="text-xs font-medium text-slate-400">Tersimpan otomatis dengan waktu saat ini</span>
             </div>
 
-            <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5" id="condition-buttons">
+            <div @class(['mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5', 'pointer-events-none opacity-50 grayscale' => $viewOnly]) id="condition-buttons" @if ($viewOnly) aria-disabled="true" @endif>
                 @php
                     $conditions = [
                         ['key' => 'OKE', 'number' => '1', 'label' => 'Oke', 'detail' => 'Aman', 'class' => 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-500 hover:bg-emerald-100 focus:ring-emerald-300'],
@@ -80,7 +87,7 @@
                         @csrf
                         <input type="hidden" name="machine_id" value="{{ $machine->id }}">
                         <input type="hidden" name="condition" value="{{ $condition['key'] }}">
-                        <button type="submit" class="group flex min-h-28 w-full flex-col items-start rounded-2xl border-2 p-4 text-left transition focus:outline-none focus:ring-4 sm:min-h-32 {{ $condition['class'] }}">
+                        <button type="submit" @disabled($viewOnly) class="group flex min-h-28 w-full flex-col items-start rounded-2xl border-2 p-4 text-left transition focus:outline-none focus:ring-4 sm:min-h-32 {{ $condition['class'] }}">
                             <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-xs font-bold shadow-sm">{{ $condition['number'] }}</span>
                             <span class="mt-3 text-base font-bold">{{ $condition['label'] }}</span>
                             <span class="mt-1 text-xs font-medium opacity-75">{{ $condition['detail'] }}</span>
@@ -91,6 +98,7 @@
         </div>
     </div>
 
+    @unless ($viewOnly)
     <script>
         document.addEventListener('keydown', (event) => {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
@@ -99,4 +107,5 @@
             if (form) form.requestSubmit();
         });
     </script>
+    @endunless
 @endsection

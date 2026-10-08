@@ -113,6 +113,15 @@
     @if ($mode === 'edit')
         <button type="button" class="js-followup-edit-toggle rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" data-target="{{ $audit->id }}">Batal</button>
     @endif
+    @if ($mode === 'create' && ($canDeleteFollowUp ?? false))
+        {{-- Belongs to the standalone form #delete-audit-{id} (HTML forms
+             cannot nest), rendered right after this follow-up form. --}}
+        <button type="submit" form="delete-audit-{{ $audit->id }}"
+            onclick="return confirm('Hapus hasil audit oli ini ({{ $audit->audited_at->format('d-m-Y H:i') }})? Data audit tidak dapat dikembalikan.')"
+            class="w-full rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto">
+            Delete
+        </button>
+    @endif
     <button type="submit" class="js-followup-submit w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
         {{ $mode === 'edit' ? 'Simpan perubahan' : 'Simpan & tandai selesai' }}
     </button>

@@ -114,7 +114,7 @@
                                 <td class="px-4 py-3 text-slate-600">{{ $row->next_pm ? $row->next_pm->format('d-m-Y') : '-' }}</td>
                                 <td class="px-4 py-3 text-center text-slate-600">{{ $row->pm_count ?? 0 }}</td>
                                 <td class="px-4 py-3 text-center">
-                                    <a href="{{ route('machine-history.show', $row->machine_number) }}"
+                                    <a href="{{ route('machine-history.show', ['machine_history' => $row->machine_number, 'from' => 'report-machine', 'return_url' => request()->fullUrl()]) }}"
                                         class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
                                         View
                                     </a>
@@ -156,7 +156,7 @@
                     </div>
 
                     <div class="mt-3 border-t border-slate-100 pt-3 text-right">
-                        <a href="{{ route('machine-history.show', $row->machine_number) }}"
+                        <a href="{{ route('machine-history.show', ['machine_history' => $row->machine_number, 'from' => 'report-machine', 'return_url' => request()->fullUrl()]) }}"
                             class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
                             View
                         </a>

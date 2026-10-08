@@ -2,6 +2,7 @@
 
 use App\Models\Area;
 use App\Models\Machine;
+use App\Models\OilAudit;
 use App\Models\PMSchedule;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -150,7 +151,11 @@ test('supervisor cannot reach write endpoints', function (string $method, string
     ['POST', '/today-activity/finish'],
     ['POST', '/today-activity/inactive'],
     ['GET', '/import-templates'],
-    ['GET', '/oil-audits/scan'],
+    ['POST', '/oil-audits/start'],
+    ['POST', '/oil-audit-report/start'],
+    ['POST', '/oil-audits/1/follow-up'],
+    ['PUT', '/oil-audits/1/follow-up'],
+    ['DELETE', '/oil-audits/1/follow-up'],
     ['POST', '/oil-audits'],
     ['GET', '/users'],
     ['POST', '/users'],
@@ -195,7 +200,7 @@ test('supervisor sidebar hides input and management menus', function () {
         ->assertSee(route('machines.index'), false)
         ->assertDontSee(route('users.index'), false)
         ->assertDontSee(route('import-templates'), false)
-        ->assertDontSee(route('oil-audits.scan'), false);
+        ->assertSee(route('oil-audits.scan'), false);
 });
 
 test('admin can create and edit supervisor users without an area', function () {
@@ -318,4 +323,62 @@ test('admin assigns zero, one or many areas to a supervisor', function () {
     expect($supervisor->areas()->count())->toBe(0);
 
     $this->actingAs($admin)->get(route('users.edit', $supervisor))->assertOk()->assertSee('area_ids[]', false);
+});
+
+test('supervisor can view oil audit pages but the check forms are greyed out', function () {
+    $supervisor = User::factory()->supervisor()->create();
+    $machine = Machine::create([
+        'machine_number' => 'OA-'.uniqid(),
+        'area' => 'WWD',
+        'machine_type' => oilAuditMachineType(),
+        'status' => 'ACTIVE',
+    ]);
+    OilAudit::create([
+        'machine_id' => $machine->id,
+        'machine_number' => $machine->machine_number,
+        'machine_type' => $machine->machine_type,
+        'area' => 'WWD',
+        'condition' => 'KRITIS',
+        'audited_by_name' => 'Tester',
+        'audited_at' => now(),
+    ]);
+
+    $this->actingAs($supervisor)->get(route('oil-audits.scan'))->assertOk();
+    $this->actingAs($supervisor)->get(route('oil-audits.report'))->assertOk();
+    $this->actingAs($supervisor)->get(route('reports.oil-audit'))->assertOk();
+
+    $this->actingAs($supervisor)->get(route('oil-audits.entry', $machine->machine_number))
+        ->assertOk()
+        ->assertSee('Mode lihat saja')
+        ->assertSee('grayscale')
+        ->assertSee('disabled', false);
+
+    $this->actingAs($supervisor)->get(route('oil-audits.history', $machine->machine_number))
+        ->assertOk()
+        ->assertSee('<fieldset disabled', false)
+        ->assertDontSee('Edit tindak lanjut');
+
+    $this->actingAs($supervisor)->post(route('oil-audits.store'), ['machine_id' => $machine->id, 'condition' => 'OKE'])
+        ->assertForbidden();
+});
+
+test('supervisor restricted to another area cannot open oil audit pages', function () {
+    $supervisor = supervisorWithAreas('BUL');
+
+    $this->actingAs($supervisor)->get(route('oil-audits.scan'))->assertForbidden();
+});
+
+test('PIC still sees enabled oil audit entry buttons', function () {
+    $pic = User::factory()->pic()->forArea('WWD')->create();
+    $machine = Machine::create([
+        'machine_number' => 'OA-'.uniqid(),
+        'area' => 'WWD',
+        'machine_type' => oilAuditMachineType(),
+        'status' => 'ACTIVE',
+    ]);
+
+    $this->actingAs($pic)->get(route('oil-audits.entry', $machine->machine_number))
+        ->assertOk()
+        ->assertDontSee('Mode lihat saja')
+        ->assertDontSee('grayscale');
 });

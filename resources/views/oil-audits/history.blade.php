@@ -34,7 +34,7 @@
 
     <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div class="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
-            <div class="min-w-0">
+            <div>
                 <h1 class="font-mono text-3xl font-bold tracking-tight text-slate-950">{{ $machine->machine_number }}</h1>
                 <p class="mt-1 text-sm text-slate-600">{{ $machine->machine_type }} · {{ $machine->area }}@if($machine->description) · {{ $machine->description }}@endif</p>
             </div>
@@ -112,6 +112,7 @@
                             @php($fu = $audit->followUp)
                             @php($fuIsOld = old('_followup_audit') !== null && (int) old('_followup_audit') === $audit->id)
                             @php($canDeleteFollowUp = (auth()->user()->isAdmin() || auth()->user()->isKoordinator()))
+                            @php($viewOnly = auth()->user()->isSupervisor())
 
                             @if ($fu)
                                 <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4" data-followup-view="{{ $audit->id }}">
@@ -146,7 +147,9 @@
                                     <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100 pt-3">
                                         <p class="text-xs text-slate-600">Ditindaklanjuti oleh <span class="font-semibold text-slate-800">{{ $fu->pic_name }}</span> · {{ $fu->actioned_at->format('d M Y, H:i') }}</p>
                                         <div class="flex flex-wrap gap-2">
+                                            @unless ($viewOnly)
                                             <button type="button" class="js-followup-edit-toggle rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50" data-target="{{ $audit->id }}">Edit tindak lanjut</button>
+                                            @endunless
                                             @if ($canDeleteFollowUp)
                                                 <form method="POST" action="{{ route('oil-audits.follow-up.destroy', $audit) }}" onsubmit="return confirm('Hapus tindak lanjut ini beserta seluruh problem &amp; finding-nya?');">
                                                     @csrf
@@ -158,16 +161,24 @@
                                     </div>
                                 </div>
 
-                                <form method="POST" action="{{ route('oil-audits.follow-up.update', $audit) }}" class="js-followup-form mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4" data-followup-form="{{ $audit->id }}" {{ $fuIsOld ? '' : 'hidden' }}>
+                                <form method="POST" action="{{ route('oil-audits.follow-up.update', $audit) }}" class="js-followup-form mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4" data-followup-form="{{ $audit->id }}" {{ $fuIsOld && ! $viewOnly ? '' : 'hidden' }}>
                                     @csrf
                                     @method('PUT')
                                     @include('oil-audits.partials.follow-up-fields', ['mode' => 'edit'])
                                 </form>
                             @else
-                                <form method="POST" action="{{ route('oil-audits.follow-up.store', $audit) }}" class="js-followup-form mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4" data-followup-form="{{ $audit->id }}">
+                                <form method="POST" action="{{ route('oil-audits.follow-up.store', $audit) }}" @class(['js-followup-form mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4', 'pointer-events-none opacity-50 grayscale' => $viewOnly]) data-followup-form="{{ $audit->id }}">
                                     @csrf
-                                    @include('oil-audits.partials.follow-up-fields', ['mode' => 'create'])
+                                    <fieldset @disabled($viewOnly) class="min-w-0">
+                                        @include('oil-audits.partials.follow-up-fields', ['mode' => 'create'])
+                                    </fieldset>
                                 </form>
+                                @if ($canDeleteFollowUp)
+                                    <form id="delete-audit-{{ $audit->id }}" method="POST" action="{{ route('oil-audits.destroy', $audit) }}" hidden>
+                                        @csrf
+                                        @method('DELETE')
+                                    </form>
+                                @endif
                             @endif
                         @endif
                     </div>

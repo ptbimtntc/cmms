@@ -11,6 +11,19 @@
     $backUrl = $cameFromReportPm && $reportPmReturnUrl && str_starts_with($reportPmReturnUrl, route('reports.pm'))
         ? $reportPmReturnUrl
         : ($cameFromReportPm ? route('reports.pm') : route('machine-history.show', $pmSchedule->machine_number));
+
+    // Opened via Machine History that was opened from Report Machine: Back
+    // returns to that Machine History page, keeping the report context.
+    if (request()->query('from') === 'report-machine') {
+        $reportMachineReturnUrl = request()->query('return_url');
+        $backUrl = route('machine-history.show', [
+            'machine_history' => $pmSchedule->machine_number,
+            'from' => 'report-machine',
+            'return_url' => is_string($reportMachineReturnUrl) && str_starts_with($reportMachineReturnUrl, route('reports.machine'))
+                ? $reportMachineReturnUrl
+                : route('reports.machine'),
+        ]);
+    }
 @endphp
 
 @section('content')

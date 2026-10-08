@@ -348,7 +348,6 @@
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Remarks</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action Date</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Follow Up</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
@@ -370,26 +369,10 @@
                                     ])>{{ $finding->status }}</span>
                                 </td>
                                 <td class="px-3 py-2 text-sm text-slate-700">{{ $finding->action_date ? $finding->action_date->format('d M Y') : '-' }}</td>
-                                <td class="px-3 py-2">
-                                    @if ($finding->status === 'OPEN')
-                                        <form action="{{ route('greasings.findings.update', [$finding->greasing, $finding]) }}" method="POST" class="flex min-w-64 flex-wrap items-center gap-1">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="COMPLETED">
-                                            <input type="date" name="action_date" value="{{ optional($finding->action_date)->format('Y-m-d') }}"
-                                                class="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-500 focus:outline-none">
-                                            <input type="text" name="action" value="{{ $finding->action }}" placeholder="Action taken" required
-                                                class="min-w-0 flex-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-500 focus:outline-none">
-                                            <button class="rounded bg-slate-700 px-3 py-1 text-xs font-medium text-white transition hover:bg-slate-800">Save</button>
-                                        </form>
-                                    @else
-                                        <span class="text-xs text-slate-400">-</span>
-                                    @endif
-                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-3 py-8 text-center text-sm text-slate-500">No finding recorded for this period.</td>
+                                <td colspan="5" class="px-3 py-8 text-center text-sm text-slate-500">No finding recorded for this period.</td>
                             </tr>
                         @endforelse
                     </tbody>

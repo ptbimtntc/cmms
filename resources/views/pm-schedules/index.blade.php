@@ -87,6 +87,16 @@
             @endforeach
         </select>
 
+        @if ($canFilterPic)
+            <select name="pic" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <option value="">All PIC</option>
+                <option value="__UNASSIGNED__" {{ request('pic') === '__UNASSIGNED__' ? 'selected' : '' }}>Unassigned</option>
+                @foreach ($picFilterOptions as $picName)
+                    <option value="{{ $picName }}" {{ request('pic') === $picName ? 'selected' : '' }}>{{ $picName }}</option>
+                @endforeach
+            </select>
+        @endif
+
         <x-checkbox-dropdown
             name="status"
             label="Status"
