@@ -17,7 +17,7 @@
  *           network request, never a machine invented from an
  *           unrecognized number (Task 7 section 6).
  */
-import { OilAuditCreate, MasterDataCache, Drafts } from '../offline/index.js';
+import { OilAuditCreate, MasterDataCache } from '../offline/index.js';
 import { currentUserId } from '../offline/scope.js';
 import { probeServerReachable } from '../offline/network.js';
 
@@ -67,16 +67,22 @@ function initScanPage() {
 
     let machines = [];
     let conditions = {};
+    let auditedToday = null;
 
     try {
         machines = JSON.parse(dataEl.dataset.machines || '[]');
         conditions = JSON.parse(dataEl.dataset.conditions || '{}');
+        auditedToday = JSON.parse(dataEl.dataset.auditedToday || 'null');
     } catch {
         machines = [];
         conditions = {};
     }
 
     seedMachineCache(machines);
+
+    if (auditedToday) {
+        OilAuditCreate.seedAuditedToday(auditedToday).catch(() => {});
+    }
 
     const userId = currentUserId();
 
@@ -138,9 +144,9 @@ function initScanPage() {
         try {
             await OilAuditCreate.saveOffline({ machineId: machine.id, condition });
 
-            await Drafts.deleteDraft(
-                (await Drafts.getDraftByReference({ userId, draftType: OilAuditCreate.DRAFT_TYPE, referenceId: machine.id }))?.draft_id
-            ).catch(() => {});
+            // The audit is already safely queued; clearing the selection
+            // draft is best effort and can never undo or fail that.
+            await OilAuditCreate.discardMachineDraft(userId);
 
             showFeedback(
                 `Audit oli mesin <strong>${machine.machine_number}</strong> berhasil <strong>disimpan secara offline</strong> `
@@ -154,7 +160,11 @@ function initScanPage() {
         }
     }
 
-    document.getElementById('oil-audit-offline-rescan')?.addEventListener('click', () => {
+    document.getElementById('oil-audit-offline-rescan')?.addEventListener('click', async () => {
+        // Scan mesin lain cancels the unfinished selection: delete it
+        // BEFORE the next scan so it can never be restored later.
+        await OilAuditCreate.discardMachineDraft(userId);
+        hideFeedback();
         showScannerView();
     });
 
@@ -194,12 +204,21 @@ function initScanPage() {
             return;
         }
 
-        await Drafts.saveDraft({
-            draftType: OilAuditCreate.DRAFT_TYPE,
-            referenceId: machine.id,
-            payload: machine,
-            userId,
-        }).catch(() => {});
+        try {
+            await OilAuditCreate.assertNotAlreadyAudited(machine);
+        } catch (error) {
+            if (statusEl) {
+                statusEl.textContent = error.message;
+            }
+
+            showFeedback(error.message);
+            window.alert(error.message);
+
+            return;
+        }
+
+        // Replaces any earlier unfinished selection (one draft per user).
+        await OilAuditCreate.selectMachineDraft(machine, userId).catch(() => {});
 
         hideFeedback();
         showOfflinePanel(machine);
@@ -259,8 +278,7 @@ function initScanPage() {
     // device picked a machine offline, then reloaded/reopened before
     // choosing a condition, show it again instead of forcing a re-scan.
     (async () => {
-        const drafts = await Drafts.listDraftsByType(userId, OilAuditCreate.DRAFT_TYPE).catch(() => []);
-        const latest = drafts.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))[0];
+        const latest = await OilAuditCreate.restoreMachineDraft(userId).catch(() => null);
 
         if (latest?.payload) {
             showFeedback(

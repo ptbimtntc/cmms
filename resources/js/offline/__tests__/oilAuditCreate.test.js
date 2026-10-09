@@ -2,10 +2,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Queue from '../queue.js';
 import * as Drafts from '../drafts.js';
+import * as SyncEngine from '../syncEngine.js';
 import { putMasterData } from '../masterData.js';
 import {
     MACHINE_CATEGORY,
     OilAuditBlockedError,
+    OilAuditDuplicateError,
+    businessDate,
+    discardMachineDraft,
+    findExistingAudit,
+    restoreMachineDraft,
+    seedAuditedToday,
+    selectMachineDraft,
     OilAuditValidationError,
     findCachedMachineByNumber,
     processQueuedOperation,
@@ -116,9 +124,11 @@ describe('saveOffline', () => {
 
         await Queue.markSynced(first.operation_uuid);
 
-        const second = await saveOffline({ machineId: 5, condition: 'PANTAU' });
+        // Task 10: even once synced, the same machine cannot be audited a
+        // second time on the same business date.
+        await expect(saveOffline({ machineId: 5, condition: 'PANTAU' })).rejects.toBeInstanceOf(OilAuditDuplicateError);
 
-        expect(second.operation_uuid).not.toBe(first.operation_uuid);
+        expect(await Queue.listAll()).toHaveLength(1);
     });
 
     it('blocks a second offline audit for a DIFFERENT machine while one is still pending', async () => {
@@ -242,5 +252,177 @@ describe('processQueuedOperation', () => {
             payload: { machine_id: 7, condition: 'KRITIS' },
             expected_state: {},
         });
+    });
+});
+
+describe('one machine-selection draft per user', () => {
+    const m1 = { id: 1, machine_number: '3001' };
+    const m2 = { id: 2, machine_number: '3002' };
+
+    it('selecting a machine replaces the same user\'s earlier draft but never another user\'s', async () => {
+        await Drafts.saveDraft({ draftType: 'OIL_AUDIT', referenceId: 9, payload: { id: 9 }, userId: 'other' });
+
+        await selectMachineDraft(m1, 'me');
+        await selectMachineDraft(m2, 'me');
+
+        const mine = await Drafts.listDraftsByType('me', 'OIL_AUDIT');
+
+        expect(mine.map((d) => d.reference_id)).toEqual([2]);
+        expect(await Drafts.listDraftsByType('other', 'OIL_AUDIT')).toHaveLength(1);
+    });
+
+    it('discarding the draft does not touch queued transactions or other users\' drafts', async () => {
+        await Drafts.saveDraft({ draftType: 'OIL_AUDIT', referenceId: 9, payload: { id: 9 }, userId: 'other' });
+        await selectMachineDraft(m1, 'me');
+        const queued = await saveOffline({ machineId: 1, condition: 'OKE' });
+
+        await discardMachineDraft('me');
+
+        expect(await Drafts.listDraftsByType('me', 'OIL_AUDIT')).toHaveLength(0);
+        expect(await Drafts.listDraftsByType('other', 'OIL_AUDIT')).toHaveLength(1);
+        expect(await Queue.getByUuid(queued.operation_uuid)).toBeTruthy();
+    });
+
+    it('restore returns the latest draft, and nothing once discarded', async () => {
+        await selectMachineDraft(m1, 'me');
+        expect((await restoreMachineDraft('me')).payload).toEqual(m1);
+
+        await discardMachineDraft('me');
+        expect(await restoreMachineDraft('me')).toBeNull();
+    });
+
+    it('restore drops a stale draft whose machine was already audited today', async () => {
+        await selectMachineDraft(m1, 'me');
+        await seedAuditedToday({ date: businessDate(), machine_ids: [1] });
+
+        expect(await restoreMachineDraft('me')).toBeNull();
+        expect(await Drafts.listDraftsByType('me', 'OIL_AUDIT')).toHaveLength(0);
+    });
+});
+
+describe('one audit per machine per business date (offline guard)', () => {
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('businessDate uses Asia/Jakarta: 17:30Z on the 8th is already the 9th in Jakarta', () => {
+        expect(businessDate('2026-10-08T16:59:00Z')).toBe('2026-10-08');
+        expect(businessDate('2026-10-08T17:00:00Z')).toBe('2026-10-09');
+    });
+
+    it('a pending queued audit for the same machine/date blocks a second one and leaves the first untouched', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-08T03:00:00Z'));
+
+        const first = await saveOffline({ machineId: 1, condition: 'OKE' });
+
+        await expect(saveOffline({ machineId: 1, condition: 'KRITIS' })).rejects.toBeInstanceOf(OilAuditDuplicateError);
+
+        const all = await Queue.listAll();
+
+        expect(all).toHaveLength(1);
+        expect(all[0]).toMatchObject({ operation_uuid: first.operation_uuid, payload: { machine_id: 1, condition: 'OKE' } });
+    });
+
+    it.each(['syncing', 'failed', 'conflict', 'synced'])('a %s audit for the same machine/date also blocks', async (status) => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-08T03:00:00Z'));
+        const first = await saveOffline({ machineId: 1, condition: 'OKE' });
+        const store = { syncing: Queue.markSyncing, failed: (u) => Queue.markFailed(u, 'x'), conflict: (u) => Queue.markConflict(u, { status: 'conflict' }), synced: (u) => Queue.markSynced(u, {}) };
+
+        await store[status](first.operation_uuid);
+
+        await expect(saveOffline({ machineId: 1, condition: 'OKE' })).rejects.toBeInstanceOf(OilAuditDuplicateError);
+    });
+
+    it('a server-rejected duplicate (duplicate_audit) represents no audit and does not itself block', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-08T03:00:00Z'));
+        const first = await saveOffline({ machineId: 1, condition: 'OKE' });
+
+        await Queue.markConflict(first.operation_uuid, { status: 'duplicate_audit', message: 'dup' });
+
+        expect(await findExistingAudit(1)).toBeNull();
+    });
+
+    it('same machine on the next day, and another machine on the same day, are allowed', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-08T03:00:00Z'));
+        const first = await saveOffline({ machineId: 1, condition: 'OKE' });
+        await Queue.markSynced(first.operation_uuid, {});
+
+        const second = await saveOffline({ machineId: 2, condition: 'OKE' });
+        await Queue.markSynced(second.operation_uuid, {});
+
+        vi.setSystemTime(new Date('2026-10-09T03:00:00Z'));
+        await expect(saveOffline({ machineId: 1, condition: 'OKE' })).resolves.toBeTruthy();
+    });
+
+    it('the cached server snapshot ("audited today" by another device) blocks, only for that date', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-10-08T03:00:00Z'));
+        await seedAuditedToday({ date: '2026-10-08', machine_ids: [1] });
+
+        await expect(saveOffline({ machineId: 1, condition: 'OKE' })).rejects.toBeInstanceOf(OilAuditDuplicateError);
+
+        vi.setSystemTime(new Date('2026-10-09T03:00:00Z'));
+        await expect(saveOffline({ machineId: 1, condition: 'OKE' })).resolves.toBeTruthy();
+    });
+});
+
+describe('server duplicate rejection during sync', () => {
+    it('duplicate_audit is kept as a non-retryable conflict with the server message — not failed, not deleted', async () => {
+        const record = await saveOffline({ machineId: 5, condition: 'OKE' });
+
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            json: async () => ({ status: 'duplicate_audit', message: 'Mesin 5 sudah memiliki audit oli untuk hari ini.' }),
+        }));
+
+        await processQueuedOperation(record.operation_uuid);
+
+        const stored = await Queue.getByUuid(record.operation_uuid);
+
+        expect(stored.status).toBe(Queue.QueueStatus.CONFLICT);
+        expect(stored.result.message).toContain('sudah memiliki audit oli');
+    });
+
+    it('is not auto-retried: a second drain sends nothing, and a network error stays retryable with the same uuid/payload', async () => {
+        const dup = await saveOffline({ machineId: 5, condition: 'OKE' });
+        const fetchSpy = vi.fn().mockResolvedValue({ json: async () => ({ status: 'duplicate_audit', message: 'dup' }) });
+
+        vi.stubGlobal('fetch', fetchSpy);
+        await SyncEngine.syncPendingOperations();
+        await SyncEngine.syncPendingOperations();
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect((await Queue.getByUuid(dup.operation_uuid)).status).toBe(Queue.QueueStatus.CONFLICT);
+
+        // independent audit with a network failure stays failed/retryable, same uuid + payload
+        const other = await saveOffline({ machineId: 6, condition: 'PANTAU' });
+
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+        await SyncEngine.syncPendingOperations();
+
+        const stored = await Queue.getByUuid(other.operation_uuid);
+
+        expect(stored).toMatchObject({ status: 'failed', last_error_status: 'network_error', payload: { machine_id: 6, condition: 'PANTAU' } });
+    });
+
+    it('one duplicate does not stop an independent audit in the same drain', async () => {
+        const dup = await saveOffline({ machineId: 5, condition: 'OKE' });
+        const ok = await saveOffline({ machineId: 5, condition: 'OKE' }).catch(() => null);
+
+        expect(ok).toBeNull(); // blocked locally; use a distinct machine instead
+        const other = await Queue.enqueue({ transactionType: 'OIL_AUDIT_CREATE', payload: { machine_id: 6, condition: 'OKE' }, userId: null });
+
+        vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url, init) => {
+            const { operation_uuid: uuid } = JSON.parse(init.body);
+
+            return { json: async () => (uuid === dup.operation_uuid ? { status: 'duplicate_audit', message: 'dup' } : { status: 'processed', subject_id: 1 }) };
+        }));
+
+        await SyncEngine.syncPendingOperations();
+
+        expect((await Queue.getByUuid(dup.operation_uuid)).status).toBe('conflict');
+        expect((await Queue.getByUuid(other.operation_uuid)).status).toBe('synced');
     });
 });

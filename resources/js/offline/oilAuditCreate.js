@@ -24,12 +24,14 @@ import { generateUuid } from './uuid.js';
 import { currentUserId } from './scope.js';
 import * as SyncQueue from './queue.js';
 import * as Drafts from './drafts.js';
-import { getMasterDataByCategory } from './masterData.js';
+import { clearMasterDataCategory, getMasterData, getMasterDataByCategory, putMasterData } from './masterData.js';
 import { sendQueuedOperation } from './sync.js';
 
 export const TRANSACTION_TYPE = 'OIL_AUDIT_CREATE';
 export const DRAFT_TYPE = 'OIL_AUDIT';
 export const MACHINE_CATEGORY = 'machines';
+export const AUDITED_CATEGORY = 'oil_audited_dates';
+export const BUSINESS_TIMEZONE = 'Asia/Jakarta';
 
 export class OilAuditValidationError extends Error {
     constructor(message, errors = {}) {
@@ -44,6 +46,130 @@ export class OilAuditBlockedError extends Error {
         super(message);
         this.name = 'OilAuditBlockedError';
     }
+}
+
+export class OilAuditDuplicateError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'OilAuditDuplicateError';
+    }
+}
+
+/**
+ * Business calendar date (YYYY-MM-DD) in Asia/Jakarta — the same day the
+ * server's audit_date uses. Only formats; never shifts the instant.
+ *
+ * @param {Date|string|number} [instant]
+ */
+export function businessDate(instant = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: BUSINESS_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(new Date(instant));
+}
+
+/**
+ * Seeds the "already audited today" cache from the scan page's embedded
+ * server data ({date, machine_ids}); replaces the previous snapshot. Best
+ * effort only — the server stays the authority at sync time.
+ */
+export async function seedAuditedToday(data) {
+    await clearMasterDataCategory(AUDITED_CATEGORY);
+
+    if (!data?.date || !Array.isArray(data.machine_ids)) {
+        return;
+    }
+
+    await Promise.all(data.machine_ids.map((machineId) => putMasterData(
+        AUDITED_CATEGORY,
+        `${machineId}:${data.date}`,
+        { machine_id: machineId, date: data.date }
+    )));
+}
+
+/**
+ * Whether this machine is already known to have an audit for today's
+ * business date: from the server snapshot cache, or from a local
+ * OIL_AUDIT_CREATE queue entry (pending/syncing/failed/conflict/synced)
+ * created today. A conflict that is a server duplicate rejection does NOT
+ * count — it represents no audit. Returns a description of where it was
+ * found, or null.
+ */
+export async function findExistingAudit(machineId, now = new Date()) {
+    const today = businessDate(now);
+
+    if (await getMasterData(AUDITED_CATEGORY, `${machineId}:${today}`)) {
+        return { source: 'cache' };
+    }
+
+    const queued = (await SyncQueue.listAll()).find((operation) => (
+        operation.transaction_type === TRANSACTION_TYPE
+        && String(operation.payload?.machine_id) === String(machineId)
+        && businessDate(operation.created_at) === today
+        && operation.result?.status !== 'duplicate_audit'
+    ));
+
+    return queued ? { source: 'queue', operation: queued } : null;
+}
+
+function duplicateMessage(machineNumber) {
+    return `Mesin ${machineNumber} sudah memiliki audit oli untuk hari ini. Satu mesin hanya dapat diaudit satu kali per hari.`;
+}
+
+/**
+ * Throws OilAuditDuplicateError if the machine already has an audit today.
+ * Never touches existing queue entries.
+ */
+export async function assertNotAlreadyAudited(machine, now = new Date()) {
+    if (await findExistingAudit(machine.id, now)) {
+        throw new OilAuditDuplicateError(duplicateMessage(machine.machine_number ?? machine.id));
+    }
+}
+
+/**
+ * A PIC has at most one unfinished machine-selection draft: choosing a
+ * machine replaces any earlier one (this user's only).
+ */
+export async function selectMachineDraft(machine, userId = currentUserId()) {
+    await Drafts.deleteDraftsByType(userId, DRAFT_TYPE);
+
+    return Drafts.saveDraft({ draftType: DRAFT_TYPE, referenceId: machine.id, payload: machine, userId });
+}
+
+/**
+ * Drops this user's unfinished machine-selection draft(s) (Scan mesin
+ * lain / audit queued). Never throws and never touches the sync queue — a
+ * failure here must not affect an audit that is already queued.
+ */
+export async function discardMachineDraft(userId = currentUserId()) {
+    try {
+        await Drafts.deleteDraftsByType(userId, DRAFT_TYPE);
+    } catch {
+        // Best effort by design.
+    }
+}
+
+/**
+ * The machine to restore after a reload, or null. A draft whose machine
+ * has meanwhile been audited today is stale: it is deleted, not restored.
+ */
+export async function restoreMachineDraft(userId = currentUserId(), now = new Date()) {
+    const drafts = await Drafts.listDraftsByType(userId, DRAFT_TYPE).catch(() => []);
+    const latest = [...drafts].sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1))[0];
+
+    if (!latest?.payload) {
+        return null;
+    }
+
+    if (await findExistingAudit(latest.payload.id, now)) {
+        await discardMachineDraft(userId);
+
+        return null;
+    }
+
+    return latest;
 }
 
 /**
@@ -126,6 +252,10 @@ async function findBlockingLocalOperation(userId, machineId) {
  */
 export async function saveOffline({ machineId, condition }) {
     validatePayloadLocally({ machineId, condition });
+
+    const cachedMachine = (await getMasterData(MACHINE_CATEGORY, machineId)) ?? { id: machineId };
+
+    await assertNotAlreadyAudited(cachedMachine);
 
     const userId = currentUserId();
     const blocking = await findBlockingLocalOperation(userId, machineId);

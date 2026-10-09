@@ -8,6 +8,7 @@ use App\Models\Machine;
 use App\Models\OilAudit;
 use App\Models\User;
 use App\Services\ActiveActivityResolver;
+use App\Exceptions\DuplicateOilAuditException;
 use App\Services\OilAuditCreateService;
 use App\Services\OilAuditFollowUpService;
 use Carbon\Carbon;
@@ -94,6 +95,12 @@ class OilAuditController extends Controller
                 ->orderBy('machine_number')
                 ->get(['id', 'machine_number', 'machine_type', 'area']),
             'offlineConditions' => OilAudit::CONDITION_LABELS,
+            // Machines already audited today (business date), so the offline
+            // duplicate guard also knows about audits made on other devices.
+            'offlineAuditedToday' => [
+                'date' => today()->toDateString(),
+                'machine_ids' => OilAudit::where('audit_date', today()->toDateString())->pluck('machine_id')->all(),
+            ],
         ]);
     }
 
@@ -213,7 +220,13 @@ class OilAuditController extends Controller
             ->firstOrFail();
         $user = $request->user();
 
-        app(OilAuditCreateService::class)->create($machine, $user, $validated['condition']);
+        try {
+            app(OilAuditCreateService::class)->create($machine, $user, $validated['condition']);
+        } catch (DuplicateOilAuditException $e) {
+            return redirect()
+                ->route('oil-audits.scan')
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('oil-audits.scan')
@@ -332,6 +345,22 @@ class OilAuditController extends Controller
     }
 
     /**
+     * Conditions picked in the multi-select Condition filter, restricted to
+     * known condition keys. A single legacy `?condition=KRITIS` still works
+     * through the array cast.
+     *
+     * @return list<string>
+     */
+    private function selectedConditions(Request $request): array
+    {
+        return collect((array) $request->input('condition'))
+            ->filter(fn ($c) => is_string($c) && array_key_exists($c, OilAudit::CONDITION_LABELS))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * The given Y-m-d date string, or null when missing/malformed (so a bad
      * query param is ignored instead of erroring).
      */
@@ -393,8 +422,8 @@ class OilAuditController extends Controller
                 })
             )
             ->when(
-                $request->filled('condition'),
-                fn (Builder $query) => $query->where('condition', $request->input('condition'))
+                $this->selectedConditions($request) !== [],
+                fn (Builder $query) => $query->whereIn('condition', $this->selectedConditions($request))
             )
             ->when(
                 $request->filled('pic'),
@@ -477,7 +506,7 @@ class OilAuditController extends Controller
         parse_str((string) $request->query('return', ''), $returnParams);
 
         if ($from === 'action') {
-            $allowed = ['area', 'machine_type', 'year', 'month', 'condition', 'finding_status', 'pic', 'search', 'page'];
+            $allowed = ['date_from', 'date_to', 'year', 'month', 'condition', 'finding_status', 'pic', 'search', 'page'];
 
             return route('oil-audits.report', Arr::only($returnParams, $allowed));
         }

@@ -113,3 +113,17 @@ describe('durability', () => {
         expect(stillThere.payload).toEqual({ x: 'y' });
     });
 });
+
+describe('deleteDraftsByType', () => {
+    it('removes only the given user\'s drafts of that type — not another user\'s, not other types', async () => {
+        await Drafts.saveDraft({ draftType: 'OIL_AUDIT', referenceId: 1, payload: {}, userId: 'u1' });
+        await Drafts.saveDraft({ draftType: 'OIL_AUDIT', referenceId: 2, payload: {}, userId: 'u2' });
+        await Drafts.saveDraft({ draftType: 'PM', referenceId: 1, payload: {}, userId: 'u1' });
+
+        expect(await Drafts.deleteDraftsByType('u1', 'OIL_AUDIT')).toBe(1);
+
+        expect(await Drafts.listDraftsByType('u1', 'OIL_AUDIT')).toHaveLength(0);
+        expect(await Drafts.listDraftsByType('u2', 'OIL_AUDIT')).toHaveLength(1);
+        expect(await Drafts.listDraftsByType('u1', 'PM')).toHaveLength(1);
+    });
+});

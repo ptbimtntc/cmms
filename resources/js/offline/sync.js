@@ -70,8 +70,13 @@ export async function sendQueuedOperation(operationUuid) {
 
         // A conflict is never force-resolved here — it is recorded so a
         // later task's UI can show and let the user resolve it.
+        // duplicate_audit: the server definitively rejected an Oil Audit for
+        // a machine that already has one that day. Retrying can never
+        // succeed, so it is recorded as a conflict (never auto-retried, not
+        // manually retryable) and its message is kept for the Sync UI.
         case 'conflict':
         case 'payload_mismatch':
+        case 'duplicate_audit':
             await SyncQueue.markConflict(operationUuid, body);
             break;
 

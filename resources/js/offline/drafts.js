@@ -99,3 +99,21 @@ export function listDraftsByType(userId, draftType) {
 export function deleteDraft(draftId) {
     return OfflineStorage.delete(STORES.DRAFTS, draftId);
 }
+
+/**
+ * Deletes EVERY draft of one type belonging to ONE user — never another
+ * user's (listDraftsByType() already filters by user_id). Used for
+ * "at most one unfinished selection draft per user" flows. Resolves to the
+ * number of drafts removed.
+ *
+ * @param {string|null} userId
+ * @param {string} draftType
+ * @returns {Promise<number>}
+ */
+export async function deleteDraftsByType(userId, draftType) {
+    const drafts = await listDraftsByType(userId, draftType);
+
+    await Promise.all(drafts.map((draft) => deleteDraft(draft.draft_id)));
+
+    return drafts.length;
+}

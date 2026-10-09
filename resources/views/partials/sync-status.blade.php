@@ -74,7 +74,7 @@
                 <template x-for="op in $store.sync.conflictOperations" :key="op.operation_uuid">
                     <div class="mb-2 rounded-lg bg-warning-light px-2 py-1.5 text-xs">
                         <div class="font-medium text-text" x-text="$store.sync.labelFor(op.transaction_type)"></div>
-                        <div class="text-text-muted">Data server sudah berubah sejak device terakhir sync.</div>
+                        <div class="text-text-muted" x-text="op.result?.status === 'duplicate_audit' ? op.result.message : 'Data server sudah berubah sejak device terakhir sync.'"></div>
                     </div>
                 </template>
             </div>

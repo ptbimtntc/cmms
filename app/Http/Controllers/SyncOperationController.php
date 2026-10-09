@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DuplicateOilAuditException;
 use App\Exceptions\Sync\SyncConflictException;
 use App\Models\Machine;
 use App\Models\OilAudit;
@@ -176,6 +177,17 @@ class SyncOperationController extends Controller
             return $this->handleDuplicate($uuid, $payloadHash);
         } catch (AuthorizationException $e) {
             return $this->respond('forbidden', 403, [
+                'operation_uuid' => $uuid,
+                'message' => $e->getMessage(),
+            ]);
+        } catch (DuplicateOilAuditException $e) {
+            // Definitive business rejection, not a transient failure: the
+            // device must not retry it automatically. The whole transaction
+            // (including the sync_operations ledger row) is rolled back, so
+            // a re-sent uuid is simply re-evaluated and rejected again,
+            // while an operation that was ALREADY processed still hits the
+            // operation_uuid unique index first and stays already_processed.
+            return $this->respond('duplicate_audit', 409, [
                 'operation_uuid' => $uuid,
                 'message' => $e->getMessage(),
             ]);

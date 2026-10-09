@@ -105,6 +105,11 @@ class OilAudit extends Model
             : self::FINDING_OPTIONS;
     }
 
+    /*
+     * audit_date is deliberately NOT cast: it is the business date as a plain
+     * 'Y-m-d' string (set by OilAuditCreateService). A date cast would write
+     * 'Y-m-d 00:00:00' on SQLite and no longer match the unique index/lookups.
+     */
     protected $fillable = [
         'machine_id',
         'machine_number',
@@ -114,6 +119,7 @@ class OilAudit extends Model
         'audited_by_user_id',
         'audited_by_name',
         'audited_at',
+        'audit_date',
     ];
 
     protected function casts(): array

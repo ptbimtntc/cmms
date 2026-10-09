@@ -341,3 +341,37 @@ test('month filter accepts several months and a legacy single month', function (
         ->assertSee('Bulan (2)');
     $this->actingAs($admin)->get(route('oil-audits.report'))->assertSee('Semua bulan');
 });
+
+test('condition filter accepts several conditions and a legacy single condition', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $oke = actionOilAudit(actionOilAuditMachine(), ['condition' => 'OKE']);
+    $kritis = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS']);
+    $pas = actionOilAudit(actionOilAuditMachine(), ['condition' => 'PAS_GARIS']);
+
+    $ids = fn (array $query) => $this->actingAs($admin)->get(route('oil-audits.report', $query))
+        ->viewData('audits')->pluck('id')->sort()->values()->all();
+
+    expect($ids(['condition' => ['KRITIS', 'PAS_GARIS']]))->toBe([$kritis->id, $pas->id])
+        ->and($ids(['condition' => 'OKE']))->toBe([$oke->id])
+        ->and($ids(['condition' => ['BOGUS']]))->toBe([$oke->id, $kritis->id, $pas->id]);
+
+    $this->actingAs($admin)->get(route('oil-audits.report', ['condition' => ['KRITIS', 'PAS_GARIS']]))
+        ->assertSee('Kondisi (2)');
+    $this->actingAs($admin)->get(route('oil-audits.report'))->assertSee('Semua kondisi');
+});
+
+test('back from history keeps the date and multi-select filters of the action page', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = actionOilAuditMachine();
+    actionOilAudit($machine);
+    $return = 'date_from=2026-09-01&date_to=2026-09-30&condition%5B0%5D=KRITIS&condition%5B1%5D=OKE&month%5B0%5D=9';
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.history', [
+        $machine->machine_number, 'from' => 'action', 'return' => $return,
+    ]));
+
+    $expected = route('oil-audits.report', [
+        'date_from' => '2026-09-01', 'date_to' => '2026-09-30', 'condition' => ['KRITIS', 'OKE'], 'month' => [9],
+    ]);
+    $response->assertOk()->assertSee(e($expected), false);
+});

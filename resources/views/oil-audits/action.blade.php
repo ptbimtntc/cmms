@@ -95,12 +95,15 @@
                 :selected="collect((array) request('month'))->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && $m >= 1 && $m <= 12)->map(fn ($m) => (int) $m)->unique()->values()->all()"
             />
         </div>
-        <select name="condition" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:w-auto">
-            <option value="">Semua kondisi</option>
-            @foreach (\App\Models\OilAudit::CONDITION_LABELS as $value => $label)
-                <option value="{{ $value }}" @selected(request('condition') === $value)>{{ $label }}</option>
-            @endforeach
-        </select>
+        <div class="w-full sm:w-auto">
+            <x-checkbox-dropdown
+                name="condition"
+                label="Kondisi"
+                all-label="Semua kondisi"
+                :options="\App\Models\OilAudit::CONDITION_LABELS"
+                :selected="collect((array) request('condition'))->filter(fn ($c) => is_string($c) && array_key_exists($c, \App\Models\OilAudit::CONDITION_LABELS))->values()->all()"
+            />
+        </div>
         <select name="finding_status" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 sm:w-auto">
             <option value="">Semua status temuan</option>
             <option value="NO_FINDING" @selected(request('finding_status') === 'NO_FINDING')>No Finding</option>

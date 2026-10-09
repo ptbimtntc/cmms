@@ -22,6 +22,12 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
+                {{ session('error') }}
+            </div>
+        @endif
+
         {{--
             FreeDOMS offline-first (Task 7). Embedded, minimal machine list +
             condition options for resources/js/oil-audits/scan.js to seed the
@@ -33,6 +39,7 @@
         <div id="oil-audit-scan-data"
             data-machines='@json($offlineMachines ?? [])'
             data-conditions='@json($offlineConditions ?? [])'
+            data-audited-today='@json($offlineAuditedToday ?? ['date' => null, 'machine_ids' => []])'
             data-autostart-scanner="{{ session('success') ? 'true' : 'false' }}"></div>
 
         <div id="oil-audit-offline-feedback" class="mb-4 hidden rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800"></div>

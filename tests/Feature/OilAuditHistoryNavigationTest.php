@@ -44,11 +44,11 @@ test('action page view link carries from=action and the current filters as retur
     $machine = navHistoryMachine();
     navHistoryAudit($machine);
 
-    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['machine_type' => 'NDE SW']));
+    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['year' => 2026]));
 
     $response->assertOk();
     $response->assertSee('from=action', false);
-    $response->assertSee('return=machine_type%3DNDE%2520SW', false);
+    $response->assertSee('return=year%3D2026', false);
 });
 
 test('history opened from report shows a back link to the report page with filters restored', function () {
@@ -71,12 +71,12 @@ test('history opened from action shows a back link to the action page with filte
     navHistoryAudit($machine);
 
     $response = $this->actingAs($admin)->get(route('oil-audits.history', [
-        $machine->machine_number, 'from' => 'action', 'return' => 'machine_type=NDE SW',
+        $machine->machine_number, 'from' => 'action', 'return' => 'year=2026',
     ]));
 
     $response->assertOk();
     $response->assertSee('Back to Oil Audit Action');
-    $response->assertSee(route('oil-audits.report', ['machine_type' => 'NDE SW']));
+    $response->assertSee(route('oil-audits.report', ['year' => 2026]));
 });
 
 test('history opened without a from parameter falls back safely to the report page', function () {
