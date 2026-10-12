@@ -6,6 +6,8 @@ import './pm/checklist';
 import './oil-audits/scan';
 import './oil-audits/entry';
 import './oil-audits/follow-up';
+import './oil-audits/action';
+import './pm-status/override';
 
 import './offline/syncUi.js';
 import './pull-to-refresh.js';

@@ -60,6 +60,7 @@ class PMStatusBoardController extends Controller
                 $displayStatus = $isClosed ? 'CLOSED' : 'OPEN';
 
                 return [
+                    'id' => $schedule->id,
                     'machine_number' => $schedule->machine_number,
                     'plan_date' => $planDate->format('d M Y'),
                     'gap_day' => $gapDay,
@@ -96,8 +97,12 @@ class PMStatusBoardController extends Controller
             $years = $years->push($year)->sortByDesc(fn ($y) => $y)->values();
         }
 
+        $user = Auth::user();
+        $canOverrideStatus = $user && ($user->isAdmin() || $user->isKoordinator());
+
         return view('pm-status-board.index', [
             'schedules' => $schedules,
+            'canOverrideStatus' => $canOverrideStatus,
             'summary' => $summary,
             'months' => $months,
             'years' => $years,

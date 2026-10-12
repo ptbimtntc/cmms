@@ -68,7 +68,7 @@ class OilAuditReportController extends Controller
      */
     public function index(Request $request)
     {
-        $area = in_array($request->input('area'), ['WWD', 'BUL'], true) ? $request->input('area') : null;
+        $area = in_array($request->input('area'), ['WWD'], true) ? $request->input('area') : null;
         $machineType = $request->input('machine_type') ?: null;
         // Condition and Month are multi-select (checkbox-dropdown): arrive
         // as arrays, but a plain single value (old bookmarked link) still

@@ -217,6 +217,7 @@ Route::middleware([
     Route::get('/oil-audits/entry/{machineNumber}', [OilAuditController::class, 'entry'])->name('oil-audits.entry');
     Route::post('/oil-audits', [OilAuditController::class, 'store'])->name('oil-audits.store');
     Route::get('/oil-audit-report', [OilAuditController::class, 'action'])->name('oil-audits.report');
+    Route::get('/oil-audit-report/more', [OilAuditController::class, 'actionMore'])->name('oil-audits.report.more');
     Route::post('/oil-audit-report/start', [OilAuditController::class, 'startDailyAction'])->name('oil-audits.report.start-daily');
     Route::get('/oil-audit-report/{machineNumber}', [OilAuditController::class, 'history'])->name('oil-audits.history');
     Route::delete('/oil-audits/{oilAudit}', [OilAuditController::class, 'destroy'])->name('oil-audits.destroy');

@@ -13,6 +13,7 @@ use App\Services\OilAuditCreateService;
 use App\Services\OilAuditFollowUpService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -319,6 +320,44 @@ class OilAuditController extends Controller
             'pendingAudits',
             'promptStart'
         ));
+    }
+
+    /**
+     * Infinite-scroll continuation for the mobile Action list — called by
+     * resources/js/oil-audits/action.js once the user scrolls near the
+     * bottom. Reuses the exact same filtered, sorted, scoped query as
+     * action() (so results can never diverge from what the first page
+     * already showed), but deliberately skips the summary / pendingAudits /
+     * pics work above: none of that changes page to page, so there is no
+     * reason to redo it on every scroll.
+     *
+     * Desktop is unaffected — it still renders entirely through action()
+     * and $audits->links().
+     */
+    public function actionMore(Request $request): JsonResponse
+    {
+        $page = max(1, $request->integer('page', 1));
+
+        $audits = $this->filteredAuditQuery($request)
+            ->with(['followUp.problems.findings'])
+            ->orderByDesc('audited_at')
+            ->orderByDesc('id')
+            ->paginate(20, ['*'], 'page', $page);
+
+        $canDeleteAudit = $request->user()->isAdmin() || $request->user()->isKoordinator();
+
+        $html = $audits->getCollection()
+            ->map(fn (OilAudit $audit) => view('oil-audits.partials.action-mobile-card', [
+                'audit' => $audit,
+                'canDeleteAudit' => $canDeleteAudit,
+            ])->render())
+            ->implode('');
+
+        return response()->json([
+            'html' => $html,
+            'has_more' => $audits->hasMorePages(),
+            'next_page' => $audits->hasMorePages() ? $page + 1 : null,
+        ]);
     }
 
     /**
