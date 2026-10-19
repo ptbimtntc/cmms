@@ -88,6 +88,11 @@ Route::middleware('auth')->group(function () {
     // Purely additive: existing pm-schedules.* / oil-audits.* routes below
     // are untouched and remain the only way to use those features online.
     Route::post('/api/sync', [SyncOperationController::class, 'handle'])->name('api.sync');
+
+    // Group detail (which machines belong to a group) is read-only and
+    // open to every authenticated role, unlike the rest of groups.* which
+    // is restricted to ADMIN/KOORDINATOR/SUPERVISOR below.
+    Route::get('/groups/{group}', [GroupController::class, 'show'])->name('groups.show');
 });
 
 Route::middleware([
@@ -127,7 +132,7 @@ Route::middleware([
     Route::get('/machines/import', [MachineController::class, 'importForm'])->name('machines.import.form');
     Route::post('/machines/import', [MachineController::class, 'import'])->name('machines.import');
 
-    Route::resource('groups', GroupController::class);
+    Route::resource('groups', GroupController::class)->except(['show']);
 
     Route::resource('greasings', GreasingController::class)->except(['index']);
     Route::post('/greasings/import', [GreasingController::class, 'import'])->name('greasings.import');

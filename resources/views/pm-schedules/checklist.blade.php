@@ -10,6 +10,13 @@
         </h1>
     </div>
 
+    @if (session('warning'))
+        <div class="mb-6 rounded-xl border border-red-300 bg-red-100 px-4 py-3 text-red-700">
+            <strong>Warning!</strong><br>
+            {{ session('warning') }}
+        </div>
+    @endif
+
     {{-- Machine Information --}}
     <div class="mb-6 rounded-lg bg-white p-6 shadow">
         <h2 class="mb-4 text-lg font-semibold">

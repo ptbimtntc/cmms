@@ -138,7 +138,7 @@
             ])
 
             @include('partials.dashboard-donut-card', [
-                'title' => 'PM Status Breakdown',
+                'title' => 'PM Status',
                 'subtitle' => $statusSubtitle,
                 'legend' => $statusLegend,
                 'id' => 'pmStatusDonut',
@@ -168,7 +168,7 @@
         </div>
 
         {{-- ROW 2: Sparepart Usage + Greasing — 50/50 --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @include('partials.dashboard-top-bars', [
                 'title' => 'Top 10 Sparepart Usage',
                 'items' => $topSpareparts,
@@ -199,12 +199,6 @@
                         '</option>')->implode('') .
                     '</select>',
             ])
-
-            {{-- Today's PM Schedule --}}
-            @include('partials.dashboard-today-schedule-table', [
-                'schedules' => $todaySchedules,
-            ])
-
 
         </div>
 

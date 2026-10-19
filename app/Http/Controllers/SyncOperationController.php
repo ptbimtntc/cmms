@@ -468,7 +468,11 @@ class SyncOperationController extends Controller
         $this->assertNoStateConflict($expectedState, ['status' => $pmSchedule->status]);
 
         $checklistService = app(PMChecklistSaveService::class);
-        $errors = $checklistService->completionErrors($pmSchedule);
+        $checklists = (array) ($payload['checklists'] ?? []);
+        $errors = array_merge(
+            $checklistService->completionErrors($pmSchedule),
+            $checklistService->checklistErrors($pmSchedule, $checklists)
+        );
 
         if (! empty($errors)) {
             throw ValidationException::withMessages([
@@ -476,7 +480,7 @@ class SyncOperationController extends Controller
             ]);
         }
 
-        $checklistService->save($pmSchedule, (array) ($payload['checklists'] ?? []));
+        $checklistService->save($pmSchedule, $checklists);
 
         return $pmSchedule;
     }

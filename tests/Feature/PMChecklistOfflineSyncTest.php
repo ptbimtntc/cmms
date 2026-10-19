@@ -98,8 +98,8 @@ test('PM_CHECKLIST_SAVE idempotency: retrying the same operation_uuid never dupl
 
     $uuid = (string) Str::uuid();
     $payload = checklistPayload($pm->id, $uuid, [
-        ['machine_checklist_id' => $item1->id, 'clean' => 'YES', 'check' => 'NO', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => ''],
-        ['machine_checklist_id' => $item2->id, 'clean' => 'NO', 'check' => 'YES', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => 'catatan'],
+        ['machine_checklist_id' => $item1->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => ''],
+        ['machine_checklist_id' => $item2->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => 'catatan'],
     ]);
 
     $first = test()->actingAs($admin)->postJson(route('api.sync'), $payload);
@@ -128,10 +128,10 @@ test('PM_CHECKLIST_SAVE payload mismatch: same operation_uuid with different che
     $uuid = (string) Str::uuid();
 
     $requestA = checklistPayload($pm->id, $uuid, [
-        ['machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'NO', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => 'Versi A'],
+        ['machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => 'Versi A'],
     ]);
     $requestB = checklistPayload($pm->id, $uuid, [
-        ['machine_checklist_id' => $item->id, 'clean' => 'NO', 'check' => 'YES', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => 'Versi B'],
+        ['machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => 'Versi B'],
     ]);
 
     $first = test()->actingAs($admin)->postJson(route('api.sync'), $requestA);
@@ -154,7 +154,7 @@ test('PM_CHECKLIST_SAVE aggregate integrity: one operation_uuid persists every c
 
     $uuid = (string) Str::uuid();
     $payload = checklistPayload($pm->id, $uuid, $items->map(fn ($item) => [
-        'machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'NO', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => '',
+        'machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => '',
     ])->all());
 
     $response = test()->actingAs($admin)->postJson(route('api.sync'), $payload);
@@ -178,7 +178,7 @@ test('PM_CHECKLIST_SAVE via sync still sets actual_date from the last work sessi
     $item = MachineChecklist::create(['machine_type' => $machine->machine_type, 'section' => 'General', 'checklist_item' => 'Check Oli']);
 
     $response = test()->actingAs($admin)->postJson(route('api.sync'), checklistPayload($pm->id, (string) Str::uuid(), [
-        ['machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'NO', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => ''],
+        ['machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => ''],
     ]));
 
     $response->assertOk();
@@ -201,7 +201,7 @@ test('PM_CHECKLIST_SAVE via sync remains compatible with multi-day PM work sessi
     $item = MachineChecklist::create(['machine_type' => $machine->machine_type, 'section' => 'General', 'checklist_item' => 'Check Oli']);
 
     $response = test()->actingAs($admin)->postJson(route('api.sync'), checklistPayload($pm->id, (string) Str::uuid(), [
-        ['machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'NO', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => ''],
+        ['machine_checklist_id' => $item->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => ''],
     ]));
 
     $response->assertOk();

@@ -423,9 +423,10 @@ class PMScheduleController extends Controller
         $this->authorizeScheduleAccess($pmSchedule);
 
         $checklistService = app(PMChecklistSaveService::class);
-        $errors = $checklistService->completionErrors($pmSchedule);
+        $completionErrors = $checklistService->completionErrors($pmSchedule);
+        $checklistErrors = $checklistService->checklistErrors($pmSchedule, (array) $request->checklists);
 
-        if (! empty($errors)) {
+        if (! empty($completionErrors) || ! empty($checklistErrors)) {
 
             // Keep the user's unsaved checklist input (session only, never persisted to DB)
             session()->put(
@@ -438,12 +439,23 @@ class PMScheduleController extends Controller
                     ->all()
             );
 
+            // Fill PM prerequisites (oil change/greasing/problem/measurement/
+            // sparepart/...) are only editable on the Fill PM page, so send
+            // the user there to fix them.
+            if (! empty($completionErrors)) {
+                return redirect()
+                    ->route('pm-schedules.edit', $pmSchedule->id)
+                    ->with(
+                        'warning',
+                        'Fill PM belum lengkap : '.implode(', ', $completionErrors)
+                    );
+            }
+
+            // Checklist-only errors are fixed right here, so stay on the
+            // checklist page instead of bouncing to Fill PM.
             return redirect()
-                ->route('pm-schedules.edit', $pmSchedule->id)
-                ->with(
-                    'warning',
-                    'Fill PM belum lengkap : '.implode(', ', $errors)
-                );
+                ->route('pm-schedules.checklist', $pmSchedule->id)
+                ->with('warning', implode(', ', $checklistErrors));
 
         }
 

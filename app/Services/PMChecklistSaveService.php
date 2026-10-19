@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\MachineChecklist;
 use App\Models\PMChecklist;
 use App\Models\PMSchedule;
 use Carbon\Carbon;
@@ -57,6 +58,11 @@ class PMChecklistSaveService
 
         if (! $pmSchedule->measurements()->exists()) {
             $errors[] = 'Measurement';
+        } elseif ($pmSchedule->measurements()
+            ->where(fn ($q) => $q->whereNull('measurement_value')
+                ->orWhereRaw("TRIM(measurement_value) = ''"))
+            ->exists()) {
+            $errors[] = 'Measurement (nilai actual belum diisi)';
         }
 
         if (! $pmSchedule->spareparts()->exists()) {
@@ -64,6 +70,50 @@ class PMChecklistSaveService
         }
 
         return $errors;
+    }
+
+    /**
+     * Every master checklist item must have its APPLICABLE action
+     * checkbox(es) set to YES before the checklist can be saved. Which
+     * checkboxes are applicable (and even rendered at all — see
+     * pm-schedules/checklist.blade.php) depends on the item's
+     * maintenance_type:
+     *   - 'replace' items: no mandatory column at all (replace/remarks
+     *     stay fully optional).
+     *   - 'clean' items: both check AND clean must be YES.
+     *   - 'lubrication' items: both check AND lubrication must be YES.
+     *   - 'check' items: only check must be YES.
+     *
+     * @param  array<int, array<string, mixed>>  $checklists
+     * @return array<int, string>
+     */
+    public function checklistErrors(PMSchedule $pmSchedule, array $checklists): array
+    {
+        $rowsById = collect($checklists)->keyBy(
+            fn ($row) => (int) ($row['machine_checklist_id'] ?? 0)
+        );
+
+        $unfilled = MachineChecklist::where('machine_type', $pmSchedule->machine_type)
+            ->where('maintenance_type', '!=', 'replace')
+            ->get()
+            ->reject(function ($item) use ($rowsById) {
+                $row = $rowsById->get($item->id);
+
+                if (! $row || ($row['check'] ?? 'NO') !== 'YES') {
+                    return false;
+                }
+
+                return match ($item->maintenance_type) {
+                    'clean' => ($row['clean'] ?? 'NO') === 'YES',
+                    'lubrication' => ($row['lubrication'] ?? 'NO') === 'YES',
+                    default => true, // 'check'
+                };
+            })
+            ->count();
+
+        return $unfilled > 0
+            ? ["Checklist ({$unfilled} item belum diisi)"]
+            : [];
     }
 
     /**

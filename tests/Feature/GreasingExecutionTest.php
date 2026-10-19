@@ -313,8 +313,32 @@ test('finding is saved with machine, area and remarks', function () {
 
     $this->assertDatabaseHas('greasing_findings', [
         'greasing_id' => $greasing->id, 'machine_id' => $machine->id,
-        'finding_area' => 'Kapstan', 'finding' => 'Nipple rusak', 'status' => 'OPEN',
+        'finding_area' => 'kapstan', 'finding' => 'Nipple rusak', 'status' => 'OPEN',
     ]);
+});
+
+/**
+ * finding_area is normalized (lowercased, all whitespace stripped) on
+ * save so "Kapstan3" and "kapstan 3" land in the Finding Report's "Top
+ * Finding Area" ranking as the same area instead of two near-duplicates.
+ */
+test('finding_area is normalized so case and spacing variants collapse to the same value', function () {
+    [$user, $greasing, $machine] = findingFixture();
+
+    $this->actingAs($user)->post(route('greasings.findings.store', $greasing), [
+        'machine_id' => $machine->id, 'finding_area' => 'Kapstan3', 'remarks' => 'a',
+    ])->assertSessionHasNoErrors();
+
+    $this->actingAs($user)->post(route('greasings.findings.store', $greasing), [
+        'machine_id' => $machine->id, 'finding_area' => '  kapstan 3 ', 'remarks' => 'b',
+    ])->assertSessionHasNoErrors();
+
+    $this->actingAs($user)->post(route('greasings.findings.store', $greasing), [
+        'machine_id' => $machine->id, 'finding_area' => 'KAPSTAN   3', 'remarks' => 'c',
+    ])->assertSessionHasNoErrors();
+
+    expect($greasing->findings()->pluck('finding_area')->unique()->values()->all())
+        ->toBe(['kapstan3']);
 });
 
 test('finding rejects machine from another group and missing fields', function () {

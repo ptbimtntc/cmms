@@ -26,6 +26,17 @@ class GroupController extends Controller
         return view('groups.index', compact('groups'));
     }
 
+    public function show(Group $group)
+    {
+        $group->load('area');
+
+        $machines = $group->machines()
+            ->orderBy('machine_number')
+            ->get();
+
+        return view('groups.show', compact('group', 'machines'));
+    }
+
     public function create()
     {
         $areas = Area::active()->orderBy('name')->get();

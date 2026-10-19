@@ -16,7 +16,7 @@ function draftFixture(): array
 
 function draftPayload($item, string $clean, string $remarks): array
 {
-    return ['checklists' => [['machine_checklist_id' => $item->id, 'clean' => $clean, 'check' => 'NO', 'lubrication' => 'NO', 'replace' => 'NO', 'remarks' => $remarks]]];
+    return ['checklists' => [['machine_checklist_id' => $item->id, 'clean' => $clean, 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => $remarks]]];
 }
 
 it('keeps checklist input in a session draft when Fill PM is incomplete and overrides the DB', function () {
@@ -55,4 +55,22 @@ it('clears the draft after a successful save', function () {
 
     expect(session()->has('pm_checklist_draft.'.$pm->id))->toBeFalse();
     expect(PMChecklist::where('pm_schedule_id', $pm->id)->count())->toBe(1);
+});
+
+it('stays on the checklist page (not Fill PM) when only the checklist itself is incomplete', function () {
+    [$admin, $pm, $item] = draftFixture();
+    makeChecklistEligible($pm->fresh()); // Fill PM prerequisites are satisfied
+
+    $response = test()->actingAs($admin)->post(
+        route('pm-schedules.checklist.save', $pm),
+        ['checklists' => [['machine_checklist_id' => $item->id, 'clean' => 'NO', 'check' => 'YES', 'lubrication' => 'YES', 'replace' => 'NO', 'remarks' => '']]]
+    );
+
+    $response->assertRedirect(route('pm-schedules.checklist', $pm->id));
+    expect(session('warning'))->toBe('Checklist (1 item belum diisi)')
+        ->and(session('warning'))->not->toContain('Fill PM belum lengkap');
+
+    // Nothing was persisted, but the input is kept for re-display.
+    expect(PMChecklist::where('pm_schedule_id', $pm->id)->count())->toBe(0)
+        ->and(session()->has('pm_checklist_draft.'.$pm->id))->toBeTrue();
 });

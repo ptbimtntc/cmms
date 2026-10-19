@@ -422,7 +422,7 @@ class GreasingController extends Controller
 
         $greasing->findings()->create([
             'machine_id' => $validated['machine_id'],
-            'finding_area' => trim($validated['finding_area']),
+            'finding_area' => GreasingFinding::normalizeFindingArea($validated['finding_area']),
             'finding' => trim($validated['remarks']),
             'status' => 'OPEN',
         ]);

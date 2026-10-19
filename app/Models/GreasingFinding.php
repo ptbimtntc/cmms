@@ -38,4 +38,19 @@ class GreasingFinding extends Model
     {
         return $this->belongsTo(Machine::class);
     }
+
+    /**
+     * Canonicalizes a free-text finding area so "Kapstan3", "kapstan 3" and
+     * " KAPSTAN3 " are all stored identically — otherwise the Finding
+     * Report's "Top Finding Area" ranking (GreasingReportController)
+     * would split one real area into several near-duplicate rows.
+     *
+     * Lowercases AND strips every whitespace character (not just leading/
+     * trailing), matching this app's existing area-code convention
+     * (kapstan1, kapstan2, ...) which never has internal spaces.
+     */
+    public static function normalizeFindingArea(string $value): string
+    {
+        return strtolower(preg_replace('/\s+/', '', $value));
+    }
 }

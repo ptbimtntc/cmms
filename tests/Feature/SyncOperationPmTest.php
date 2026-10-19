@@ -266,7 +266,7 @@ test('PM_CHECKLIST_SAVE via sync uses PMChecklistSaveService and recalculates st
         'payload' => [
             'pm_schedule_id' => $pm->id,
             'checklists' => [
-                ['machine_checklist_id' => $machineChecklist->id, 'clean' => 'YES'],
+                ['machine_checklist_id' => $machineChecklist->id, 'clean' => 'YES', 'check' => 'YES', 'lubrication' => 'YES'],
             ],
         ],
     ]);
