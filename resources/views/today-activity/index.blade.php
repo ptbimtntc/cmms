@@ -8,7 +8,7 @@
                 <h1 class="text-xl font-semibold text-text">Today's Activity</h1>
                 <p class="mt-1 text-sm text-text-muted">
                     {{ now()->translatedFormat('l, d F Y') }}
-                    @unless ($canManage)
+                    @unless ($canViewAll)
                         · {{ auth()->user()->name }}
                     @endunless
                 </p>
@@ -97,7 +97,7 @@
         {{-- ------------------------------------------------------------------ --}}
         {{-- PIC AVAILABILITY (ADMIN / KOORDINATOR)                              --}}
         {{-- ------------------------------------------------------------------ --}}
-        @if ($canManage)
+        @if ($canViewAll)
             <div class="rounded-2xl border border-border bg-surface p-5 shadow-sm">
                 <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">PIC Availability</div>
                 <div class="overflow-x-auto">
@@ -107,7 +107,9 @@
                                 <th class="pb-2 pr-4">PIC</th>
                                 <th class="pb-2 pr-4">Status</th>
                                 <th class="pb-2 pr-4">Reason</th>
-                                <th class="pb-2">Actions</th>
+                                @if ($canManage)
+                                    <th class="pb-2">Actions</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border text-text">
@@ -130,30 +132,32 @@
                                             —
                                         @endif
                                     </td>
-                                    <td class="py-2">
-                                        <div class="flex flex-wrap gap-2">
-                                            @if ($s['status'] === 'NOT STARTED')
-                                                <button type="button"
-                                                    class="pic-inactive-btn rounded-lg border border-amber-500 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
-                                                    data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
-                                                    data-reason="" data-notes="">Set Inactive</button>
-                                            @elseif ($s['status'] === 'INACTIVE')
-                                                <button type="button"
-                                                    class="pic-inactive-btn rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                                    data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
-                                                    data-reason="{{ $s['availability']->reason }}"
-                                                    data-notes="{{ $s['availability']->notes }}">Edit</button>
-                                                <form method="POST" action="{{ route('today-activity.inactive.clear', $s['availability']->id) }}">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700">Set Available</button>
-                                                </form>
-                                            @else
-                                                <span class="text-xs text-text-disabled">—</span>
-                                            @endif
-                                        </div>
-                                    </td>
+                                    @if ($canManage)
+                                        <td class="py-2">
+                                            <div class="flex flex-wrap gap-2">
+                                                @if ($s['status'] === 'NOT STARTED')
+                                                    <button type="button"
+                                                        class="pic-inactive-btn rounded-lg border border-amber-500 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                                                        data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
+                                                        data-reason="" data-notes="">Set Inactive</button>
+                                                @elseif ($s['status'] === 'INACTIVE')
+                                                    <button type="button"
+                                                        class="pic-inactive-btn rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                                        data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
+                                                        data-reason="{{ $s['availability']->reason }}"
+                                                        data-notes="{{ $s['availability']->notes }}">Edit</button>
+                                                    <form method="POST" action="{{ route('today-activity.inactive.clear', $s['availability']->id) }}">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit"
+                                                            class="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700">Set Available</button>
+                                                    </form>
+                                                @else
+                                                    <span class="text-xs text-text-disabled">—</span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>

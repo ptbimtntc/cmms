@@ -40,11 +40,14 @@ class TodayActivityController extends Controller
     {
         $user = $request->user();
         $canManage = $user->isAdmin() || $user->isKoordinator();
+        $canViewAll = $canManage || $user->isSupervisor();
         $resolver = app(ActiveActivityResolver::class);
 
-        $pics = $canManage
-            ? $this->assignablePics($user)
-            : collect([$user]);
+        $pics = match (true) {
+            $canManage => $this->assignablePics($user),
+            $user->isSupervisor() => $this->viewablePics($user),
+            default => collect([$user]),
+        };
 
         $inactiveByUser = PicAvailability::query()
             ->whereIn('user_id', $pics->pluck('id'))
@@ -89,6 +92,7 @@ class TodayActivityController extends Controller
             'activeRows' => $rows->where('isActive', true)->values(),
             'picStatuses' => $picStatuses,
             'canManage' => $canManage,
+            'canViewAll' => $canViewAll,
             'assignablePics' => $canManage ? $availablePics : collect(),
             'inactiveReasons' => PicAvailability::REASONS,
         ]);
@@ -335,6 +339,28 @@ class TodayActivityController extends Controller
         return User::query()
             ->where('role', User::ROLE_PIC)
             ->when(! $actor->isAdmin(), fn ($q) => $q->where('area_id', $actor->area_id))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * PICs a SUPERVISOR may view (read-only): every active PIC, narrowed to
+     * the supervisor's assigned areas if any are set (see
+     * User::restrictedAreaNames()), otherwise every area.
+     *
+     * @return Collection<int, User>
+     */
+    private function viewablePics(User $actor): Collection
+    {
+        $areaNames = $actor->restrictedAreaNames();
+
+        return User::query()
+            ->where('role', User::ROLE_PIC)
+            ->when(
+                $areaNames !== null,
+                fn ($q) => $q->whereHas('area', fn ($q2) => $q2->whereIn('name', $areaNames))
+            )
             ->where('is_active', true)
             ->orderBy('name')
             ->get();

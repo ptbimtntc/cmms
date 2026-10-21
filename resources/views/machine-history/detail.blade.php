@@ -271,6 +271,7 @@
                 <thead class="bg-slate-100">
                     <tr>
                         <th class="px-4 py-3 text-left">Measurement Item</th>
+                        <th class="px-4 py-3 text-left">Standard</th>
                         <th class="px-4 py-3 text-left">Result</th>
                     </tr>
                 </thead>
@@ -278,6 +279,7 @@
                     @foreach ($pmMeasurements as $measurement)
                         <tr class="border-t">
                             <td class="px-4 py-3">{{ $measurement->measurement_item }}</td>
+                            <td class="px-4 py-3">{{ $measurement->standard ?: '-' }}</td>
                             <td class="px-4 py-3 font-semibold">{{ $measurement->measurement_value }}</td>
                         </tr>
                     @endforeach
@@ -289,7 +291,10 @@
         <div class="divide-y divide-slate-100 rounded-lg border border-slate-200 md:hidden">
             @foreach ($pmMeasurements as $measurement)
                 <div class="flex items-center justify-between gap-3 px-4 py-3">
-                    <span class="text-sm text-slate-600">{{ $measurement->measurement_item }}</span>
+                    <div class="text-sm text-slate-600">
+                        <div>{{ $measurement->measurement_item }}</div>
+                        <div class="text-xs text-slate-400">Std: {{ $measurement->standard ?: '-' }}</div>
+                    </div>
                     <span class="text-sm font-semibold text-slate-800">{{ $measurement->measurement_value }}</span>
                 </div>
             @endforeach
