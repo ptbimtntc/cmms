@@ -2,13 +2,25 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "🚀 Start Website (DB + Build + Serve)",
+            "name": "🐬 Start MySQL (Docker)",
             "type": "node-terminal",
             "request": "launch",
-            "command": "docker-compose up -d && npm run build && php artisan serve"
+            "command": "docker-compose up -d"
         },
         {
-            "name": "Listen for Xdebug",
+            "name": "🚀 Serve Laravel (artisan serve)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "php artisan serve"
+        },
+        {
+            "name": "⚡ Full Dev (MySQL + Serve + Queue + Vite)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "docker-compose up -d && composer run dev"
+        },
+        {
+            "name": "🐞 Listen for Xdebug",
             "type": "php",
             "request": "launch",
             "port": 9003

@@ -23,8 +23,19 @@ export default defineConfig({
     ],
     server: {
         cors: true,
+        host: '0.0.0.0',
+        port: 5173,
+        strictPort: true,
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },
+        ...(process.env.CODESPACE_NAME && {
+            origin: `https://${process.env.CODESPACE_NAME}-5173.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`,
+            hmr: {
+                protocol: 'wss',
+                host: `${process.env.CODESPACE_NAME}-5173.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`,
+                clientPort: 443,
+            },
+        }),
     },
 });
