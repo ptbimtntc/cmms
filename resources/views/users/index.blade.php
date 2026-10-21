@@ -82,7 +82,7 @@
                 </td>
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('users.edit', $user) }}"
+                        <a href="{{ route('users.edit', ['user' => $user, 'page' => request('page')]) }}"
                             class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200">
                             Edit
                         </a>
@@ -143,7 +143,7 @@
                     @endif
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('users.edit', $user) }}"
+                    <a href="{{ route('users.edit', ['user' => $user, 'page' => request('page')]) }}"
                         class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200">
                         Edit
                     </a>

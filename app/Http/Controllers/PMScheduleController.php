@@ -329,7 +329,7 @@ class PMScheduleController extends Controller
         app(PMScheduleSaveService::class)->save($pmSchedule, $data);
 
         return redirect()
-            ->route('pm-schedules.checklist', $pmSchedule->id)
+            ->route('pm-schedules.checklist', ['pmSchedule' => $pmSchedule->id, 'page' => $request->input('return_page')])
             ->with('success', 'PM Progress Saved');
 
     }
@@ -444,7 +444,7 @@ class PMScheduleController extends Controller
             // the user there to fix them.
             if (! empty($completionErrors)) {
                 return redirect()
-                    ->route('pm-schedules.edit', $pmSchedule->id)
+                    ->route('pm-schedules.edit', ['pm_schedule' => $pmSchedule->id, 'page' => $request->input('return_page')])
                     ->with(
                         'warning',
                         'Fill PM belum lengkap : '.implode(', ', $completionErrors)
@@ -454,7 +454,7 @@ class PMScheduleController extends Controller
             // Checklist-only errors are fixed right here, so stay on the
             // checklist page instead of bouncing to Fill PM.
             return redirect()
-                ->route('pm-schedules.checklist', $pmSchedule->id)
+                ->route('pm-schedules.checklist', ['pmSchedule' => $pmSchedule->id, 'page' => $request->input('return_page')])
                 ->with('warning', implode(', ', $checklistErrors));
 
         }
@@ -463,7 +463,7 @@ class PMScheduleController extends Controller
         session()->forget('pm_checklist_draft.'.$pmSchedule->id);
 
         return redirect()
-            ->route('pm-schedules.index')
+            ->route('pm-schedules.index', ['page' => $request->input('return_page')])
             ->with('success', 'PM Checklist saved successfully');
 
     }

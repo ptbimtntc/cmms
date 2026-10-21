@@ -62,7 +62,7 @@
                             {{ $machine->last_pm ? \Carbon\Carbon::parse($machine->last_pm)->format('d-m-Y') : '-' }}
                         </td>
                         <td class="px-4 py-3 text-center">
-                            <a href="{{ route('machine-history.show', $machine->machine_number) }}"
+                            <a href="{{ route('machine-history.show', ['machine_history' => $machine->machine_number, 'return_url' => request()->fullUrl()]) }}"
                                 class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                                 View History
                             </a>
@@ -105,7 +105,7 @@
                 </div>
 
                 <div class="mt-3 border-t border-slate-100 pt-3 text-right">
-                    <a href="{{ route('machine-history.show', $machine->machine_number) }}"
+                    <a href="{{ route('machine-history.show', ['machine_history' => $machine->machine_number, 'return_url' => request()->fullUrl()]) }}"
                         class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700">
                         View History
                     </a>

@@ -15,6 +15,14 @@
     $detailContext = $cameFromReportMachine
         ? ['from' => 'report-machine', 'return_url' => $reportMachineReturnUrl]
         : [];
+
+    // Opened directly from Machine History's own list (not from a report):
+    // Back returns to that list at the same page/filters it was opened
+    // from (return_url), instead of always resetting to page 1.
+    $listReturnUrl = request()->query('return_url');
+    $listReturnUrl = is_string($listReturnUrl) && str_starts_with($listReturnUrl, route('machine-history.index'))
+        ? $listReturnUrl
+        : route('machine-history.index');
 @endphp
 
 @section('content')
@@ -31,7 +39,7 @@
         <div>
             @php
                 $backRoute = auth()->check() && auth()->user()->role !== 'guest'
-                    ? ($cameFromReportMachine ? $reportMachineReturnUrl : route('machine-history.index'))
+                    ? ($cameFromReportMachine ? $reportMachineReturnUrl : $listReturnUrl)
                     : route('qr.scan');
             @endphp
             <a href="{{ $backRoute }}"

@@ -246,7 +246,7 @@ class SparepartController extends Controller
         ]);
 
         return redirect()
-            ->route('spareparts.index')
+            ->route('spareparts.index', ['page' => $request->input('return_page')])
             ->with('success', 'Sparepart updated successfully');
     }
 

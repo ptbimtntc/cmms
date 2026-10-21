@@ -185,7 +185,7 @@ class MachineMeasurementController extends Controller
         ]);
 
         return redirect()
-            ->route('machine-measurements.index')
+            ->route('machine-measurements.index', ['page' => $request->input('return_page')])
             ->with('success', 'Measurement updated successfully');
     }
 

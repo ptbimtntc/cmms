@@ -42,6 +42,7 @@
 
                     @csrf
                     @method('PUT')
+                    <input type="hidden" name="return_page" value="{{ request('page') }}">
 
                     <!-- Machine Type -->
                     <div class="mb-5">

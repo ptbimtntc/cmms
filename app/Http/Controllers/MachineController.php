@@ -210,7 +210,7 @@ class MachineController extends Controller
         ]);
 
         return redirect()
-            ->route('machines.index')
+            ->route('machines.index', ['page' => $request->input('return_page')])
             ->with('success', 'Machine updated successfully.');
     }
 

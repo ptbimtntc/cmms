@@ -130,7 +130,7 @@
                         @if ((auth()->user()->isAdmin() || auth()->user()->isKoordinator()))
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-2">
-                                <a href="{{ route('spareparts.edit', $sparepart->id) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">Edit</a>
+                                <a href="{{ route('spareparts.edit', ['sparepart' => $sparepart->id, 'page' => request('page')]) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">Edit</a>
                                 <form action="{{ route('spareparts.destroy', $sparepart->id) }}" method="POST">
                                     @csrf
                                     @method('DELETE')
@@ -199,7 +199,7 @@
                 </div>
                 @if ((auth()->user()->isAdmin() || auth()->user()->isKoordinator()))
                     <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                        <a href="{{ route('spareparts.edit', $sparepart->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">Edit</a>
+                        <a href="{{ route('spareparts.edit', ['sparepart' => $sparepart->id, 'page' => request('page')]) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">Edit</a>
                         <form action="{{ route('spareparts.destroy', $sparepart->id) }}" method="POST" class="flex-1">
                             @csrf
                             @method('DELETE')

@@ -11,6 +11,7 @@
         <form action="{{ route('spareparts.update', $sparepart->id) }}" method="POST" class="space-y-5 p-6">
             @csrf
             @method('PUT')
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
 
             <div class="grid gap-5 md:grid-cols-2">
                 <div>

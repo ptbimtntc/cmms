@@ -65,7 +65,7 @@ function checklistSchedule(Machine $machine, array $overrides = []): PMSchedule
 function makeChecklistEligible(PMSchedule $pm): void
 {
     $machine = $pm->machine;
-    $pm->update(['oil_change' => 'YES', 'greasing' => 'YES', 'wo_zsbp' => 'YES', 'remarks' => 'OK']);
+    $pm->update(['oil_change' => 'YES', 'greasing' => 'YES', 'wo_zsbp' => 'YES', 'remarks' => 'OK', 'end_time' => '10:00']);
 
     $mp = MachineProblem::create(['machine_type' => $machine->machine_type, 'category' => 'General', 'problem' => 'Belt Retak']);
     PMProblem::create(['pm_schedule_id' => $pm->id, 'machine_problem_id' => $mp->id, 'severity' => 'Low']);

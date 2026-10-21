@@ -253,7 +253,7 @@
                                 <div class="flex justify-center gap-2">
 
                                     @unless (auth()->user()->isSupervisor())
-                                    <a href="{{ route('machine-checklists.edit', $checklist->id) }}"
+                                    <a href="{{ route('machine-checklists.edit', ['machine_checklist' => $checklist->id, 'page' => request('page')]) }}"
                                         class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs">
 
                                         Edit
@@ -322,7 +322,7 @@
                     </div>
                     <div class="mt-3 flex gap-2 border-t pt-3">
                         @unless (auth()->user()->isSupervisor())
-                        <a href="{{ route('machine-checklists.edit', $checklist->id) }}"
+                        <a href="{{ route('machine-checklists.edit', ['machine_checklist' => $checklist->id, 'page' => request('page')]) }}"
                             class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
                             Edit
                         </a>

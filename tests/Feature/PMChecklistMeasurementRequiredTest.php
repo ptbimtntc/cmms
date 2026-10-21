@@ -44,6 +44,7 @@ function measurementGateSchedule(): PMSchedule
         'greasing' => 'YES',
         'wo_zsbp' => 'YES',
         'remarks' => 'OK',
+        'end_time' => '10:00',
     ]);
 
     $mp = MachineProblem::create(['machine_type' => 'NDE', 'category' => 'General', 'problem' => 'Belt Retak']);

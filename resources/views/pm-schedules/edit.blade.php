@@ -30,6 +30,7 @@
 
         @csrf
         @method('PUT')
+        <input type="hidden" name="return_page" value="{{ request('page') }}">
 
         <div class="bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-xl p-6 shadow mb-6 max-sm:p-4">
 

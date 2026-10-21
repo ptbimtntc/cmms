@@ -91,6 +91,7 @@
     {{-- Checklist --}}
     <form id="pm-checklist-form" action="{{ route('pm-schedules.checklist.save', $pmSchedule) }}" method="POST">
         @csrf
+        <input type="hidden" name="return_page" value="{{ request('page') }}">
 
         <div id="pm-checklist-data" data-pm-schedule-id="{{ $pmSchedule->id }}" data-pm-status="{{ $pmSchedule->status }}"></div>
 
@@ -206,7 +207,7 @@
                                         class="h-6 w-6 cursor-pointer rounded border-2 text-green-600 transition duration-150 focus:ring-2 focus:ring-green-500
                                         {{ $item->maintenance_type == 'replace'
                                             ? 'border-red-600 bg-red-50 text-red-600 accent-red-600 ring-4 ring-red-500/30'
-                                            : 'border-slate-400' }}">
+                                            : 'border-slate-400 opacity-25 hover:opacity-30 focus:opacity-20 checked:opacity-100' }}">
                                 </div>
                             </td>
 

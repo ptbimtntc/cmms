@@ -133,7 +133,7 @@
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-2">
                                 @unless (auth()->user()->isSupervisor())
-                                <a href="{{ route('machines.edit', $m->id) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
+                                <a href="{{ route('machines.edit', ['machine' => $m->id, 'page' => request('page')]) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
                                     Edit
                                 </a>
                                 <form method="POST" action="{{ route('machines.destroy', $m->id) }}" class="inline">
@@ -179,7 +179,7 @@
                 </div>
                 <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
                     @unless (auth()->user()->isSupervisor())
-                    <a href="{{ route('machines.edit', $m->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
+                    <a href="{{ route('machines.edit', ['machine' => $m->id, 'page' => request('page')]) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
                         Edit
                     </a>
                     <form method="POST" action="{{ route('machines.destroy', $m->id) }}" class="flex-1">

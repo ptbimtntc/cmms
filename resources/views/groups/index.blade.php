@@ -61,7 +61,7 @@
                                     View
                                 </a>
                                 @unless (auth()->user()->isSupervisor())
-                                <a href="{{ route('groups.edit', $group->id) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
+                                <a href="{{ route('groups.edit', ['group' => $group->id, 'page' => request('page')]) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
                                     Edit
                                 </a>
                                 <form method="POST" action="{{ route('groups.destroy', $group->id) }}" class="inline">
@@ -101,7 +101,7 @@
                         View
                     </a>
                     @unless (auth()->user()->isSupervisor())
-                    <a href="{{ route('groups.edit', $group->id) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
+                    <a href="{{ route('groups.edit', ['group' => $group->id, 'page' => request('page')]) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
                         Edit
                     </a>
                     <form method="POST" action="{{ route('groups.destroy', $group->id) }}" class="flex-1">

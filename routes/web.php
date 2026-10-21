@@ -91,8 +91,10 @@ Route::middleware('auth')->group(function () {
 
     // Group detail (which machines belong to a group) is read-only and
     // open to every authenticated role, unlike the rest of groups.* which
-    // is restricted to ADMIN/KOORDINATOR/SUPERVISOR below.
-    Route::get('/groups/{group}', [GroupController::class, 'show'])->name('groups.show');
+    // is restricted to ADMIN/KOORDINATOR/SUPERVISOR below. Constrained to
+    // digits so it doesn't swallow /groups/create (registered later, below)
+    // by capturing "create" as the {group} id and 404ing on binding.
+    Route::get('/groups/{group}', [GroupController::class, 'show'])->name('groups.show')->where('group', '[0-9]+');
 });
 
 Route::middleware([

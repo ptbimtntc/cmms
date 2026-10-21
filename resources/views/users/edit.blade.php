@@ -23,6 +23,7 @@
         >
             @csrf
             @method('PUT')
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
 
             <div
                 x-data="{

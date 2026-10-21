@@ -254,7 +254,7 @@
                                 {{-- ADMIN --}}
                                 @if ($role == 'ADMIN')
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                        <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                             class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded">
                                             Edit
                                         </a>
@@ -283,7 +283,7 @@
                                     {{-- KOORDINATOR --}}
                                 @elseif(str_starts_with($role, 'KOORDINATOR'))
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                        <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                             class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded">
                                             Edit
                                         </a>
@@ -329,13 +329,13 @@
                                                     START
                                                 </button>
                                             @endif
-                                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                                 class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">
                                                 Fill PM
                                             </a>
                                         </div>
                                     @else
-                                        <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                        <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                             class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded">
 
                                             View
@@ -447,7 +447,7 @@
                 <div class="mt-3 border-t border-slate-100 pt-3 text-right">
                     @if ($role == 'ADMIN')
                         <div class="flex flex-wrap items-center justify-end gap-2">
-                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                 class="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-medium text-white hover:bg-yellow-600">Edit</a>
                             @if ($pm->status === 'IN_PROGRESS')
                                 <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
@@ -468,7 +468,7 @@
                         </div>
                     @elseif(str_starts_with($role, 'KOORDINATOR'))
                         <div class="flex flex-wrap items-center justify-end gap-2">
-                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                 class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700">Edit</a>
                             @if ($pm->status === 'IN_PROGRESS')
                                 <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
@@ -501,12 +501,12 @@
                                         data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}"
                                         data-status="{{ $pm->status }}">START</button>
                                 @endif
-                                <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                                <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                     class="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white hover:bg-green-700">Fill
                                     PM</a>
                             </div>
                         @else
-                            <a href="{{ route('pm-schedules.edit', $pm->id) }}"
+                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
                                 class="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-medium text-white hover:bg-yellow-600">View</a>
                         @endif
                     @endif

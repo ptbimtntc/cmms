@@ -220,7 +220,7 @@ class GreasingController extends Controller
         ]);
 
         return redirect()
-            ->route('greasings.index')
+            ->route('greasings.index', ['page' => $request->input('return_page')])
             ->with('success', 'Greasing schedule updated successfully');
     }
 
@@ -399,7 +399,7 @@ class GreasingController extends Controller
         }
 
         return redirect()
-            ->route('greasings.index')
+            ->route('greasings.index', ['page' => $request->input('return_page')])
             ->with('success', 'Greasing execution saved successfully');
     }
 

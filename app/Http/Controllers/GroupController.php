@@ -108,7 +108,7 @@ class GroupController extends Controller
         });
 
         return redirect()
-            ->route('groups.index')
+            ->route('groups.index', ['page' => $request->input('return_page')])
             ->with('success', 'Group updated successfully');
     }
 

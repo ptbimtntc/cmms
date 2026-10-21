@@ -11,6 +11,7 @@
         <form action="{{ route('groups.update', $group) }}" method="POST" class="space-y-5 p-6">
             @csrf
             @method('PUT')
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
 
             <div>
                 <label class="mb-2 block text-sm font-medium text-slate-700">Group Name</label>

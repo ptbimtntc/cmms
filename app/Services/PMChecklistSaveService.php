@@ -52,6 +52,16 @@ class PMChecklistSaveService
             $errors[] = 'Remarks';
         }
 
+        if ($pmSchedule->workSessions()->exists()) {
+            if ($pmSchedule->workSessions()
+                ->where(fn ($q) => $q->whereNull('end_time')->orWhere('end_time', ''))
+                ->exists()) {
+                $errors[] = 'End Time';
+            }
+        } elseif (blank($pmSchedule->end_time)) {
+            $errors[] = 'End Time';
+        }
+
         if (! $pmSchedule->problems()->exists()) {
             $errors[] = 'Problem';
         }

@@ -28,6 +28,7 @@
 
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="return_page" value="{{ request('page') }}">
 
                 {{-- CATEGORY --}}
                 <div class="mb-4">

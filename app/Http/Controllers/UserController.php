@@ -109,7 +109,7 @@ class UserController extends Controller
             : 'User updated successfully.';
 
         return redirect()
-            ->route('users.index')
+            ->route('users.index', ['page' => $request->input('return_page')])
             ->with('success', $message);
     }
 

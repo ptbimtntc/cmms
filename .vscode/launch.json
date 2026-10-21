@@ -20,6 +20,12 @@
             "command": "docker-compose up -d && composer run dev"
         },
         {
+            "name": "🚀 Launch All (DB + Build + Serve)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "docker-compose up -d && npm run build && php artisan serve"
+        },
+        {
             "name": "🐞 Listen for Xdebug",
             "type": "php",
             "request": "launch",

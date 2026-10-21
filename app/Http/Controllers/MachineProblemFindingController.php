@@ -228,7 +228,7 @@ class MachineProblemFindingController extends Controller
         ]);
 
         return redirect()
-            ->route('machine-problem-findings.index')
+            ->route('machine-problem-findings.index', ['page' => $request->input('return_page')])
             ->with('success', 'Finding updated successfully.');
     }
 

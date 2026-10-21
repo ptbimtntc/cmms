@@ -241,6 +241,7 @@ test('PM_CHECKLIST_SAVE via sync uses PMChecklistSaveService and recalculates st
         'greasing' => 'YES',
         'wo_zsbp' => 'WO-1',
         'remarks' => 'done',
+        'end_time' => '10:00',
     ]);
     $machineProblem = MachineProblem::create([
         'machine_type' => $machine->machine_type,

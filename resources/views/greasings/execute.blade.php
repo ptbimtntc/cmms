@@ -39,6 +39,7 @@
 
         <form action="{{ route('greasings.execute.store', $greasing) }}" method="POST" class="space-y-5 p-6">
             @csrf
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
 
             <div class="grid gap-5 md:grid-cols-2">
                 <div>

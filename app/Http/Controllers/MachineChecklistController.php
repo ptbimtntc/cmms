@@ -257,7 +257,7 @@ class MachineChecklistController extends Controller
 ]);
 
         return redirect()
-            ->route('machine-checklists.index')
+            ->route('machine-checklists.index', ['page' => $request->input('return_page')])
             ->with('success', 'Checklist updated successfully.');
     }
 
