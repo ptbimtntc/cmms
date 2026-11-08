@@ -18,6 +18,7 @@ use App\Models\PMSchedule;
 use App\Models\PMSparepart;
 use App\Models\Sparepart;
 use App\Models\User;
+use App\Services\MachineOpenFindings;
 use App\Services\PMChecklistSaveService;
 use App\Services\PMScheduleSaveService;
 use App\Services\PMStartService;
@@ -305,6 +306,8 @@ class PMScheduleController extends Controller
             ->orderBy('name')
             ->get();
 
+        $openFindings = app(MachineOpenFindings::class)->forSchedule($pmSchedule, $user);
+
         return view('pm-schedules.edit', compact(
             'pmSchedule',
             'bigProblems',
@@ -316,7 +319,8 @@ class PMScheduleController extends Controller
             'pmSpareparts',
             'mandatoryPrefilled',
             'lastPm',
-            'pics'
+            'pics',
+            'openFindings'
         ));
     }
 

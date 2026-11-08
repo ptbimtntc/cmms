@@ -65,6 +65,8 @@
 
         </div>
 
+        @include('pm-schedules._open-findings')
+
         <div class="bg-white rounded-xl shadow p-6 mb-6 max-sm:p-4">
 
             <h3 class="text-lg font-semibold mb-6">
