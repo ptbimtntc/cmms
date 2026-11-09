@@ -238,6 +238,7 @@ Route::middleware([
     Route::post('/machines/import', [MachineController::class, 'import'])->name('machines.import');
 
     Route::resource('groups', GroupController::class)->except(['show']);
+    Route::post('/small-pm-rows/import', [SmallPmRowController::class, 'import'])->name('small-pm-rows.import');
     Route::resource('small-pm-rows', SmallPmRowController::class);
 
     Route::resource('greasings', GreasingController::class)->except(['index']);

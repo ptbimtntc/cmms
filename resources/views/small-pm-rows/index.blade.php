@@ -8,14 +8,57 @@
         </div>
 
         @unless (auth()->user()->isSupervisor())
-        <a href="{{ route('small-pm-rows.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-            Tambah Row
-        </a>
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <form action="{{ route('small-pm-rows.import') }}" method="POST" enctype="multipart/form-data"
+                class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:flex-row sm:items-center"
+                x-data="{ busy: false }" @submit="busy = true">
+                @csrf
+                <div class="flex items-center gap-2">
+                    <input type="file" id="rowFileInput" name="file" accept=".csv,.xlsx,.xls" class="sr-only" required
+                        onchange="document.getElementById('rowFileName').textContent = this.files.length ? this.files[0].name : 'Belum ada file'">
+                    <label for="rowFileInput" class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">Pilih File</label>
+                    <span id="rowFileName" class="max-w-45 truncate text-sm text-slate-500">Belum ada file</span>
+                </div>
+                <button x-bind:disabled="busy" class="min-h-11 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">Import</button>
+                <a href="{{ route('import-templates.download', 'small-pm-row') }}" class="text-sm font-medium text-blue-700 underline-offset-2 hover:underline">Template</a>
+            </form>
+            <a href="{{ route('small-pm-rows.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
+                Tambah Row
+            </a>
+        </div>
         @endunless
     </div>
 
     @if (session('success'))
         <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" role="status">{{ session('success') }}</div>
+    @endif
+
+    @if ($errors->has('file'))
+        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{{ $errors->first('file') }}</div>
+    @endif
+
+    @if (session('small_pm_row_import_result'))
+        @php($ir = session('small_pm_row_import_result'))
+        <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" role="status">
+            <div class="flex flex-wrap gap-x-3 gap-y-1">
+                <span>Hasil import:</span>
+                <span class="font-semibold text-emerald-700">{{ $ir['rows_created'] }} row baru</span>
+                <span class="font-semibold text-emerald-700">{{ $ir['assigned'] }} mesin masuk row</span>
+                <span class="font-semibold text-amber-700">{{ $ir['moved'] }} mesin pindah row</span>
+                <span class="text-slate-600">{{ $ir['unchanged'] }} sudah sesuai</span>
+                <span class="font-semibold text-rose-700">{{ $ir['skipped'] }} dilewati</span>
+            </div>
+            @if ($ir['errors'])
+                <ul class="mt-2 list-disc space-y-0.5 pl-5 text-xs text-rose-700">
+                    @foreach ($ir['errors'] as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                    @if ($ir['skipped'] > count($ir['errors']))
+                        <li>dan {{ $ir['skipped'] - count($ir['errors']) }} baris lain.</li>
+                    @endif
+                </ul>
+            @endif
+        </div>
     @endif
 
     @if (session('error'))

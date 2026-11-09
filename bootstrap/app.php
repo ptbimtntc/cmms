@@ -38,6 +38,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // server cron to actually call `php artisan schedule:run` every
         // minute, same as any Laravel scheduler.
         $schedule->command('pm-schedules:mark-overdue-missed')->dailyAt('00:05');
+
+        // Daily check; database is created weekly and source code every two
+        // weeks (config/backup.php), then copied to Google Drive when set up.
+        $schedule->command('backup:scheduled')
+            ->dailyAt(config('backup.schedule_time', '02:00'))
+            ->timezone(config('app.timezone'))
+            ->withoutOverlapping(120)
+            ->when(fn () => (bool) config('backup.schedule_enabled'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

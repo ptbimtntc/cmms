@@ -23,12 +23,17 @@ class BackupRun extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const TRIGGER_MANUAL = 'manual';
+
+    public const TRIGGER_SCHEDULED = 'scheduled';
+
     /** Folder (relative to the private `local` disk) holding finished archives. */
     public const DIRECTORY = 'backups';
 
     protected $fillable = [
         'type',
         'status',
+        'trigger',
         'file_name',
         'file_size',
         'error_message',
@@ -38,6 +43,10 @@ class BackupRun extends Model
         'download_started_at',
         'downloaded_by_user_id',
         'file_removed_at',
+        'drive_file_id',
+        'drive_uploaded_at',
+        'drive_error',
+        'drive_removed_at',
     ];
 
     protected function casts(): array
@@ -48,6 +57,8 @@ class BackupRun extends Model
             'finished_at' => 'datetime',
             'download_started_at' => 'datetime',
             'file_removed_at' => 'datetime',
+            'drive_uploaded_at' => 'datetime',
+            'drive_removed_at' => 'datetime',
         ];
     }
 
@@ -69,6 +80,17 @@ class BackupRun extends Model
     public function scopeOfType(Builder $query, string $type): Builder
     {
         return $query->where('type', $type);
+    }
+
+    public function isScheduled(): bool
+    {
+        return $this->trigger === self::TRIGGER_SCHEDULED;
+    }
+
+    /** True while the Google Drive copy exists (uploaded and not yet pruned). */
+    public function isOnDrive(): bool
+    {
+        return $this->drive_file_id !== null && $this->drive_removed_at === null;
     }
 
     /** True only when the archive is still on disk and was not pruned. */

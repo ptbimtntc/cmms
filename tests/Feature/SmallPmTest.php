@@ -484,3 +484,85 @@ test('schedule-only actions refuse the findings tab', function () {
     $this->actingAs($koord)->get('/small-pm/create?tab=temuan-blower')->assertNotFound();
     $this->actingAs($koord)->post('/small-pm/generate', ['tab' => 'temuan-blower', 'start_week' => '2026-11-09', 'cycle' => '26W'])->assertNotFound();
 });
+
+// --- Import Row Small PM ------------------------------------------------------
+
+function spmRowCsv(array $lines): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent('rows.csv', implode("\n", array_merge(['row,machine_number,area,sort_order'], $lines)));
+}
+
+test('importing rows creates missing rows and puts machines in them', function () {
+    $koord = spmUser(User::ROLE_KOORDINATOR);
+    spmArea();
+    foreach (['A1', 'A2', 'B1'] as $n) {
+        Machine::create(['machine_number' => $n, 'area' => 'WWD', 'machine_type' => 'NDE SW', 'status' => 'ACTIVE']);
+    }
+
+    $this->actingAs($koord)
+        ->post('/small-pm-rows/import', ['file' => spmRowCsv([
+            'Row 01,A1,WWD,1',
+            'Row 01,A2,,',
+            'Row 02,B1,,',
+        ])])
+        ->assertRedirect()
+        ->assertSessionHas('small_pm_row_import_result', fn ($r) => $r['rows_created'] === 2 && $r['assigned'] === 3 && $r['skipped'] === 0);
+
+    $row1 = SmallPmRow::where('name', 'Row 01')->sole();
+    $row2 = SmallPmRow::where('name', 'Row 02')->sole();
+    expect($row1->sort_order)->toBe(1);
+    expect($row2->sort_order)->toBe(2); // next free order
+    expect($row1->area_id)->toBe(spmArea()->id); // only one Small PM area, so blank area is fine
+    expect($row1->machines()->pluck('machine_number')->sort()->values()->all())->toBe(['A1', 'A2']);
+    expect($row2->machines()->pluck('machine_number')->all())->toBe(['B1']);
+});
+
+test('importing moves a machine out of its old row, keeps others, and updates the order', function () {
+    $koord = spmUser(User::ROLE_KOORDINATOR);
+    $old = spmRow(1, ['A1', 'A2']);
+    $target = spmRow(2, ['B1']);
+
+    $this->actingAs($koord)
+        ->post('/small-pm-rows/import', ['file' => spmRowCsv(['Row 02,A1,,7', 'Row 02,B1,,7'])])
+        ->assertSessionHas('small_pm_row_import_result', fn ($r) => $r['moved'] === 1 && $r['unchanged'] === 1 && $r['rows_created'] === 0);
+
+    expect($old->machines()->pluck('machine_number')->all())->toBe(['A2']);
+    expect($target->fresh()->sort_order)->toBe(7);
+});
+
+test('invalid import lines are skipped with a reason per line', function () {
+    $koord = spmUser(User::ROLE_KOORDINATOR);
+    spmArea('BUL');
+    spmRow(1, ['A1']);
+    Machine::create(['machine_number' => 'BULM', 'area' => 'BUL', 'machine_type' => 'NDE SW', 'status' => 'ACTIVE']);
+
+    $this->actingAs($koord)
+        ->post('/small-pm-rows/import', ['file' => spmRowCsv([
+            'Row 01,NOPE,,',      // unknown machine
+            'Row 01,BULM,,',      // machine of another area
+            ',A1,,',              // no row
+            'Row 01,A1,BUL,',     // row exists in WWD
+            'Row 01,A1,,x',       // bad order
+            'Row 09,A1,MARS,',    // unknown area
+        ])])
+        ->assertSessionHas('small_pm_row_import_result', function ($r) {
+            return $r['skipped'] === 6
+                && str_contains($r['errors'][0], 'Baris 2')
+                && str_contains($r['errors'][0], 'NOPE')
+                && str_contains($r['errors'][1], 'area BUL');
+        });
+
+    expect(SmallPmRow::count())->toBe(1);
+    expect(Machine::where('machine_number', 'BULM')->value('small_pm_row_id'))->toBeNull();
+});
+
+test('a PIC or supervisor cannot import rows', function () {
+    $file = spmRowCsv(['Row 01,A1,,']);
+
+    $this->actingAs(spmUser(User::ROLE_PIC))->post('/small-pm-rows/import', ['file' => $file])->assertForbidden();
+    $this->actingAs(spmUser(User::ROLE_SUPERVISOR, null))->post('/small-pm-rows/import', ['file' => $file])->assertForbidden();
+});
+
+test('the row import template downloads', function () {
+    $this->actingAs(spmUser(User::ROLE_ADMIN, null))->get(route('import-templates.download', 'small-pm-row'))->assertOk();
+});

@@ -375,13 +375,13 @@ describe('reminder', function () {
 
     test('reminder becomes due once the last successful backup is older than the window', function () {
         $admin = User::factory()->admin()->create();
-        backupRunOn(BackupRun::TYPE_DATABASE, ['finished_at' => now()->subDays(BackupManager::REMINDER_DAYS + 1)]);
+        backupRunOn(BackupRun::TYPE_DATABASE, ['finished_at' => now()->subDays(8)]);
         backupRunOn(BackupRun::TYPE_SOURCE, ['finished_at' => now()]);
 
         $this->actingAs($admin)->get('/backup')
             ->assertOk()
             ->assertSee('Pengingat backup')
-            ->assertSee('sudah lebih dari '.BackupManager::REMINDER_DAYS.' hari');
+            ->assertSee('sudah lebih dari 7 hari');
 
         expect(app(BackupManager::class)->reminders()[BackupRun::TYPE_DATABASE]['state'])->toBe(BackupManager::REMINDER_DUE);
     });

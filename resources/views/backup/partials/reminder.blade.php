@@ -20,7 +20,7 @@
                     @if ($reminder['state'] === \App\Services\Backup\BackupManager::REMINDER_NEVER)
                         belum pernah dibuat.
                     @else
-                        terakhir {{ $reminder['last_backup_at']->timezone(config('app.timezone'))->format('d-m-Y H:i') }}, sudah lebih dari {{ \App\Services\Backup\BackupManager::REMINDER_DAYS }} hari.
+                        terakhir {{ $reminder['last_backup_at']->timezone(config('app.timezone'))->format('d-m-Y H:i') }}, sudah lebih dari {{ $reminder['days'] }} hari.
                     @endif
                 </p>
             @endforeach

@@ -11,6 +11,7 @@ use App\Exports\MachineTemplateExport;
 use App\Exports\PMScheduleTemplateExport;
 use App\Exports\PredictiveProblemFindingTemplateExport;
 use App\Exports\PredictiveWorkOrderTemplateExport;
+use App\Exports\SmallPmRowTemplateExport;
 use App\Exports\SmallPmScheduleTemplateExport;
 use App\Exports\SparepartInjectionTemplateExport;
 use App\Exports\SparepartTemplateExport;
@@ -89,6 +90,13 @@ class ImportTemplateController extends Controller
                 return Excel::download(
                     new GreasingScheduleTemplateExport,
                     'greasing_schedule_import_template.xlsx'
+                );
+
+            case 'small-pm-row':
+
+                return Excel::download(
+                    new SmallPmRowTemplateExport,
+                    'small_pm_row_import_template.xlsx'
                 );
 
             case 'small-pm-schedule':

@@ -39,6 +39,14 @@ class BackupController extends Controller
         return view('backup.index', [
             'sections' => $sections,
             'reminders' => $this->backups->reminders(),
+            'automation' => [
+                'enabled' => (bool) config('backup.schedule_enabled'),
+                'time' => config('backup.schedule_time'),
+                'days' => collect(BackupManager::TYPES)->mapWithKeys(fn ($type) => [$type => $this->backups->intervalDays($type)]),
+                'keep' => config('backup.google_drive.keep'),
+                'drive_configured' => $this->backups->driveConfigured(),
+                'last_scheduled' => $this->backups->lastScheduledRun(),
+            ],
         ]);
     }
 

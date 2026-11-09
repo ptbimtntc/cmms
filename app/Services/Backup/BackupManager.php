@@ -20,9 +20,6 @@ use Throwable;
  */
 class BackupManager
 {
-    /** Days after which the admin is reminded to take a fresh backup. */
-    public const REMINDER_DAYS = 7;
-
     /** Newest successful archives kept per type; older ones are deleted from disk. */
     public const KEEP_FILES_PER_TYPE = 5;
 
@@ -44,14 +41,18 @@ class BackupManager
     public function __construct(
         private readonly DatabaseDumper $databaseDumper,
         private readonly SourceArchiver $sourceArchiver,
+        private readonly GoogleDriveUploader $drive,
     ) {}
 
     /**
      * Runs one backup and always returns the recorded run (succeeded or failed).
+     * $admin is null for scheduled runs. When Google Drive is configured, a
+     * successful archive is also copied there; a failed upload is recorded in
+     * drive_error and never turns the backup itself into a failed run.
      *
      * @throws BackupBusyException when the same type is already running.
      */
-    public function create(string $type, User $admin): BackupRun
+    public function create(string $type, ?User $admin, string $trigger = BackupRun::TRIGGER_MANUAL): BackupRun
     {
         $this->assertType($type);
 
@@ -67,8 +68,9 @@ class BackupManager
             $run = BackupRun::create([
                 'type' => $type,
                 'status' => BackupRun::STATUS_RUNNING,
+                'trigger' => $trigger,
                 'started_at' => now(),
-                'created_by_user_id' => $admin->id,
+                'created_by_user_id' => $admin?->id,
             ]);
 
             $temporary = null;
@@ -113,12 +115,46 @@ class BackupManager
             // can never turn a finished archive into a "failed" run.
             if ($run->status === BackupRun::STATUS_SUCCEEDED) {
                 $this->pruneOldArchives($type);
+
+                if ($this->drive->isConfigured()) {
+                    $this->copyToDrive($run);
+                }
             }
 
             return $run->refresh();
         } finally {
             $lock->release();
         }
+    }
+
+    /** True when Google Drive credentials and folder are set. */
+    public function driveConfigured(): bool
+    {
+        return $this->drive->isConfigured();
+    }
+
+    /** Days between automatic backups of this type. */
+    public function intervalDays(string $type): int
+    {
+        $this->assertType($type);
+
+        return max(1, (int) config("backup.interval_days.{$type}", $type === BackupRun::TYPE_DATABASE ? 7 : 14));
+    }
+
+    /**
+     * True when the scheduler should create this type now: no scheduled backup
+     * has succeeded yet, or the newest one is at least one interval old. A small
+     * grace keeps a run that finished a few minutes after the daily check from
+     * pushing the next one a whole day later.
+     */
+    public function isDue(string $type): bool
+    {
+        $last = BackupRun::query()->ofType($type)->succeeded()
+            ->where('trigger', BackupRun::TRIGGER_SCHEDULED)
+            ->latest('finished_at')->first();
+
+        return $last === null
+            || $last->finished_at->lte(now()->subDays($this->intervalDays($type))->addHours(2));
     }
 
     /**
@@ -140,8 +176,9 @@ class BackupManager
 
     /**
      * Reminder state per type, derived from persisted successful runs only.
+     * A type is due once its newest backup is older than its schedule interval.
      *
-     * @return array<string, array{state: string, last_backup_at: ?Carbon}>
+     * @return array<string, array{state: string, last_backup_at: ?Carbon, days: int}>
      */
     public function reminders(): array
     {
@@ -149,14 +186,15 @@ class BackupManager
 
         foreach (self::TYPES as $type) {
             $last = $this->lastSucceeded($type);
+            $days = $this->intervalDays($type);
 
             $state = match (true) {
                 $last === null => self::REMINDER_NEVER,
-                $last->finished_at->lt(now()->subDays(self::REMINDER_DAYS)) => self::REMINDER_DUE,
+                $last->finished_at->lt(now()->subDays($days)) => self::REMINDER_DUE,
                 default => self::REMINDER_CURRENT,
             };
 
-            $result[$type] = ['state' => $state, 'last_backup_at' => $last?->finished_at];
+            $result[$type] = ['state' => $state, 'last_backup_at' => $last?->finished_at, 'days' => $days];
         }
 
         return $result;
@@ -185,6 +223,12 @@ class BackupManager
     {
         return BackupRun::query()->ofType($type)->whereNotNull('download_started_at')
             ->latest('download_started_at')->first();
+    }
+
+    /** Newest scheduled run of any type, or null when the scheduler has never run a backup. */
+    public function lastScheduledRun(): ?BackupRun
+    {
+        return BackupRun::query()->where('trigger', BackupRun::TRIGGER_SCHEDULED)->latest('id')->first();
     }
 
     public function lastRun(string $type): ?BackupRun
@@ -256,6 +300,54 @@ class BackupManager
         foreach ($stale as $run) {
             Storage::disk('local')->delete($run->relativePath());
             $run->forceFill(['file_removed_at' => now()])->save();
+        }
+    }
+
+    private function copyToDrive(BackupRun $run): void
+    {
+        try {
+            $mime = $run->type === BackupRun::TYPE_DATABASE ? 'application/gzip' : 'application/zip';
+            $fileId = $this->drive->upload($run->absolutePath(), (string) $run->file_name, $mime);
+
+            $run->forceFill([
+                'drive_file_id' => $fileId,
+                'drive_uploaded_at' => now(),
+                'drive_error' => null,
+            ])->save();
+        } catch (Throwable $e) {
+            Log::error("Upload backup {$run->type} ke Google Drive gagal.", ['exception' => $e::class]);
+
+            $run->forceFill([
+                'drive_error' => $e instanceof BackupStepException
+                    ? mb_substr($e->getMessage(), 0, 250)
+                    : 'Gagal mengunggah ke Google Drive. Periksa log server.',
+            ])->save();
+
+            return;
+        }
+
+        $this->pruneDriveArchives($run->type);
+    }
+
+    /**
+     * Keeps the newest configured number of Drive copies per type. Only files
+     * this app uploaded (tracked in backup_runs) are ever deleted.
+     */
+    private function pruneDriveArchives(string $type): void
+    {
+        $keep = max(1, (int) config("backup.google_drive.keep.{$type}", 5));
+
+        $stale = BackupRun::query()->ofType($type)->whereNotNull('drive_file_id')->whereNull('drive_removed_at')
+            ->latest('id')->get()->slice($keep);
+
+        foreach ($stale as $old) {
+            try {
+                $this->drive->delete($old->drive_file_id);
+                $old->forceFill(['drive_removed_at' => now()])->save();
+            } catch (Throwable $e) {
+                // Left in place and retried after the next successful upload.
+                Log::warning("Hapus backup lama {$type} di Google Drive gagal.", ['exception' => $e::class]);
+            }
         }
     }
 

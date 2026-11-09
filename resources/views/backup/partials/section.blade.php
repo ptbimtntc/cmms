@@ -35,6 +35,8 @@
             <dd class="mt-1 font-medium {{ $statusLabel[1] }}">{{ $statusLabel[0] }}</dd>
             @if ($section['last_run']?->status === \App\Models\BackupRun::STATUS_FAILED)
                 <dd class="mt-1 text-xs text-red-600">{{ $section['last_run']->error_message }}</dd>
+            @elseif ($section['last_run']?->drive_error)
+                <dd class="mt-1 text-xs text-red-600">Salinan Google Drive gagal: {{ $section['last_run']->drive_error }}</dd>
             @endif
         </div>
     </dl>
@@ -59,6 +61,7 @@
                     <th class="px-3 py-2 font-medium">Nama file</th>
                     <th class="px-3 py-2 font-medium">Ukuran</th>
                     <th class="px-3 py-2 font-medium">Dibuat oleh</th>
+                    <th class="px-3 py-2 font-medium">Google Drive</th>
                     <th class="px-3 py-2 font-medium">Download terakhir</th>
                     <th class="px-3 py-2 font-medium"><span class="sr-only">Aksi</span></th>
                 </tr>
@@ -72,7 +75,19 @@
                         </td>
                         <td class="px-3 py-2 text-slate-700">{{ $run->file_name ?? '—' }}</td>
                         <td class="whitespace-nowrap px-3 py-2 text-slate-700">{{ $run->sizeLabel() }}</td>
-                        <td class="px-3 py-2 text-slate-700">{{ $run->creator?->name ?? '—' }}</td>
+                        <td class="px-3 py-2 text-slate-700">{{ $run->isScheduled() ? 'Otomatis' : ($run->creator?->name ?? '—') }}</td>
+                        <td class="px-3 py-2">
+                            @if ($run->isOnDrive())
+                                <span class="text-emerald-700">Tersimpan</span>
+                            @elseif ($run->drive_removed_at)
+                                <span class="text-xs text-slate-500">Dihapus dari Drive</span>
+                            @elseif ($run->drive_error)
+                                <span class="text-red-600">Gagal</span>
+                                <span class="block max-w-xs text-xs text-red-600">{{ $run->drive_error }}</span>
+                            @else
+                                <span class="text-xs text-slate-500">Tidak disalin</span>
+                            @endif
+                        </td>
                         <td class="whitespace-nowrap px-3 py-2 text-slate-700">
                             {{ $run->download_started_at ? $formatTime($run->download_started_at).' oleh '.($run->downloader?->name ?? '—') : '—' }}
                         </td>
@@ -86,7 +101,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-3 py-4 text-center text-slate-500">Belum ada riwayat backup.</td>
+                        <td colspan="8" class="px-3 py-4 text-center text-slate-500">Belum ada riwayat backup.</td>
                     </tr>
                 @endforelse
             </tbody>

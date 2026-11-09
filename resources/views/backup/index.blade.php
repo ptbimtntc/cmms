@@ -19,6 +19,8 @@
 
     @include('backup.partials.reminder')
 
+    @include('backup.partials.automation')
+
     @include('backup.partials.section', [
         'type' => \App\Models\BackupRun::TYPE_DATABASE,
         'title' => 'A. Backup Database',

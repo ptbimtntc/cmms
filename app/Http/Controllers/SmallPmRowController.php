@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\SmallPmRowImport;
 use App\Models\Area;
 use App\Models\Machine;
 use App\Models\SmallPmRow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Small PM row master. Same flow as GroupController: create with name and
@@ -30,6 +32,29 @@ class SmallPmRowController extends Controller
             ->withQueryString();
 
         return view('small-pm-rows.index', compact('rows'));
+    }
+
+    /**
+     * Bulk fill rows and their machines from a file, see SmallPmRowImport
+     * for the columns. Additive: machines missing from the file keep their row.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:20480', 'mimes:csv,txt,xlsx,xls'],
+        ]);
+
+        $import = new SmallPmRowImport;
+
+        try {
+            Excel::import($import, $request->file('file'));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['file' => 'Import gagal. Periksa format kolom dan isi file.']);
+        }
+
+        return back()->with('small_pm_row_import_result', $import->result);
     }
 
     public function show(SmallPmRow $smallPmRow)
