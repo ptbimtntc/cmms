@@ -17,20 +17,27 @@
        1. RAW BRAND RAMPS — edit these to re-skin the whole application
        ------------------------------------------------------------------- */
 
-    /* Primary — Industrial Blue (#1565C0 / dark #0D47A1 / light #E3F2FD) */
-    --brand-primary-50:  #e8f1fb;
-    --brand-primary-100: #cfe1f6;
-    --brand-primary-200: #9fc3ec;
-    --brand-primary-300: #6fa5e2;
-    --brand-primary-400: #3f86d8;
-    --brand-primary-500: #1e6ecb;
-    --brand-primary-600: #1565c0;
-    --brand-primary-700: #0d47a1;
-    --brand-primary-800: #0b3b85;
-    --brand-primary-900: #0a2e66;
-    --brand-primary-950: #061c3f;
+    /* Primary: logo "Process" blue. #0284C7 sits at 500 because white text on
+       it is only 4.1:1; 600 (#0369A1, 5.9:1) carries button and link colour. */
+    --brand-primary-50:  #f0f9ff;
+    --brand-primary-100: #e0f2fe;
+    --brand-primary-200: #bae6fd;
+    --brand-primary-300: #7dd3fc;
+    --brand-primary-400: #0ea5e9;
+    --brand-primary-500: #0284c7;
+    --brand-primary-600: #0369a1;
+    --brand-primary-700: #075985;
+    --brand-primary-800: #0c4a6e;
+    --brand-primary-900: #0b3a57;
+    --brand-primary-950: #082f49;
 
-    /* Secondary / Accent — Amber (#F59E0B / dark #D97706 / light #FEF3C7) */
+    /* Brand gradient from the logo bars. Decorative only (white text fails
+       on the sky end), used for the logo mark and the progress-bar motif. */
+    --brand-gradient-from: #0ea5e9;
+    --brand-gradient-to:   #10b981;
+
+    /* Attention: amber. A status colour (pending, needs action), not a brand
+       accent: the logo has no amber. */
     --brand-secondary-50:  #fef6e7;
     --brand-secondary-100: #fdecc5;
     --brand-secondary-200: #fbd98c;
@@ -43,18 +50,19 @@
     --brand-secondary-900: #74340d;
     --brand-secondary-950: #431c03;
 
-    /* Success — Green (#2E7D32) */
-    --brand-success-50:  #e9f5ea;
-    --brand-success-100: #c9e7cb;
-    --brand-success-200: #a3d5a6;
-    --brand-success-300: #79c07d;
-    --brand-success-400: #52a857;
-    --brand-success-500: #3b9040;
-    --brand-success-600: #2e7d32;
-    --brand-success-700: #256428;
-    --brand-success-800: #1d4e20;
-    --brand-success-900: #163c19;
-    --brand-success-950: #0a230d;
+    /* Success: logo emerald. 600 (#047857, 5.5:1 with white) carries text and
+       buttons; the brighter logo stops sit at 400/500. */
+    --brand-success-50:  #ecfdf5;
+    --brand-success-100: #d1fae5;
+    --brand-success-200: #a7f3d0;
+    --brand-success-300: #6ee7b7;
+    --brand-success-400: #10b981;
+    --brand-success-500: #059669;
+    --brand-success-600: #047857;
+    --brand-success-700: #065f46;
+    --brand-success-800: #064e3b;
+    --brand-success-900: #053d2e;
+    --brand-success-950: #022c22;
 
     /* Warning — Orange (#ED6C02) */
     --brand-warning-50:  #fef1e6;
@@ -82,31 +90,34 @@
     --brand-danger-900: #721b1b;
     --brand-danger-950: #3f0c0c;
 
-    /* Info — Cyan/Blue (#0288D1) */
-    --brand-info-50:  #e6f4fb;
-    --brand-info-100: #c3e5f5;
-    --brand-info-200: #8ecfec;
-    --brand-info-300: #59b8e3;
-    --brand-info-400: #24a1da;
-    --brand-info-500: #0691d4;
-    --brand-info-600: #0288d1;
-    --brand-info-700: #026ca6;
-    --brand-info-800: #045982;
-    --brand-info-900: #06496b;
-    --brand-info-950: #032e44;
+    /* Info: logo "Technology" blue (#1E40AF). Kept apart from primary so an
+       informational note never reads as an action. */
+    --brand-info-50:  #eff6ff;
+    --brand-info-100: #dbeafe;
+    --brand-info-200: #bfdbfe;
+    --brand-info-300: #93c5fd;
+    --brand-info-400: #60a5fa;
+    --brand-info-500: #2563eb;
+    --brand-info-600: #1d4ed8;
+    --brand-info-700: #1e40af;
+    --brand-info-800: #1e3a8a;
+    --brand-info-900: #1e3370;
+    --brand-info-950: #172554;
 
-    /* Neutral — Slate (bg #F6F8FA / border #E2E8F0 / muted #64748B / text #172033) */
-    --brand-neutral-50:  #f6f8fa;
-    --brand-neutral-100: #eef1f5;
+    /* Neutral: logo slate (letters #1E293B, field #F8FAFC, frame #CBD5E1).
+       500 is a touch darker than stock slate so muted text stays at AA on
+       the 100 surface. */
+    --brand-neutral-50:  #f8fafc;
+    --brand-neutral-100: #f1f5f9;
     --brand-neutral-200: #e2e8f0;
     --brand-neutral-300: #cbd5e1;
     --brand-neutral-400: #94a3b8;
-    --brand-neutral-500: #64748b;
+    --brand-neutral-500: #5b6b80;
     --brand-neutral-600: #475569;
     --brand-neutral-700: #334155;
     --brand-neutral-800: #1e293b;
-    --brand-neutral-900: #172033;
-    --brand-neutral-950: #0b1120;
+    --brand-neutral-900: #0f172a;
+    --brand-neutral-950: #020617;
 }
 
 /* ------------------------------------------------------------------------
@@ -161,6 +172,8 @@
     --color-warning:          var(--brand-warning-500);
     --color-warning-hover:     var(--brand-warning-600);
     --color-warning-light:     var(--brand-warning-50);
+    /* warning-hover is 3.9:1 on warning-light; tinted badges use this one */
+    --color-warning-text:      var(--brand-warning-700);
     --color-warning-contrast:  #ffffff;
 
     --color-danger:          var(--brand-danger-600);
@@ -180,7 +193,7 @@
     --color-surface-sunken: var(--brand-neutral-50);
 
     /* Text */
-    --color-text:          var(--brand-neutral-900);
+    --color-text:          var(--brand-neutral-800);
     --color-text-muted:     var(--brand-neutral-500);
     --color-text-disabled:  var(--brand-neutral-400);
     --color-text-inverse:   #ffffff;
@@ -203,9 +216,15 @@
     --color-accent-content:    var(--brand-primary-700);
     --color-accent-foreground: #ffffff;
 
-    /* Shape & elevation */
-    --radius-control: 0.5rem;
-    --radius-card:    0.75rem;
+    /* Brand gradient (logo bars). Never put text on it. */
+    --color-brand-from: var(--brand-gradient-from);
+    --color-brand-to:   var(--brand-gradient-to);
+
+    /* Shape & elevation. Three radii only: controls, cards, and pill for
+       status badges and the progress-bar motif (echoes the logo bars). */
+    --radius-control: 0.625rem;
+    --radius-card:    1rem;
+    --radius-pill:    9999px;
 
     --shadow-card:    0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.08);
     --shadow-raised:  0 4px 6px -1px rgb(15 23 42 / 0.10), 0 2px 4px -2px rgb(15 23 42 / 0.10);

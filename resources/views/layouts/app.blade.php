@@ -14,10 +14,11 @@
 
     {{-- FreeDOMS offline-first PWA/app-shell foundation (Phase 1, Task 3). --}}
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <meta name="theme-color" content="#1565c0">
+    <meta name="theme-color" content="#0369a1">
     <meta name="app-user-id" content="{{ auth()->id() }}">
     <link rel="shortcut icon" href="{{ asset('FreeDOMS.ico') }}">
 
+    @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>

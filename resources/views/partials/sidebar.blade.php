@@ -21,11 +21,7 @@ document.addEventListener('alpine:init', () => {
 
                 <a href="{{ route('home') }}" title="Go to landing page"
                     class="flex min-w-0 items-center gap-3 transition hover:opacity-80">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl
-                bg-gradient-to-br from-emerald-400 to-cyan-500
-                text-slate-950 shadow-lg shadow-emerald-500/20">
-                        <x-app-logo-icon class="h-7 w-7 text-slate-950" />
-                    </div>
+                    <x-brand-logo class="h-10 w-auto shrink-0" aria-hidden="true" />
                     <div class="min-w-0">
                         <div class="text-base font-semibold tracking-wide text-sidebar-foreground">FreeDOMS</div>
                         <div class="mt-0.5 text-xs text-sidebar-muted">Preventive Maintenance System</div>
