@@ -10,7 +10,7 @@
     'caption' => null,
 ])
 
-<div {{ $attributes->merge(['class' => 'overflow-x-auto rounded-card border border-border bg-surface']) }}>
+<div {{ $attributes->merge(['class' => 'relative overflow-x-auto rounded-card border border-border bg-surface']) }}>
     <table class="data-table min-w-full">
         @if ($caption)
             <caption class="px-4 py-3 text-left text-sm font-semibold text-text">{{ $caption }}</caption>

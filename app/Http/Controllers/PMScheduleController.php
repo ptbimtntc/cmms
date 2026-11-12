@@ -341,7 +341,7 @@ class PMScheduleController extends Controller
 
         // VALIDASI INPUT — rule set lives in PMScheduleSaveService::rules()
         // so the online request and the offline sync handler never drift.
-        $request->validate(PMScheduleSaveService::rules($request->has('sessions')));
+        $request->validate(PMScheduleSaveService::rules($request->has('sessions')), PMScheduleSaveService::messages());
 
         // Server-side duration and persistence — PM_SAVE business logic
         // lives in PMScheduleSaveService so it can later be reused by an

@@ -46,8 +46,10 @@ class PMScheduleSaveService
             'wo_zsbp' => 'nullable',
             'remarks' => 'nullable',
             'problems.*.problem' => 'nullable',
-            'problems.*.finding' => 'nullable',
-            'problems.*.severity' => 'nullable',
+            // A problem row is only complete with its finding and severity; rows without a
+            // problem are still skipped on save, so blank rows stay harmless.
+            'problems.*.finding' => 'nullable|required_with:problems.*.problem',
+            'problems.*.severity' => 'nullable|required_with:problems.*.problem|in:Low,Medium,High',
             'measurements.*.measurement_item' => 'nullable',
             'measurements.*.measurement_value' => 'nullable',
             'spareparts.*.sparepart_id' => 'nullable',
@@ -68,6 +70,23 @@ class PMScheduleSaveService
         }
 
         return $rules;
+    }
+
+    /**
+     * Messages for rules(), shared by the online request and the offline sync handler.
+     *
+     * @return array<string, string>
+     */
+    public static function messages(): array
+    {
+        return [
+            'problems.*.finding.required_with' => 'Choose a finding for this problem.',
+            'problems.*.severity.required_with' => 'Choose a severity for this problem.',
+            'problems.*.severity.in' => 'Severity must be Low, Medium, or High.',
+            'sessions.*.actual_date.required' => 'Enter the date of this working day.',
+            'sessions.*.actual_date.date' => 'Enter a valid date for this working day.',
+            'sessions.*.start_time.required' => 'Enter the start time of this working day.',
+        ];
     }
 
     /**

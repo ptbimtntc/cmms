@@ -441,7 +441,7 @@ class SyncOperationController extends Controller
 
         $hasSessions = array_key_exists('sessions', $payload);
 
-        Validator::make($payload, PMScheduleSaveService::rules($hasSessions))->validate();
+        Validator::make($payload, PMScheduleSaveService::rules($hasSessions), PMScheduleSaveService::messages())->validate();
 
         $data = collect($payload)->only([
             'order_number', 'pic', 'oil_change', 'greasing', 'wo_zsbp', 'remarks',

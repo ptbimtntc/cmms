@@ -49,13 +49,15 @@
     <button
         type="button"
         @click="open = !open"
-        class="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-700 sm:w-auto sm:min-w-40"
+        :aria-expanded="open.toString()"
+        aria-haspopup="true"
+        class="flex min-h-11 w-full items-center justify-between gap-2 rounded-control border border-border-strong bg-surface px-3 text-left text-sm text-text transition-colors hover:bg-surface-sunken sm:w-auto sm:min-w-48 lg:min-h-9"
     >
         {{-- Text is also rendered server-side (not just via x-text) so the
              correct label is visible immediately even if Alpine hasn't
              finished initializing yet — x-text keeps it live afterwards. --}}
         <span x-text="selected.length ? '{{ $label }} (' + selected.length + ')' : @js($allText)">{{ count($selected) ? $label.' ('.count($selected).')' : $allText }}</span>
-        <svg class="h-4 w-4 shrink-0 text-slate-400" :class="open ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor">
+        <svg class="h-4 w-4 shrink-0 text-text-muted" :class="open ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.293l3.71-4.06a.75.75 0 111.08 1.04l-4.25 4.65a.75.75 0 01-1.08 0l-4.25-4.65a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
         </svg>
     </button>
@@ -64,24 +66,26 @@
         x-show="open"
         x-transition
         style="display: none;"
-        class="absolute z-20 mt-1 max-h-64 w-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+        {{-- Phones: the list opens inline and pushes the form down, so it never covers the
+             Filter button. From sm it floats, no wider than its button. --}}
+        class="mt-1 max-h-72 w-full overflow-y-auto rounded-card border border-border bg-surface p-1.5 sm:absolute sm:z-20 sm:w-max sm:min-w-full sm:max-w-72 sm:shadow-popover"
     >
         @foreach ($options as $value => $optionLabel)
-            <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+            <label class="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-control px-2 text-sm text-text hover:bg-surface-muted lg:min-h-9">
                 <input
                     type="checkbox"
                     name="{{ $name }}[]"
                     value="{{ $value }}"
                     x-model="selected"
                     @if ($autoSubmit) @change="$nextTick(() => $root.closest('form').submit())" @endif
-                    class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    class="checkbox h-4 w-4 shrink-0"
                 >
                 <span>{{ $optionLabel }}</span>
             </label>
         @endforeach
 
         @if (count($options) === 0)
-            <p class="px-2 py-1.5 text-sm text-slate-400">No options</p>
+            <p class="px-2 py-1.5 text-sm text-text-muted">No options</p>
         @endif
     </div>
 </div>

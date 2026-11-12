@@ -39,11 +39,11 @@ function initChecklistRemarks() {
         if (textarea.value.trim() !== '') {
             button?.classList.remove('text-gray-500');
             button?.classList.add('text-green-600');
-            button.innerHTML = '📝';
+            button.textContent = 'Edit note';
         } else {
             button?.classList.remove('text-green-600');
             button?.classList.add('text-gray-500');
-            button.innerHTML = '✏️';
+            button.textContent = 'Add note';
         }
 
         modal.classList.add('hidden');

@@ -93,7 +93,7 @@ test('no problem together with a filled problem row is rejected', function () {
 
     $this->put(route('pm-schedules.update', $this->pm), noneFormData($this->pm, [
         'no_problem' => '1',
-        'problems' => [['problem' => $problem->id, 'finding' => null, 'severity' => 'Low']],
+        'problems' => [['problem' => $problem->id, 'finding' => pmTestFindingId(), 'severity' => 'Low']],
     ]))->assertSessionHasErrors('no_problem');
 
     expect(PMProblem::where('pm_schedule_id', $this->pm->id)->count())->toBe(0)
@@ -116,7 +116,7 @@ test('unticking after recording problems clears the flag', function () {
     $problem = MachineProblem::create(['machine_type' => 'NDE', 'category' => 'General', 'problem' => 'Belt Retak']);
 
     $this->put(route('pm-schedules.update', $this->pm), noneFormData($this->pm, [
-        'problems' => [['problem' => $problem->id, 'finding' => null, 'severity' => 'Low']],
+        'problems' => [['problem' => $problem->id, 'finding' => pmTestFindingId(), 'severity' => 'Low']],
     ]))->assertSessionHasNoErrors();
 
     expect($this->pm->fresh()->no_problem)->toBeFalse()

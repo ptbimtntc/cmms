@@ -1,33 +1,38 @@
-<div class="bg-surface border border-border rounded-xl shadow-sm p-4 flex flex-col {{ $height ?? '' }}">
-    <div class="flex items-start justify-between mb-1 gap-2 flex-wrap">
+{{--
+    Status donut with a legend that carries every value, so the chart never
+    relies on colour or hover alone. Params: title, subtitle, legend, colors
+    (label => hex, overrides the legend's own colour), id, size, height, filters.
+--}}
+<section class="card flex flex-col p-5 {{ $height ?? '' }}">
+    <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <div class="text-sm font-medium text-text">{{ $title }}</div>
-            @if(isset($subtitle))
-                <div class="text-xs text-text-muted">{{ $subtitle }}</div>
-            @endif
+            <h3 class="text-sm font-semibold text-text">{{ $title }}</h3>
+            @isset($subtitle)
+                <p class="text-xs text-text-muted">{{ $subtitle }}</p>
+            @endisset
         </div>
-        @if(isset($filters))
-            <div class="space-x-1.5 text-xs text-text-muted [&_select]:text-xs [&_select]:px-1.5 [&_select]:py-1">
-                {!! $filters !!}
-            </div>
-        @endif
+        @isset($filters)
+            <div class="flex flex-wrap gap-2">{!! $filters !!}</div>
+        @endisset
     </div>
-    <div class="flex flex-1 flex-col sm:flex-row items-center justify-center gap-6 mt-2">
-        <div class="relative shrink-0" style="width: {{ $size ?? 208 }}px; height: {{ $size ?? 208 }}px;">
-            <canvas id="{{ $id }}" width="{{ $size ?? 208 }}" height="{{ $size ?? 208 }}" class="max-w-full"></canvas>
+
+    {{-- Side by side only from xl: in the two-column grid the card is too narrow before that. --}}
+    <div class="mt-3 flex flex-1 flex-col items-center justify-center gap-6 xl:flex-row">
+        <div class="relative max-w-full shrink-0" style="width: {{ $size ?? 208 }}px; aspect-ratio: 1;">
+            <canvas id="{{ $id }}" width="{{ $size ?? 208 }}" height="{{ $size ?? 208 }}" class="h-full w-full" role="img" aria-label="{{ $title }}, see legend for values"></canvas>
         </div>
-        @if(isset($legend))
-            <div class="w-full max-w-40 space-y-1">
-                @foreach($legend as $item)
-                    <div class="flex items-center justify-between text-xs">
-                        <div class="flex items-center gap-1.5 text-text-muted truncate">
-                            <span class="h-2 w-2 rounded-full shrink-0" style="background-color: {{ $item['color'] }}"></span>
+        @isset($legend)
+            <ul class="w-full max-w-64 space-y-1.5">
+                @foreach ($legend as $item)
+                    <li class="flex items-center justify-between gap-2 text-sm">
+                        <span class="flex min-w-0 items-center gap-2 text-text-muted">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $colors[$item['label']] ?? $item['color'] }}" aria-hidden="true"></span>
                             <span class="truncate">{{ $item['label'] }}</span>
-                        </div>
-                        <div class="text-text font-medium shrink-0 pl-1">{{ $item['value'] }} <span class="text-text-muted font-normal">({{ $item['percent'] }}%)</span></div>
-                    </div>
+                        </span>
+                        <span class="shrink-0 font-semibold text-text">{{ $item['value'] }} <span class="font-normal text-text-muted">({{ $item['percent'] }}%)</span></span>
+                    </li>
                 @endforeach
-            </div>
-        @endif
+            </ul>
+        @endisset
     </div>
-</div>
+</section>

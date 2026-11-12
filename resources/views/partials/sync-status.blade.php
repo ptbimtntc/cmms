@@ -2,11 +2,12 @@
      Reads/acts through window Alpine store `sync` (resources/js/offline/syncUi.js),
      which is only ever a view over resources/js/offline/syncEngine.js — the
      single engine auto sync and this button both use (section 16/17). --}}
-<div class="relative" x-data="{}">
+<div class="relative" x-data="{}" @keydown.escape.window="$store.sync.panelOpen = false">
     <button
         type="button"
         @click="$store.sync.panelOpen = !$store.sync.panelOpen"
-        class="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-medium transition hover:bg-surface-muted"
+        :aria-expanded="$store.sync.panelOpen.toString()"
+        class="flex min-h-11 items-center gap-2 rounded-full border border-border px-3 text-xs font-medium transition hover:bg-surface-muted active:bg-border lg:min-h-9"
         :class="{
             'border-success/30 text-success': $store.sync.status === 'synced',
             'border-warning/30 text-warning': $store.sync.status === 'pending' || $store.sync.status === 'syncing',
@@ -24,7 +25,7 @@
         x-cloak
         @click.outside="$store.sync.panelOpen = false"
         x-transition
-        class="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-border bg-surface py-3 shadow-lg"
+        class="absolute right-0 z-40 mt-2 w-72 max-w-[calc(100vw-1.5rem)] rounded-card border border-border bg-surface py-3 shadow-popover"
     >
         <div class="flex items-center justify-between px-4 pb-2">
             <div class="text-sm font-medium text-text">Sync Status</div>
@@ -32,7 +33,7 @@
                 type="button"
                 @click="$store.sync.syncNow()"
                 :disabled="$store.sync.running"
-                class="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-contrast transition disabled:opacity-50"
+                class="inline-flex min-h-11 items-center rounded-control bg-primary px-3 text-xs font-semibold text-primary-contrast transition hover:bg-primary-hover disabled:opacity-50 lg:min-h-9"
             >
                 <span x-show="!$store.sync.running">Sync Now</span>
                 <span x-show="$store.sync.running" x-cloak>Syncing...</span>
@@ -59,7 +60,7 @@
                             type="button"
                             x-show="$store.sync.isManuallyRetryable(op)"
                             @click="$store.sync.retry(op.operation_uuid)"
-                            class="mt-1 font-medium text-primary hover:underline"
+                            class="mt-1 inline-flex min-h-11 items-center font-medium text-primary hover:underline lg:min-h-8"
                         >Retry</button>
                     </div>
                 </template>
@@ -79,7 +80,7 @@
                             type="button"
                             x-show="$store.sync.canResolve(op)"
                             @click="$store.sync.startResolve(op)"
-                            class="mt-1 font-medium text-primary hover:underline"
+                            class="mt-1 inline-flex min-h-11 items-center font-medium text-primary hover:underline lg:min-h-8"
                         >Selesaikan</button>
                     </div>
                 </template>
@@ -94,11 +95,14 @@
 
 {{-- Conflict resolver (PM Checklist): per-field "Saya" vs "Server" choice. --}}
 <template x-teleport="body">
-    <div x-data x-show="$store.sync.resolver.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-surface shadow-lg">
+    <div x-data x-show="$store.sync.resolver.open" x-cloak
+         @keydown.escape.window="$store.sync.resolver.open && $store.sync.closeResolve()"
+         role="dialog" aria-modal="true" aria-label="Selesaikan konflik PM Checklist"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4">
+        <div class="flex max-h-[90dvh] w-full max-w-2xl flex-col rounded-card border border-border bg-surface shadow-popover">
             <div class="flex items-center justify-between border-b border-border px-4 py-3">
                 <div class="text-sm font-semibold text-text">Selesaikan konflik &middot; PM Checklist</div>
-                <button type="button" @click="$store.sync.closeResolve()" class="text-text-muted hover:text-text" aria-label="Tutup">&times;</button>
+                <button type="button" @click="$store.sync.closeResolve()" class="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-xl text-text-muted hover:bg-surface-muted hover:text-text" aria-label="Tutup">&times;</button>
             </div>
 
             <div class="overflow-y-auto px-4 py-3 text-xs">

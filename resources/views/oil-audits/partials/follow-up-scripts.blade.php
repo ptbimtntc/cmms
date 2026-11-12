@@ -5,39 +5,38 @@
     re-indexed after every add/remove so the server always receives a
     dense problems[i][findings][j][finding] tree.
 --}}
+{{-- Mirrors the rows in follow-up-fields.blade.php: the script renumbers the .js-*-label spans. --}}
 <template id="tpl-followup-problem-row">
-    <div class="js-problem-row rounded-lg border border-slate-200 bg-white p-3">
-        <div class="flex items-start gap-2">
-            <div class="min-w-0 flex-1">
-                <label class="js-problem-label mb-1.5 block text-xs font-semibold text-slate-700">Problem</label>
-                <select data-problem-select required
-                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
+    <div class="js-problem-row rounded-control border border-border bg-surface p-3">
+        <div class="flex items-end gap-2">
+            <label class="grid min-w-0 flex-1 gap-1.5">
+                <span class="js-problem-label text-xs font-semibold text-text">Problem</span>
+                <select data-problem-select required class="select">
                     <option value="">Pilih problem</option>
                     @foreach ($problemOptions as $opt)
                         <option value="{{ $opt }}">{{ $opt }}</option>
                     @endforeach
                 </select>
-            </div>
-            <button type="button" class="js-remove-problem mt-6 rounded-lg border border-red-200 px-3 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50">Hapus</button>
+            </label>
+            <button type="button" class="js-remove-problem btn btn-ghost min-h-11 shrink-0 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9">Hapus</button>
         </div>
-        <div class="js-finding-list mt-2 space-y-2 border-l border-slate-200 pl-3"></div>
-        <button type="button" class="js-add-finding mt-2 ml-3 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">+ Add Finding</button>
+        <div class="js-finding-list mt-3 space-y-2 border-l-2 border-border pl-3"></div>
+        <button type="button" class="js-add-finding btn btn-ghost btn-sm mt-2 min-h-11 lg:min-h-9">Tambah finding</button>
     </div>
 </template>
 
 <template id="tpl-followup-finding-row">
-    <div class="js-finding-row flex items-start gap-2">
-        <div class="min-w-0 flex-1">
-            <label class="js-finding-label mb-1 block text-[11px] font-semibold text-slate-500">Finding</label>
-            <select data-finding-select required
-                class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
+    <div class="js-finding-row flex items-end gap-2">
+        <label class="grid min-w-0 flex-1 gap-1">
+            <span class="js-finding-label text-xs font-medium text-text-muted">Finding</span>
+            <select data-finding-select required class="select">
                 <option value="">Pilih finding</option>
                 @foreach ($findingOptions as $fopt)
                     <option value="{{ $fopt }}">{{ $fopt }}</option>
                 @endforeach
             </select>
-        </div>
-        <button type="button" class="js-remove-finding mt-5 rounded-lg border border-red-200 px-2.5 py-2 text-[11px] font-semibold text-red-600 hover:bg-red-50">Hapus</button>
+        </label>
+        <button type="button" class="js-remove-finding btn btn-ghost min-h-11 shrink-0 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9">Hapus</button>
     </div>
 </template>
 

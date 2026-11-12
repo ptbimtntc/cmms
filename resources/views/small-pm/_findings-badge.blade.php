@@ -1,11 +1,13 @@
 {{-- Dead blower filter count for one schedule (Ganti Filter Panel). --}}
 @if ($s->findings_count > 0)
-    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $s->findings_count }} mesin</span>
-    @if ($s->open_findings_count > 0)
-        <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">{{ $s->open_findings_count }} open</span>
-    @endif
+    <span class="inline-flex flex-wrap items-center gap-1.5">
+        <x-ui.badge>{{ $s->findings_count }} mesin</x-ui.badge>
+        @if ($s->open_findings_count > 0)
+            <x-ui.badge tone="warning">{{ $s->open_findings_count }} open</x-ui.badge>
+        @endif
+    </span>
 @elseif ($s->action_date)
-    <span class="text-xs text-slate-500">Semua normal</span>
+    <span class="text-sm text-text-muted">Semua normal</span>
 @else
-    <span class="text-xs text-slate-500">-</span>
+    <span class="text-sm text-text-muted">-</span>
 @endif

@@ -290,7 +290,9 @@
     /* --------------------------------------------------------------------
        TABLES
        ------------------------------------------------------------------ */
-    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    /* relative: keeps sr-only (absolutely positioned) header text inside the
+       table's scroll container instead of widening the whole document. */
+    .data-table { position: relative; width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     .data-table thead th {
         padding: 0.75rem 1rem;
         text-align: left;

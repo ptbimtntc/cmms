@@ -83,7 +83,7 @@ function restoreChecklistsIntoForm(form, checklists) {
                 const remarkButton = form.querySelector(`.remark-btn[data-index="${index}"]`);
 
                 if (remarkButton) {
-                    remarkButton.textContent = item.remarks ? '📝' : '✏️';
+                    remarkButton.textContent = item.remarks ? 'Edit note' : 'Add note';
                     remarkButton.classList.toggle('text-green-600', Boolean(item.remarks));
                 }
             }

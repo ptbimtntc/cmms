@@ -1,24 +1,20 @@
-<div class="bg-surface border border-border rounded-xl shadow-sm p-4">
-    <div class="flex items-center justify-between mb-4">
-        <div class="text-sm font-medium text-text">{{ $title }}</div>
-        @if(isset($filters))
-            <div class="text-sm text-text-muted">{!! $filters !!}</div>
-        @endif
-    </div>
+{{-- Ranked horizontal bars, one series, so one colour for every bar. Params: title, items, emptyText. --}}
+<section class="card p-5">
+    <h3 class="text-sm font-semibold text-text">{{ $title }}</h3>
 
-    <div class="space-y-3">
+    <ol class="mt-4 space-y-3">
         @forelse($items as $it)
-            <div>
-                <div class="flex justify-between text-sm text-text-muted mb-1">
-                    <div class="truncate">{{ $it['label'] }}</div>
-                    <div class="font-medium text-text">{{ $it['value'] }}</div>
+            <li>
+                <div class="mb-1 flex justify-between gap-3 text-sm">
+                    <span class="truncate text-text-muted">{{ $it['label'] }}</span>
+                    <span class="font-semibold text-text">{{ $it['value'] }}</span>
                 </div>
-                <div class="w-full bg-surface-muted rounded-full h-3">
-                    <div class="h-3 bg-primary rounded-full" style="width: {{ $it['percent'] }}%"></div>
+                <div class="h-2 rounded-full bg-surface-muted" aria-hidden="true">
+                    <div class="h-2 rounded-full bg-chart-1" style="width: {{ $it['percent'] }}%"></div>
                 </div>
-            </div>
+            </li>
         @empty
-            <p class="text-sm text-text-disabled">No data available</p>
+            <li class="text-sm text-text-muted">No data available. {{ $emptyText ?? '' }}</li>
         @endforelse
-    </div>
-</div>
+    </ol>
+</section>

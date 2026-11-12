@@ -31,7 +31,7 @@
         @endif
 
         @if (session('predictive_master_import_result'))
-            @include('predictive.partials.import-result', ['resultKey' => 'predictive_master_import_result', 'labelHeader' => 'Problem > Finding', 'maxDetail' => \App\Imports\PredictiveOptionImport::MAX_DETAIL_ROWS])
+            @include('predictive.partials.import-result', ['resultKey' => 'predictive_master_import_result', 'labelHeader' => 'Problem > Finding', 'maxDetail' => \App\Imports\PredictiveOptionImport::MAX_DETAIL_ROWS, 'class' => 'mb-5'])
         @endif
 
         <form method="GET" action="{{ route('predictive.master.index') }}" class="mb-5 flex flex-wrap items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">

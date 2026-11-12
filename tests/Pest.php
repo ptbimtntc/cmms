@@ -104,3 +104,15 @@ function roleAttributes(string $combinedRole): array
 
     return $attributes;
 }
+
+/**
+ * Id of a Machine Problem Finding for PM Result rows in tests. A row with a
+ * problem must also carry a finding and severity (PMScheduleSaveService::rules()).
+ */
+function pmTestFindingId(): int
+{
+    return App\Models\MachineProblemFinding::firstOrCreate(
+        ['finding' => 'Test finding'],
+        ['category' => 'general']
+    )->id;
+}

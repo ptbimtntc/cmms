@@ -1,94 +1,107 @@
-@php
-    $inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
-    $rate = $overview['closing_rate'];
-@endphp
+@php($rate = $overview['closing_rate'])
 
-<form method="GET" action="{{ route('predictive.index') }}" class="mb-5 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2 lg:grid-cols-6">
+{{-- Filters: plain GET, every field labelled. --}}
+<form method="GET" action="{{ route('predictive.index') }}" class="card grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6 lg:items-end">
     <input type="hidden" name="tab" value="dashboard">
-    <label class="block text-xs font-medium text-slate-600">Dari tanggal WO
-        <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" class="{{ $inputClass }} mt-1">
-    </label>
-    <label class="block text-xs font-medium text-slate-600">Sampai tanggal WO
-        <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" class="{{ $inputClass }} mt-1">
-    </label>
-    <label class="block text-xs font-medium text-slate-600">Kategori
-        <select name="category" class="{{ $inputClass }} mt-1">
+    <div class="grid gap-1.5">
+        <label for="pd-from" class="text-xs font-medium text-text-muted">Dari tanggal WO</label>
+        <input id="pd-from" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" class="input lg:min-h-9">
+    </div>
+    <div class="grid gap-1.5">
+        <label for="pd-to" class="text-xs font-medium text-text-muted">Sampai tanggal WO</label>
+        <input id="pd-to" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" class="input lg:min-h-9">
+    </div>
+    <div class="grid gap-1.5">
+        <label for="pd-category" class="text-xs font-medium text-text-muted">Kategori</label>
+        <select id="pd-category" name="category" class="select lg:min-h-9">
             <option value="">Semua</option>
             @foreach (\App\Models\PredictiveWorkOrder::CATEGORIES as $key => $label)
                 <option value="{{ $key }}" @selected(($filters['category'] ?? '') === $key)>{{ $label }}</option>
             @endforeach
         </select>
-    </label>
+    </div>
     @if ($areaOptions->isNotEmpty())
-        <label class="block text-xs font-medium text-slate-600">Area
-            <select name="area" class="{{ $inputClass }} mt-1">
+        <div class="grid gap-1.5">
+            <label for="pd-area" class="text-xs font-medium text-text-muted">Area</label>
+            <select id="pd-area" name="area" class="select lg:min-h-9">
                 <option value="">Semua area</option>
                 @foreach ($areaOptions as $a)
                     <option value="{{ $a }}" @selected(($filters['area'] ?? '') === $a)>{{ $a }}</option>
                 @endforeach
             </select>
-        </label>
+        </div>
     @endif
-    <label class="block text-xs font-medium text-slate-600">Machine Type
-        <select name="machine_type" class="{{ $inputClass }} mt-1">
+    <div class="grid gap-1.5">
+        <label for="pd-type" class="text-xs font-medium text-text-muted">Machine Type</label>
+        <select id="pd-type" name="machine_type" class="select lg:min-h-9">
             <option value="">Semua tipe</option>
             @foreach ($machineTypes as $t)
                 <option value="{{ $t }}" @selected(($filters['machine_type'] ?? '') === $t)>{{ $t }}</option>
             @endforeach
         </select>
-    </label>
-    <label class="block text-xs font-medium text-slate-600">PIC
-        <select name="pic" class="{{ $inputClass }} mt-1">
+    </div>
+    <div class="grid gap-1.5">
+        <label for="pd-pic" class="text-xs font-medium text-text-muted">PIC</label>
+        <select id="pd-pic" name="pic" class="select lg:min-h-9">
             <option value="">Semua PIC</option>
             @foreach ($pics as $p)
                 <option value="{{ $p->id }}" @selected((string) ($filters['pic'] ?? '') === (string) $p->id)>{{ $p->name }}</option>
             @endforeach
         </select>
-    </label>
+    </div>
     <div class="flex gap-2 sm:col-span-2 lg:col-span-6 lg:justify-end">
-        <button class="min-h-11 flex-1 rounded-lg bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 lg:flex-none">Terapkan filter</button>
-        <a href="{{ route('predictive.index', ['tab' => 'dashboard']) }}" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-900 lg:flex-none">Reset</a>
+        <x-ui.button type="submit" class="flex-1 lg:min-h-9 lg:flex-none">Terapkan filter</x-ui.button>
+        <x-ui.button variant="ghost" href="{{ route('predictive.index', ['tab' => 'dashboard']) }}" class="lg:min-h-9">Reset</x-ui.button>
     </div>
 </form>
 
-<p class="mb-3 text-xs text-slate-500">
+<p class="-mt-2 text-xs text-text-muted">
     Periode memakai tanggal WO. Filter PIC mencakup WO yang sedang di-claim atau pernah diberi Action oleh PIC tersebut.
 </p>
 
-{{-- A. WO Overview. Closing Rate is the focal figure; the rest are supporting counts. --}}
-<section class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-5" aria-label="WO Overview">
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-        <h2 class="text-sm font-medium text-slate-500">Closing Rate</h2>
-        <p class="mt-1 text-4xl font-bold text-slate-900">{{ rtrim(rtrim(number_format($rate, 1, ',', '.'), '0'), ',') }}%</p>
-        <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow="{{ $rate }}" aria-valuemin="0" aria-valuemax="100" aria-label="Closing Rate">
-            <div class="h-full rounded-full bg-emerald-600" style="width: {{ $rate }}%"></div>
+{{-- A. WO Overview. Closing Rate is the focal figure and the only brand gradient here; the rest are supporting counts. --}}
+<section class="grid grid-cols-1 gap-4 lg:grid-cols-5" aria-label="WO Overview">
+    <div class="card p-5 lg:col-span-2">
+        <h2 class="text-sm font-medium text-text-muted">Closing Rate</h2>
+        <p class="mt-1 font-signage text-5xl font-semibold leading-none tabular-nums text-text">{{ rtrim(rtrim(number_format($rate, 1, ',', '.'), '0'), ',') }}%</p>
+        <div class="mt-4 h-2.5 overflow-hidden rounded-full bg-surface-muted" role="progressbar" aria-valuenow="{{ $rate }}" aria-valuemin="0" aria-valuemax="100" aria-label="Closing Rate">
+            <div class="h-full rounded-full bg-linear-to-r from-brand-from to-brand-to" style="width: {{ $rate }}%"></div>
         </div>
-        <p class="mt-2 text-xs text-slate-500">{{ $overview['closed'] }} dari {{ $overview['total'] }} WO berstatus CLOSED. WO yang di-reopen dihitung OPEN.</p>
+        <p class="mt-2 text-xs text-text-muted">{{ $overview['closed'] }} dari {{ $overview['total'] }} WO berstatus CLOSED. WO yang di-reopen dihitung OPEN.</p>
     </div>
-    <dl class="grid grid-cols-3 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-3">
-        <div class="flex flex-col justify-center px-4 py-5"><dt class="text-sm text-slate-500">Total WO</dt><dd class="mt-1 text-3xl font-bold text-slate-900">{{ $overview['total'] }}</dd></div>
-        <div class="flex flex-col justify-center px-4 py-5"><dt class="text-sm text-amber-800">Total OPEN</dt><dd class="mt-1 text-3xl font-bold text-amber-700">{{ $overview['open'] }}</dd></div>
-        <div class="flex flex-col justify-center px-4 py-5"><dt class="text-sm text-emerald-800">Total CLOSED</dt><dd class="mt-1 text-3xl font-bold text-emerald-700">{{ $overview['closed'] }}</dd></div>
+    <dl class="card grid grid-cols-3 divide-x divide-border lg:col-span-3">
+        <div class="flex min-w-0 flex-col justify-center px-3 py-5 sm:px-5">
+            <dt class="text-sm text-text-muted">Total WO</dt>
+            <dd class="mt-1 font-signage text-3xl font-semibold tabular-nums text-text">{{ $overview['total'] }}</dd>
+        </div>
+        <div class="flex min-w-0 flex-col justify-center px-3 py-5 sm:px-5">
+            <dt class="text-sm text-warning-text">Total OPEN</dt>
+            <dd class="mt-1 font-signage text-3xl font-semibold tabular-nums text-warning-text">{{ $overview['open'] }}</dd>
+        </div>
+        <div class="flex min-w-0 flex-col justify-center px-3 py-5 sm:px-5">
+            <dt class="text-sm text-success-hover">Total CLOSED</dt>
+            <dd class="mt-1 font-signage text-3xl font-semibold tabular-nums text-success-hover">{{ $overview['closed'] }}</dd>
+        </div>
     </dl>
 </section>
 
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-    @foreach ([['Finding Summary', 'Finding yang paling sering muncul', $findings, 'bg-sky-600'], ['Problem Summary', 'Problem yang paling sering muncul', $problems, 'bg-amber-500']] as [$title, $hint, $rows, $bar])
-        @php $max = max(1, (int) ($rows->max('total') ?? 0)); @endphp
-        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="{{ $title }}">
-            <h2 class="font-bold text-slate-900">{{ $title }}</h2>
-            <p class="text-xs text-slate-500">{{ $hint }}, dari seluruh histori Action termasuk setelah Reopen.</p>
+    @foreach ([['Finding Summary', 'Finding apa yang paling sering muncul?', $findings], ['Problem Summary', 'Problem apa yang paling sering muncul?', $problems]] as [$title, $question, $rows])
+        @php($max = max(1, (int) ($rows->max('total') ?? 0)))
+        <section class="card p-5" aria-label="{{ $title }}">
+            <h2 class="font-semibold text-text">{{ $title }}</h2>
+            <p class="mt-0.5 text-sm text-text-muted">{{ $question }} Dari seluruh histori Action, termasuk setelah Reopen.</p>
             @if ($rows->isEmpty())
-                <p class="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">Belum ada Action pada WO yang sesuai filter.</p>
+                <x-ui.empty-state class="mt-4" title="Belum ada Action pada WO yang sesuai filter." />
             @else
                 <ol class="mt-4 space-y-3">
                     @foreach ($rows as $row)
                         <li>
                             <div class="flex items-baseline justify-between gap-3 text-sm">
-                                <span class="min-w-0 break-words text-slate-800">{{ $row->label }}</span>
-                                <span class="shrink-0 font-semibold text-slate-900">{{ $row->total }}x</span>
+                                <span class="min-w-0 break-words text-text">{{ $row->label }}</span>
+                                <span class="shrink-0 font-semibold tabular-nums text-text">{{ $row->total }}x</span>
                             </div>
-                            <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full {{ $bar }}" style="width: {{ round($row->total / $max * 100) }}%"></div></div>
+                            <div class="mt-1 h-2 overflow-hidden rounded-full bg-surface-muted"><div class="h-full rounded-full bg-chart-1" style="width: {{ round($row->total / $max * 100) }}%"></div></div>
                         </li>
                     @endforeach
                 </ol>

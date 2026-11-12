@@ -375,7 +375,7 @@ export function initWeeklyPlan(root) {
         const due = card.due_date ? `Due ${formatShortDate(card.due_date)}` : card.plan_date ? `Plan ${formatShortDate(card.plan_date)}` : '';
         const fieldId = `wp-${key}`;
         const label = 'text-xs font-medium text-text-muted';
-        const control = 'w-full min-w-0 min-h-11 py-1 text-sm sm:min-h-0';
+        const control = 'w-full min-w-0 min-h-11 py-1 text-sm lg:min-h-0';
 
         // White card with a stronger edge and a light-blue head on a grey
         // column, so neighbouring machines in one day read as separate items.
@@ -398,7 +398,7 @@ export function initWeeklyPlan(root) {
                     </div>
                     ${placed ? `
                     <button type="button" data-unschedule aria-label="Kembalikan ${escapeHtml(card.machine_number)} ke Belum dijadwalkan" title="Kembalikan ke Belum dijadwalkan"
-                        class="-mr-1 -mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-muted transition-colors hover:bg-danger-light hover:text-danger focus-visible:outline-2 focus-visible:outline-primary active:bg-danger-light sm:min-h-8 sm:min-w-8">
+                        class="-mr-1 -mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-muted transition-colors hover:bg-danger-light hover:text-danger focus-visible:outline-2 focus-visible:outline-primary active:bg-danger-light lg:min-h-8 lg:min-w-8">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                     </button>` : ''}
                 </div>
@@ -454,11 +454,11 @@ export function initWeeklyPlan(root) {
 
             return `
                 <div class="grid gap-1 rounded-md border border-border bg-surface p-1.5">
-                    <select data-type-field="type" data-date="${day.date}" data-index="${index}" aria-label="Tipe mesin ${escapeHtml(name)}" class="select min-h-11 w-full min-w-0 py-0.5 text-xs sm:min-h-0">${typeOptions}</select>
+                    <select data-type-field="type" data-date="${day.date}" data-index="${index}" aria-label="Tipe mesin ${escapeHtml(name)}" class="select min-h-11 w-full min-w-0 py-0.5 text-xs lg:min-h-0">${typeOptions}</select>
                     <div class="flex items-center gap-1.5">
-                        <select data-type-field="count" data-date="${day.date}" data-index="${index}" aria-label="Jumlah mesin ${escapeHtml(name)}" class="select min-h-11 w-14 shrink-0 py-0.5 text-xs sm:min-h-0">${countOptions}</select>
+                        <select data-type-field="count" data-date="${day.date}" data-index="${index}" aria-label="Jumlah mesin ${escapeHtml(name)}" class="select min-h-11 w-14 shrink-0 py-0.5 text-xs lg:min-h-0">${countOptions}</select>
                         <span class="min-w-0 flex-1 text-[11px] text-text-muted">${placed !== null ? `terisi ${placed}` : 'mesin'}</span>
-                        <button type="button" data-type-remove data-date="${day.date}" data-index="${index}" aria-label="Hapus tipe ${escapeHtml(name)}" class="btn btn-ghost min-h-11 min-w-11 shrink-0 px-0 py-0 text-base leading-none sm:min-h-7 sm:min-w-7">&times;</button>
+                        <button type="button" data-type-remove data-date="${day.date}" data-index="${index}" aria-label="Hapus tipe ${escapeHtml(name)}" class="btn btn-ghost min-h-11 min-w-11 shrink-0 px-0 py-0 text-base leading-none lg:min-h-7 lg:min-w-7">&times;</button>
                     </div>
                 </div>`;
         }).join('');
@@ -484,14 +484,14 @@ export function initWeeklyPlan(root) {
                 ${count}
                 <label class="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-text-muted">
                     Maks. mesin
-                    <select data-day-limit="${day.date}" class="select min-h-11 w-16 shrink-0 py-0.5 text-xs sm:min-h-0">${options}</select>
+                    <select data-day-limit="${day.date}" class="select min-h-11 w-16 shrink-0 py-0.5 text-xs lg:min-h-0">${options}</select>
                 </label>
             </div>
             <div class="mt-2 grid gap-1.5">
                 <p class="text-xs font-medium text-text-muted">Kombinasi tipe</p>
                 ${typeRowsHtml(day)}
                 ${error ? `<p class="text-xs font-medium text-danger" role="alert">${escapeHtml(error)}</p>` : ''}
-                <button type="button" data-type-add="${day.date}" class="link min-h-11 justify-self-start text-xs font-semibold disabled:cursor-not-allowed disabled:text-text-disabled sm:min-h-0" ${day.limit === 0 ? 'disabled' : ''}>+ Tambah tipe</button>
+                <button type="button" data-type-add="${day.date}" class="link min-h-11 justify-self-start text-xs font-semibold disabled:cursor-not-allowed disabled:text-text-disabled lg:min-h-0" ${day.limit === 0 ? 'disabled' : ''}>+ Tambah tipe</button>
             </div>
             ${offText}`;
     }
@@ -546,7 +546,7 @@ export function initWeeklyPlan(root) {
             <p class="text-text-muted">${matches
                 ? `Maks. mesin dan kombinasi tipe sesuai default ${area}.`
                 : `Maks. mesin atau kombinasi tipe minggu ini sudah diubah dari default ${area}.`}</p>
-            <button type="button" data-day-defaults class="btn btn-outline btn-sm min-h-11 sm:min-h-0" ${matches ? 'disabled' : ''}>Kembalikan ke default ${area}</button>`;
+            <button type="button" data-day-defaults class="btn btn-outline btn-sm min-h-11 lg:min-h-0" ${matches ? 'disabled' : ''}>Kembalikan ke default ${area}</button>`;
 
         if (hadFocus) bar.querySelector('[data-day-defaults]')?.focus();
     }
@@ -628,9 +628,9 @@ export function initWeeklyPlan(root) {
                     </div>
                     <label class="grid w-full gap-1 text-xs font-medium text-text-muted sm:w-64">
                         Cari mesin
-                        <input type="search" data-pool-filter value="${escapeHtml(poolFilter)}" placeholder="Nomor atau tipe" class="input w-full min-w-0 min-h-11 py-1 text-sm sm:min-h-0">
+                        <input type="search" data-pool-filter value="${escapeHtml(poolFilter)}" placeholder="Nomor atau tipe" class="input w-full min-w-0 min-h-11 py-1 text-sm lg:min-h-0">
                     </label>
-                    <label class="flex min-h-11 items-center gap-2 text-sm text-text sm:min-h-9">
+                    <label class="flex min-h-11 items-center gap-2 text-sm text-text lg:min-h-9">
                         <input type="checkbox" data-due-only class="checkbox" ${dueOnly ? 'checked' : ''}>
                         Hanya yang due sampai Jumat
                     </label>
@@ -686,7 +686,7 @@ export function initWeeklyPlan(root) {
                         <h3 class="font-semibold text-text">${title}</h3>
                         ${description ? `<p class="text-sm text-text-muted">${description}</p>` : ''}
                     </div>
-                    <button type="button" class="btn btn-outline min-h-11 sm:min-h-0" ${attr}>${copyLabel}</button>
+                    <button type="button" class="btn btn-outline min-h-11 lg:min-h-0" ${attr}>${copyLabel}</button>
                 </div>
                 <div class="overflow-x-auto rounded-xl border border-border bg-surface-sunken p-3 text-sm text-text">${html}</div>
             </div>`;
@@ -728,7 +728,7 @@ export function initWeeklyPlan(root) {
                         attr: 'data-copy="email"',
                     })}
                     <div class="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                        <button type="button" class="btn btn-outline min-h-11 sm:min-h-0" data-mark-sent>${sentAt ? 'Tandai terkirim lagi' : 'Tandai sudah dikirim'}</button>
+                        <button type="button" class="btn btn-outline min-h-11 lg:min-h-0" data-mark-sent>${sentAt ? 'Tandai terkirim lagi' : 'Tandai sudah dikirim'}</button>
                         <p class="text-sm text-text-muted">${sentLine}</p>
                     </div>
                     ${revisionHtml}
@@ -812,7 +812,7 @@ export function initWeeklyPlan(root) {
         els.realization.hidden = false;
         els.realization.innerHTML = `
             <details>
-                <summary class="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 sm:min-h-0">
+                <summary class="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 lg:min-h-0">
                     <span class="font-semibold text-text">Realisasi minggu lalu (${escapeHtml(r.week)})</span>
                     <span class="text-sm text-text-muted">${r.total - r.open.length} dari ${r.total} mesin selesai, ${r.open.length} belum</span>
                 </summary>

@@ -1,601 +1,287 @@
 @extends('layouts.app')
 
 @php
-    // This table has a lot of columns (Area/Machine/Type/Plan Date/PIC/Due
-    // Date/Month/Year/Status/Action) and feels cramped under the shared
-    // max-w-7xl content width — let it use the full content area instead,
-    // same gutter/padding as every other page.
+    // This table has many columns and feels cramped under the shared
+    // max-w-7xl content width, so it uses the full content area.
     $contentMaxWidth = 'max-w-full';
+    $fullWidth = true;
+
+    $role = auth()->user()->role;
+    $canManage = $role === 'ADMIN' || str_starts_with($role, 'KOORDINATOR');
+    $canImport = auth()->user()->isAdmin() || auth()->user()->isKoordinator();
+    $hasFilters = collect(request()->except('page'))->filter(fn ($v) => filled($v))->isNotEmpty();
+    $date = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d-m-Y') : '-';
+    $picName = fn ($pic) => $pic ? \Illuminate\Support\Str::title(strtolower($pic)) : null;
 @endphp
 
 @section('content')
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">PM Schedule</h1>
-            <p class="text-sm text-slate-500">Manage preventive maintenance schedules</p>
-        </div>
+    <div class="space-y-5">
+        <x-ui.page-header title="PM Schedule" description="Find a machine's PM, then start it, fill it, or assign a PIC.">
+            @if ($canImport)
+                <x-slot:actions>
+                    <x-ui.button variant="outline" id="pm-import-open">Import CSV</x-ui.button>
+                    <x-ui.button href="{{ route('pm-schedules.create') }}">Add Schedule</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
 
-        @if ((auth()->user()->isAdmin() || auth()->user()->isKoordinator()))
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <form action="{{ route('pm-schedules.import') }}" method="POST" enctype="multipart/form-data"
-                    class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:flex-row sm:items-center">
-                    @csrf
-                    <div class="flex items-center gap-2">
-                        <input type="file" id="fileInput" name="file" accept=".csv" class="hidden"
-                            onchange="updateFileName(this)">
-                        <label for="fileInput"
-                            class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
-                            Choose File
-                        </label>
-                        <span id="fileName" class="max-w-[180px] truncate text-sm text-slate-500">No file chosen</span>
-                    </div>
-                    <button
-                        class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700">
-                        Import
-                    </button>
-                </form>
-
-                <a href="{{ route('pm-schedules.create') }}" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-                    Add Schedule
-                </a>
-            </div>
+        @if ($errors->has('file'))
+            <x-ui.alert tone="danger">{{ $errors->first('file') }}</x-ui.alert>
         @endif
-    </div>
-
-    @if ($errors->has('file'))
-        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ $errors->first('file') }}
-        </div>
-    @endif
-
-    @if (session('success'))
-        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if (session('warning'))
-        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            {{ session('warning') }}
-        </div>
-    @endif
-
-    <?php if (session('pm_schedules_import_result')): ?>
-        <?php $importResult = session('pm_schedules_import_result'); ?>
-        <div class="mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            <span>Import result:</span>
-            <span class="font-semibold text-emerald-700"><?php echo e($importResult['imported']); ?> imported</span>
-            <span class="font-semibold text-amber-700"><?php echo e($importResult['duplicate']); ?> duplicate</span>
-            <span class="font-semibold text-rose-700"><?php echo e($importResult['skipped']); ?> skipped/invalid</span>
-        </div>
-    <?php endif; ?>
-
-    <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input title="Search machine / type / order number..." type="text" name="search" value="{{ request('search') }}"
-            placeholder="Search..."
-            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-40">
-
-        @if (auth()->user()->seesAllAreas())
-            <select name="area" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="">All Areas</option>
-                @foreach ($areas as $area)
-                    <option value="{{ $area }}" {{ request('area') == $area ? 'selected' : '' }}>{{ $area }}
-                    </option>
-                @endforeach
-            </select>
+        @if (session('success'))
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
+        @endif
+        @if (session('warning'))
+            <x-ui.alert tone="warning">{{ session('warning') }}</x-ui.alert>
+        @endif
+        @if (session('pm_schedules_import_result'))
+            @php($importResult = session('pm_schedules_import_result'))
+            <x-ui.alert tone="info" title="Import result">
+                <span class="font-semibold">{{ $importResult['imported'] }}</span> imported,
+                <span class="font-semibold">{{ $importResult['duplicate'] }}</span> duplicate,
+                <span class="font-semibold">{{ $importResult['skipped'] }}</span> skipped or invalid.
+            </x-ui.alert>
         @endif
 
-        <select name="machine_type" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Machine Type</option>
-            @foreach ($machineTypes as $type)
-                <option value="{{ $type }}" {{ request('machine_type') == $type ? 'selected' : '' }}>
-                    {{ $type }}</option>
-            @endforeach
-        </select>
-
-        @if ($canFilterPic)
-            <select name="pic" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="">All PIC</option>
-                <option value="__UNASSIGNED__" {{ request('pic') === '__UNASSIGNED__' ? 'selected' : '' }}>Unassigned</option>
-                @foreach ($picFilterOptions as $picName)
-                    <option value="{{ $picName }}" {{ request('pic') === $picName ? 'selected' : '' }}>{{ $picName }}</option>
-                @endforeach
-            </select>
-        @endif
-
-        <x-checkbox-dropdown
-            name="status"
-            label="Status"
-            :options="[
-                'OPEN' => 'OPEN',
-                'IN_PROGRESS' => 'IN PROGRESS',
-                'FINISHED' => 'FINISHED',
-                'FINISHED_ON_TIME' => 'FINISHED ON TIME',
-                'MISSED' => 'MISSED',
-            ]"
-            :selected="(array) request('status', [])"
-        />
-
-        <x-checkbox-dropdown
-            name="plan_month"
-            label="Month"
-            :options="array_combine($months, $months)"
-            :selected="(array) request('plan_month', [])"
-        />
-
-        <select name="plan_year" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Year</option>
-            @foreach ($years as $y)
-                <option value="{{ $y }}" {{ request('plan_year') == $y ? 'selected' : '' }}>
-                    {{ $y }}</option>
-            @endforeach
-        </select>
-
-        <button
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">Filter</button>
-        <a href="{{ route('pm-schedules.index') }}"
-            class="rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">Reset</a>
-    </form>
-
-    <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
-                <thead class="bg-slate-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Area
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                            Machine</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                            Order Number</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Type
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Plan
-                            Date
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">PIC
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Due
-                            Date</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Month
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Year
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status
-                        </th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                            Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 bg-white" data-infinite-list="schedules">
-                    @foreach ($schedules as $pm)
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3 text-slate-600">{{ $pm->area }}</td>
-                            <td class="px-4 py-3 font-medium text-slate-800">{{ $pm->machine_number }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ $pm->order_number ?? '-' }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ $pm->machine_type }}</td>
-                            <td class="px-4 py-3 text-slate-600">
-                                {{ $pm->plan_date ? \Carbon\Carbon::parse($pm->plan_date)->format('d-m-Y') : '-' }}</td>
-                            <td class="px-3 py-2">
-
-                                @if (str_starts_with(auth()->user()->role, 'KOORDINATOR') || auth()->user()->role == 'ADMIN')
-                                    <select
-                                        class="assign-pic
-    w-44
-    rounded-lg
-    border
-    border-slate-300
-    bg-white
-    px-3
-    py-2
-    text-sm
-    font-medium
-    shadow-sm
-    transition
-    hover:border-blue-500
-    focus:border-blue-500
-    focus:ring-2
-    focus:ring-blue-200"
-                                        data-id="{{ $pm->id }}">
-
-                                        <option value="">Assign PIC</option>
-
-                                        @foreach ($picsByArea[$pm->area] ?? [] as $pic)
-                                            <option value="{{ $pic->name }}"
-                                                {{ $pm->pic == $pic->name ? 'selected' : '' }}>
-
-                                                👤 {{ \Illuminate\Support\Str::title(strtolower($pic->name)) }}
-
-                                            </option>
-                                        @endforeach
-
-                                    </select>
-                                @else
-                                    {{ $pm->pic ? \Illuminate\Support\Str::title(strtolower($pm->pic)) : '-' }}
-                                @endif
-
-                            </td>
-                            <td class="px-4 py-3 text-slate-600">
-                                {{ $pm->due_date ? \Carbon\Carbon::parse($pm->due_date)->format('d-m-Y') : '-' }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ $pm->plan_month }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ $pm->plan_year }}</td>
-                            <td class="px-4 py-3">
-                                @switch($pm->status)
-                                    @case('OPEN')
-                                        <span
-                                            class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">OPEN</span>
-                                    @break
-
-                                    @case('IN_PROGRESS')
-                                        <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">IN
-                                            PROGRESS</span>
-                                    @break
-
-                                    @case('FINISHED')
-                                        <span
-                                            class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">FINISHED</span>
-                                    @break
-
-                                    @case('FINISHED_ON_TIME')
-                                        <span
-                                            class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">FINISHED
-                                            ON TIME</span>
-                                    @break
-
-                                    @case('MISSED')
-                                        <span
-                                            class="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">MISSED</span>
-                                    @break
-
-                                    @default
-                                        <span
-                                            class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $pm->status }}</span>
-                                @endswitch
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                @php
-                                    $role = auth()->user()->role;
-                                @endphp
-
-                                {{-- ADMIN --}}
-                                @if ($role == 'ADMIN')
-                                    <div class="flex items-center justify-center gap-2">
-                                        <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                            class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded">
-                                            Edit
-                                        </a>
-                                        @if ($pm->status === 'IN_PROGRESS')
-                                            <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}"
-                                                method="POST"
-                                                onsubmit="return confirm('Revert this PM back to Open?')">
-                                                @csrf
-                                                <button type="submit"
-                                                    class="bg-slate-500 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded">
-                                                    Revert to Open
-                                                </button>
-                                            </form>
-                                        @endif
-                                        <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
-                                            onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </div>
-
-                                    {{-- KOORDINATOR --}}
-                                @elseif(str_starts_with($role, 'KOORDINATOR'))
-                                    <div class="flex items-center justify-center gap-2">
-                                        <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded">
-                                            Edit
-                                        </a>
-                                        @if ($pm->status === 'IN_PROGRESS')
-                                            <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}"
-                                                method="POST"
-                                                onsubmit="return confirm('Revert this PM back to Open?')">
-                                                @csrf
-                                                <button type="submit"
-                                                    class="bg-slate-500 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded">
-                                                    Revert to Open
-                                                </button>
-                                            </form>
-                                        @endif
-                                        <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
-                                            onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </div>
-
-                                    {{-- PIC --}}
-                                @elseif(str_starts_with($role, 'PIC'))
-                                    @if (in_array($pm->status, ['OPEN', 'MISSED', 'IN_PROGRESS']))
-                                        <div class="flex items-center justify-center gap-2">
-                                            @if ($pm->start_time)
-                                                <span
-                                                    class="inline-flex flex-col items-center rounded bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700"
-                                                    title="PM activity started">
-                                                    STARTED
-                                                    <span
-                                                        class="text-[10px] font-normal text-slate-500">{{ optional($pm->startedAt())->format('d-m-Y H:i') }}</span>
-                                                </span>
-                                            @else
-                                                <button type="button"
-                                                    class="pm-start-btn rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
-                                                    data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}"
-                                                    data-status="{{ $pm->status }}">
-                                                    START
-                                                </button>
-                                            @endif
-                                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                                class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded">
-                                                Fill PM
-                                            </a>
-                                        </div>
-                                    @else
-                                        <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                            class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded">
-
-                                            View
-
-                                        </a>
-                                    @endif
-                                @endif
-
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    {{-- ============ MOBILE: Card List (di bawah md) ============ --}}
-    <div class="space-y-3 md:hidden" data-infinite-list="schedules">
-        @foreach ($schedules as $pm)
-            @php $role = auth()->user()->role; @endphp
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                {{-- Header card: Machine + Status --}}
-                <div class="mb-3 flex items-start justify-between gap-2">
-                    <div>
-                        <div class="text-sm font-semibold text-slate-800">{{ $pm->machine_number }}</div>
-                        <div class="text-xs text-slate-500">{{ $pm->machine_type }} • {{ $pm->area }}</div>
-                    </div>
-                    @switch($pm->status)
-                        @case('OPEN')
-                            <span
-                                class="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">OPEN</span>
-                        @break
-
-                        @case('IN_PROGRESS')
-                            <span class="shrink-0 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">IN
-                                PROGRESS</span>
-                        @break
-
-                        @case('FINISHED')
-                            <span
-                                class="shrink-0 rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">FINISHED</span>
-                        @break
-
-                        @case('FINISHED_ON_TIME')
-                            <span
-                                class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">ON
-                                TIME</span>
-                        @break
-
-                        @case('MISSED')
-                            <span
-                                class="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">MISSED</span>
-                        @break
-
-                        @default
-                            <span
-                                class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ $pm->status }}</span>
-                    @endswitch
+        {{-- Filters: plain GET form, same parameter names as before. Single-choice fields first;
+             the two multi-select dropdowns share the last row with the buttons, so an open
+             list never covers another control. --}}
+        <form method="GET" class="card space-y-3 p-4">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,2fr)_repeat(4,minmax(0,1fr))]">
+                <div class="grid gap-1.5 sm:col-span-2 lg:col-span-1">
+                    <label for="pm-filter-search" class="text-xs font-medium text-text-muted">Search</label>
+                    <input id="pm-filter-search" title="Search machine / type / order number..." type="text" name="search"
+                        value="{{ request('search') }}" placeholder="Machine, type, or order number" class="input lg:min-h-9">
                 </div>
 
-                {{-- Detail grid --}}
-                <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
-                    <div>
-                        <div class="text-slate-400">Plan Date</div>
-                        <div class="font-medium text-slate-700">
-                            {{ $pm->plan_date ? \Carbon\Carbon::parse($pm->plan_date)->format('d-m-Y') : '-' }}
-                        </div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400">Due Date</div>
-                        <div class="font-medium text-slate-700">
-                            {{ $pm->due_date ? \Carbon\Carbon::parse($pm->due_date)->format('d-m-Y') : '-' }}
-                        </div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400">Month / Year</div>
-                        <div class="font-medium text-slate-700">{{ $pm->plan_month }} {{ $pm->plan_year }}</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400">PIC</div>
-                        <div class="font-medium text-slate-700">
-                            @if (!(str_starts_with($role, 'KOORDINATOR') || $role == 'ADMIN'))
-                                {{ $pm->pic ? \Illuminate\Support\Str::title(strtolower($pm->pic)) : '-' }}
-                            @else
-                                {{ $pm->pic ? \Illuminate\Support\Str::title(strtolower($pm->pic)) : 'Belum diassign' }}
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Assign PIC (khusus koordinator/admin) --}}
-                @if (str_starts_with($role, 'KOORDINATOR') || $role == 'ADMIN')
-                    <div class="mt-3 border-t border-slate-100 pt-3">
-                        <select
-                            class="assign-pic w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                            data-id="{{ $pm->id }}">
-                            <option value="">Assign PIC</option>
-                            @foreach ($picsByArea[$pm->area] ?? [] as $pic)
-                                <option value="{{ $pic->name }}" {{ $pm->pic == $pic->name ? 'selected' : '' }}>
-                                    👤 {{ \Illuminate\Support\Str::title(strtolower($pic->name)) }}
-                                </option>
+                @if (auth()->user()->seesAllAreas())
+                    <div class="grid gap-1.5">
+                        <label for="pm-filter-area" class="text-xs font-medium text-text-muted">Area</label>
+                        <select id="pm-filter-area" name="area" class="select lg:min-h-9">
+                            <option value="">All Areas</option>
+                            @foreach ($areas as $area)
+                                <option value="{{ $area }}" {{ request('area') == $area ? 'selected' : '' }}>{{ $area }}</option>
                             @endforeach
                         </select>
                     </div>
                 @endif
 
-                {{-- Action --}}
-                <div class="mt-3 border-t border-slate-100 pt-3 text-right">
-                    @if ($role == 'ADMIN')
-                        <div class="flex flex-wrap items-center justify-end gap-2">
-                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                class="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-medium text-white hover:bg-yellow-600">Edit</a>
-                            @if ($pm->status === 'IN_PROGRESS')
-                                <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
-                                    onsubmit="return confirm('Revert this PM back to Open?')">
-                                    @csrf
-                                    <button type="submit"
-                                        class="rounded-lg bg-slate-500 px-4 py-2 text-xs font-medium text-white hover:bg-slate-600">Revert
-                                        to Open</button>
-                                </form>
-                            @endif
-                            <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
-                                onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                    class="rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Delete</button>
-                            </form>
-                        </div>
-                    @elseif(str_starts_with($role, 'KOORDINATOR'))
-                        <div class="flex flex-wrap items-center justify-end gap-2">
-                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700">Edit</a>
-                            @if ($pm->status === 'IN_PROGRESS')
-                                <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
-                                    onsubmit="return confirm('Revert this PM back to Open?')">
-                                    @csrf
-                                    <button type="submit"
-                                        class="rounded-lg bg-slate-500 px-4 py-2 text-xs font-medium text-white hover:bg-slate-600">Revert
-                                        to Open</button>
-                                </form>
-                            @endif
-                            <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
-                                onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                    class="rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700">Delete</button>
-                            </form>
-                        </div>
-                    @elseif(str_starts_with($role, 'PIC'))
-                        @if (in_array($pm->status, ['OPEN', 'MISSED', 'IN_PROGRESS']))
-                            <div class="flex flex-wrap items-center justify-end gap-2">
-                                @if ($pm->start_time)
-                                    <span
-                                        class="inline-flex items-center gap-1 rounded-lg bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">
-                                        STARTED · {{ optional($pm->startedAt())->format('d-m-Y H:i') }}
-                                    </span>
-                                @else
-                                    <button type="button"
-                                        class="pm-start-btn rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
-                                        data-id="{{ $pm->id }}" data-machine="{{ $pm->machine_number }}"
-                                        data-status="{{ $pm->status }}">START</button>
-                                @endif
-                                <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                    class="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white hover:bg-green-700">Fill
-                                    PM</a>
-                            </div>
-                        @else
-                            <a href="{{ route('pm-schedules.edit', ['pm_schedule' => $pm->id, 'page' => request('page')]) }}"
-                                class="rounded-lg bg-yellow-500 px-4 py-2 text-xs font-medium text-white hover:bg-yellow-600">View</a>
-                        @endif
-                    @endif
+                <div class="grid gap-1.5">
+                    <label for="pm-filter-type" class="text-xs font-medium text-text-muted">Machine type</label>
+                    <select id="pm-filter-type" name="machine_type" class="select lg:min-h-9">
+                        <option value="">All Machine Type</option>
+                        @foreach ($machineTypes as $type)
+                            <option value="{{ $type }}" {{ request('machine_type') == $type ? 'selected' : '' }}>{{ $type }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                @if ($canFilterPic)
+                    <div class="grid gap-1.5">
+                        <label for="pm-filter-pic" class="text-xs font-medium text-text-muted">PIC</label>
+                        <select id="pm-filter-pic" name="pic" class="select lg:min-h-9">
+                            <option value="">All PIC</option>
+                            <option value="__UNASSIGNED__" {{ request('pic') === '__UNASSIGNED__' ? 'selected' : '' }}>Unassigned</option>
+                            @foreach ($picFilterOptions as $picOption)
+                                <option value="{{ $picOption }}" {{ request('pic') === $picOption ? 'selected' : '' }}>{{ $picOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
+                <div class="grid gap-1.5">
+                    <label for="pm-filter-year" class="text-xs font-medium text-text-muted">Year</label>
+                    <select id="pm-filter-year" name="plan_year" class="select lg:min-h-9">
+                        <option value="">All Year</option>
+                        @foreach ($years as $y)
+                            <option value="{{ $y }}" {{ request('plan_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
-        @endforeach
-    </div>
 
-    <div class="mt-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <div class="grid gap-1.5">
+                    <span class="text-xs font-medium text-text-muted">Status</span>
+                    <x-checkbox-dropdown name="status" label="Status" :options="[
+                        'OPEN' => 'OPEN',
+                        'IN_PROGRESS' => 'IN PROGRESS',
+                        'FINISHED' => 'FINISHED',
+                        'FINISHED_ON_TIME' => 'FINISHED ON TIME',
+                        'MISSED' => 'MISSED',
+                    ]" :selected="(array) request('status', [])" />
+                </div>
+
+                <div class="grid gap-1.5">
+                    <span class="text-xs font-medium text-text-muted">Month</span>
+                    <x-checkbox-dropdown name="plan_month" label="Month" :options="array_combine($months, $months)"
+                        :selected="(array) request('plan_month', [])" />
+                </div>
+
+                <div class="flex gap-2 sm:ml-auto">
+                    <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                    <x-ui.button variant="ghost" href="{{ route('pm-schedules.index') }}" class="lg:min-h-9">Reset</x-ui.button>
+                </div>
+            </div>
+        </form>
+
+        @if ($schedules->isEmpty())
+            <x-ui.empty-state
+                :title="$hasFilters ? 'No PM schedule matches these filters.' : 'No PM schedule yet.'"
+                :description="$hasFilters
+                    ? 'Widen the filters, or reset them to see every schedule you can access.'
+                    : ($canImport ? 'Add a schedule or import a CSV to fill this list.' : 'Schedules assigned to you will appear here.')">
+                @if ($hasFilters)
+                    <x-ui.button variant="outline" href="{{ route('pm-schedules.index') }}">Reset filters</x-ui.button>
+                @elseif ($canImport)
+                    <x-ui.button href="{{ route('pm-schedules.create') }}">Add Schedule</x-ui.button>
+                @endif
+            </x-ui.empty-state>
+        @endif
+
+        {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+        <div @class(['card hidden overflow-hidden', 'md:block' => $schedules->isNotEmpty()])>
+            <div class="relative overflow-x-auto">
+                <table class="data-table min-w-full">
+                    <thead>
+                        <tr>
+                            <th scope="col">Machine</th>
+                            <th scope="col">Area</th>
+                            <th scope="col">Plan</th>
+                            <th scope="col">Due</th>
+                            <th scope="col">PIC</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Order Number</th>
+                            {{-- Actions stay pinned on the right when the table scrolls sideways on narrower screens. --}}
+                            <th scope="col" class="sticky right-0 bg-surface-sunken"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody data-infinite-list="schedules">
+                        @foreach ($schedules as $pm)
+                            <tr>
+                                <td>
+                                    <div class="font-semibold text-text">{{ $pm->machine_number }}</div>
+                                    <div class="text-xs text-text-muted">{{ $pm->machine_type }}</div>
+                                </td>
+                                <td class="text-text-muted">{{ $pm->area }}</td>
+                                <td class="whitespace-nowrap">
+                                    <div>{{ $date($pm->plan_date) }}</div>
+                                    <div class="text-xs text-text-muted">{{ $pm->plan_month }} {{ $pm->plan_year }}</div>
+                                </td>
+                                <td class="whitespace-nowrap">{{ $date($pm->due_date) }}</td>
+                                <td>
+                                    @if ($canManage)
+                                        @include('partials.assign-pic-select', ['id' => 'assign-pic-t-' . $pm->id, 'recordId' => $pm->id, 'label' => $pm->machine_number, 'pics' => $picsByArea[$pm->area] ?? [], 'current' => $pm->pic])
+                                    @else
+                                        {{ $picName($pm->pic) ?? '-' }}
+                                    @endif
+                                </td>
+                                <td>@include('pm-schedules.partials.status-badge', ['status' => $pm->status])</td>
+                                <td class="text-text-muted">{{ $pm->order_number ?? '-' }}</td>
+                                <td class="sticky right-0 bg-surface shadow-[-10px_0_10px_-10px_rgb(15_23_42/0.25)] whitespace-nowrap [&>div]:flex-nowrap">@include('pm-schedules.partials.row-actions')</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- Phone cards (below md). Second list with the same key. --}}
+        <div class="space-y-3 md:hidden" data-infinite-list="schedules">
+            @foreach ($schedules as $pm)
+                <article class="card min-w-0 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h2 class="truncate text-base font-semibold text-text">{{ $pm->machine_number }}</h2>
+                            <p class="truncate text-sm text-text-muted">{{ $pm->machine_type }} · {{ $pm->area }}</p>
+                        </div>
+                        @include('pm-schedules.partials.status-badge', ['status' => $pm->status, 'short' => true])
+                    </div>
+
+                    <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
+                        <div>
+                            <dt class="text-xs text-text-muted">Plan Date</dt>
+                            <dd class="font-medium text-text">{{ $date($pm->plan_date) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-text-muted">Due Date</dt>
+                            <dd class="font-medium text-text">{{ $date($pm->due_date) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-text-muted">Month / Year</dt>
+                            <dd class="font-medium text-text">{{ $pm->plan_month }} {{ $pm->plan_year }}</dd>
+                        </div>
+                        @unless ($canManage)
+                            <div>
+                                <dt class="text-xs text-text-muted">PIC</dt>
+                                <dd class="font-medium text-text">{{ $picName($pm->pic) ?? '-' }}</dd>
+                            </div>
+                        @endunless
+                    </dl>
+
+                    @if ($canManage)
+                        <div class="mt-3 border-t border-border pt-3">
+                            <p class="mb-1.5 text-xs text-text-muted">PIC: {{ $picName($pm->pic) ?? 'Belum diassign' }}</p>
+                            @include('partials.assign-pic-select', ['id' => 'assign-pic-c-' . $pm->id, 'recordId' => $pm->id, 'label' => $pm->machine_number, 'pics' => $picsByArea[$pm->area] ?? [], 'current' => $pm->pic])
+                        </div>
+                    @endif
+
+                    <div class="mt-3 border-t border-border pt-3">
+                        @include('pm-schedules.partials.row-actions')
+                    </div>
+                </article>
+            @endforeach
+        </div>
+
         <x-infinite-scroll :paginator="$schedules" key="schedules" />
     </div>
 
-    <script>
-        function validateFile(input) {
-            const file = input.files[0];
-
-            if (!file) return;
-
-            const allowed = ['csv'];
-            const ext = file.name.split('.').pop().toLowerCase();
-
-            if (!allowed.includes(ext)) {
-                alert("File harus .CSV saja!");
-                input.value = ""; // reset file
-            }
-        }
-    </script>
-
-    <script>
-        function updateFileName(input) {
-            const fileName = input.files[0] ? input.files[0].name : 'No file chosen';
-            document.getElementById('fileName').textContent = fileName;
-        }
-    </script>
-    <script>
-        // delegated: rows are appended later by infinite scroll
-        document.addEventListener('change', function(e) {
-            const select = e.target.closest('.assign-pic');
-            if (!select) return;
-
-            fetch(`/pm-schedules/${select.dataset.id}/assign-pic`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document
-                        .querySelector('meta[name="csrf-token"]')
-                        .content
-                },
-                body: JSON.stringify({
-                    pic: select.value
-                })
-            });
-        });
-    </script>
-
-    {{-- ============ START PM ACTIVITY MODAL ============ --}}
-    <div id="pm-start-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 class="text-lg font-semibold text-slate-800">Start PM Activity</h3>
-            <p id="pm-start-machine" class="mt-1 text-sm text-slate-500"></p>
-
-            <form id="pm-start-form" method="POST" class="mt-4 space-y-4" data-base-action="{{ url('pm-schedules') }}">
+    @if ($canImport)
+        <x-ui.modal id="pm-import-modal" title="Import PM schedules"
+            description="Upload a .csv file in the PM Schedule import template format.">
+            <form action="{{ route('pm-schedules.import') }}" method="POST" enctype="multipart/form-data" class="mt-5 space-y-4">
                 @csrf
-                <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
-                    <input type="datetime-local" name="started_at" id="pm-start-input" required
-                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                </div>
-                <div class="flex justify-end gap-2">
-                    <button type="button" id="pm-start-cancel"
-                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancel</button>
-                    <button type="submit"
-                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">START</button>
+                <x-ui.field label="CSV file" for="fileInput" error="file" required>
+                    <input type="file" id="fileInput" name="file" accept=".csv" required
+                        class="block w-full text-sm text-text file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-medium file:text-text hover:file:bg-surface-muted">
+                </x-ui.field>
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-ui.button variant="ghost" id="pm-import-cancel">Cancel</x-ui.button>
+                    <x-ui.button type="submit" variant="success">Import</x-ui.button>
                 </div>
             </form>
-        </div>
-    </div>
+        </x-ui.modal>
 
-    {{--
-        PM Start modal wiring (open/close, online-vs-offline decision,
-        offline enqueue) lives in resources/js/pm/start.js — see Task 4
-        (FreeDOMS offline-first). Nothing else on this page changed.
-    --}}
+        <script>
+            (function () {
+                const modal = document.getElementById('pm-import-modal');
+                const show = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); };
+                const hide = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+                document.getElementById('pm-import-open').addEventListener('click', show);
+                document.getElementById('pm-import-cancel').addEventListener('click', hide);
+                modal.addEventListener('click', (e) => { if (e.target === modal) hide(); });
+                @if ($errors->has('file')) show(); @endif
+            })();
+        </script>
+    @endif
+
+    @include('partials.assign-pic-script', ['baseUrl' => '/pm-schedules'])
+
+    <x-ui.modal id="pm-start-modal" title="Start PM activity" size="sm">
+        <p id="pm-start-machine" class="mt-1 text-sm text-text-muted"></p>
+
+        {{-- Wiring (open/close, online vs offline, offline queue) lives in resources/js/pm/start.js. --}}
+        <form id="pm-start-form" method="POST" class="mt-5 space-y-4" data-base-action="{{ url('pm-schedules') }}">
+            @csrf
+            <x-ui.field label="Start date & time" for="pm-start-input" required>
+                <input type="datetime-local" name="started_at" id="pm-start-input" required class="input">
+            </x-ui.field>
+            <div class="flex justify-end gap-2 pt-2">
+                <x-ui.button variant="ghost" id="pm-start-cancel">Cancel</x-ui.button>
+                <x-ui.button type="submit">START</x-ui.button>
+            </div>
+        </form>
+    </x-ui.modal>
 
     @include('partials.activity-conflict-modal')
 @endsection

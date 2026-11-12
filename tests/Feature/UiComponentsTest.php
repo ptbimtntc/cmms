@@ -122,3 +122,18 @@ test('brand logo is labelled, or hidden when decorative, with unique gradient id
 
     expect(renderUi('<x-brand-logo mono :framed="false" />'))->not->toContain('linearGradient');
 });
+
+test('a button link keeps a multi-parameter query string intact', function () {
+    $url = 'https://example.test/report?from=action&return=year%3D2026';
+
+    $html = renderUi('<x-ui.button href="{{ $url }}">View</x-ui.button>', ['url' => $url]);
+
+    expect($html)->toContain('href="https://example.test/report?from=action&amp;return=year%3D2026"')
+        ->not->toContain('&amp;amp;');
+
+    $bound = renderUi('<x-ui.button :href="$url">View</x-ui.button>', ['url' => $url]);
+    expect($bound)->toContain('&amp;return=')->not->toContain('&amp;amp;');
+
+    $evil = renderUi('<x-ui.button :href="$url">View</x-ui.button>', ['url' => '/x?a="><script>']);
+    expect($evil)->not->toContain('"><script>');
+});

@@ -202,19 +202,27 @@
     --color-border:         var(--brand-neutral-200);
     --color-border-strong:  var(--brand-neutral-300);
 
-    /* Sidebar — a dark operational surface, themeable on its own axis */
-    --color-sidebar:            var(--brand-neutral-900);
-    --color-sidebar-elevated:   var(--brand-neutral-950);
-    --color-sidebar-foreground: #ffffff;
-    --color-sidebar-muted:      var(--brand-neutral-400);
-    --color-sidebar-border:     rgb(255 255 255 / 0.08);
-    --color-sidebar-hover:      rgb(255 255 255 / 0.06);
-    --color-sidebar-active:     var(--brand-primary-600);
+    /* Sidebar: a light surface so the full-colour logo reads on it and the
+       app feels lighter than a dark control-room rail. Active = tinted row
+       plus bold text plus aria-current, never colour alone. */
+    --color-sidebar:                   #ffffff;
+    --color-sidebar-elevated:          var(--brand-neutral-50);
+    --color-sidebar-foreground:        var(--brand-neutral-800);
+    --color-sidebar-muted:             var(--brand-neutral-600);
+    --color-sidebar-border:            var(--brand-neutral-200);
+    --color-sidebar-hover:             var(--brand-neutral-100);
+    --color-sidebar-active:            var(--brand-primary-50);
+    --color-sidebar-active-foreground: var(--brand-primary-700);
 
     /* Flux UI kit accent (auth + settings screens) follows the brand */
     --color-accent:            var(--brand-primary-600);
     --color-accent-content:    var(--brand-primary-700);
     --color-accent-foreground: #ffffff;
+
+    /* Chart marks. Single-series bars use chart-1; chart-1-strong marks the
+       emphasised bar (e.g. the current month). Validated as an ordinal pair. */
+    --color-chart-1:        var(--brand-primary-500);
+    --color-chart-1-strong: var(--brand-primary-700);
 
     /* Brand gradient (logo bars). Never put text on it. */
     --color-brand-from: var(--brand-gradient-from);

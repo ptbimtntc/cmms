@@ -1,6 +1,9 @@
 @extends('layouts.app')
 
-@php $contentMaxWidth = 'max-w-full'; @endphp
+@php
+    $contentMaxWidth = 'max-w-full';
+    $fullWidth = true;
+@endphp
 @section('title', 'Action Predictive')
 
 @section('content')
@@ -29,54 +32,52 @@
                 ];
             }
         }
-        $inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100';
     @endphp
 
     <div x-data="{ promptOpen: @json($promptStart), startOpen: false, startAt: '', openStart() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); this.startAt = d.toISOString().slice(0, 16); this.promptOpen = false; this.startOpen = true; }, addOpen: {{ old('_form') === 'add' ? 'true' : 'false' }}, importOpen: {{ $errors->has('file') ? 'true' : 'false' }}, action: @js($reopenedAction), edit: @js($reopenedEdit) }">
-        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-900">Action Predictive</h1>
-                <p class="mt-1 text-sm text-slate-500">Work order hasil pemeriksaan Vibration dan Air Leaked: claim, closing, dan reopen.</p>
-            </div>
+        <div class="space-y-5">
+        <x-ui.page-header title="Action Predictive" description="Work order hasil pemeriksaan Vibration dan Air Leaked: claim, closing, dan reopen.">
             @if ($canManage && ! $isDashboard)
-                <div class="flex gap-2">
-                    <button type="button" @click="importOpen = true" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:flex-none">Import WO</button>
-                    <button type="button" @click="addOpen = true" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700 sm:flex-none">Add WO</button>
-                </div>
+                <x-slot:actions>
+                    <x-ui.button variant="outline" class="flex-1 sm:flex-none" x-on:click="importOpen = true">Import WO</x-ui.button>
+                    <x-ui.button class="flex-1 sm:flex-none" x-on:click="addOpen = true">Add WO</x-ui.button>
+                </x-slot:actions>
             @endif
-        </div>
+        </x-ui.page-header>
 
-        <nav class="mb-5 flex overflow-x-auto overflow-y-hidden border-b border-slate-200 pb-px sm:gap-1" aria-label="Tab Action Predictive">
+        {{-- On a phone the tabs scroll sideways; bring the current one into view so it is never off-screen. --}}
+        <nav class="-mt-1 flex overflow-x-auto border-b border-border" aria-label="Tab Action Predictive"
+            x-init="$el.querySelector('[aria-current]')?.scrollIntoView({ inline: 'center', block: 'nearest' })">
             @foreach ($tabs as $key => $t)
-                @php $active = $tab === $key; @endphp
+                @php($active = $tab === $key)
                 <a href="{{ route('predictive.index', ['tab' => $key]) }}" @if ($active) aria-current="page" @endif
-                    class="-mb-px inline-flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-1.5 py-2 text-sm font-semibold focus:outline-none sm:flex-none sm:px-3 focus-visible:ring-2 focus-visible:ring-sky-400 {{ $active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
+                    @class([
+                        '-mb-px inline-flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition-colors sm:flex-none',
+                        'border-primary text-primary-hover' => $active,
+                        'border-transparent text-text-muted hover:border-border-strong hover:text-text' => ! $active,
+                    ])>
                     @if ($key === 'dashboard')
                         Dashboard
                     @else
                         <span><span class="hidden sm:inline">Action Predictive </span>{{ \Illuminate\Support\Str::after($t['label'], 'Action Predictive ') }}</span>
                     @endif
                     @if ($t['open'] !== null)
-                        <span class="hidden rounded-full bg-amber-100 px-2 py-0.5 sm:inline text-xs font-semibold text-amber-800" title="{{ $t['open'] }} WO open">{{ $t['open'] }}<span class="hidden sm:inline"> open</span></span>
+                        <x-ui.badge tone="warning" class="hidden sm:inline-flex" title="{{ $t['open'] }} WO open">{{ $t['open'] }} open</x-ui.badge>
                     @endif
                 </a>
             @endforeach
         </nav>
 
-        @foreach ([
-            'success' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
-            'error' => 'border-rose-200 bg-rose-50 text-rose-800',
-            'warning' => 'border-amber-200 bg-amber-50 text-amber-800',
-        ] as $flash => $classes)
+        @foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning'] as $flash => $tone)
             @if (session($flash))
-                <div class="mb-4 rounded-xl border px-4 py-3 text-sm font-medium {{ $classes }}" role="{{ $flash === 'error' ? 'alert' : 'status' }}">{{ session($flash) }}</div>
+                <x-ui.alert :tone="$tone">{{ session($flash) }}</x-ui.alert>
             @endif
         @endforeach
 
         @if (auth()->user()->isPic() && ! $canWork)
-            <div class="mb-4 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between" role="status">
+            <div class="alert alert-warning flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="status">
                 <p>Aktivitas Action Predictive belum dimulai. Claim dan Action aktif setelah Anda memulainya.</p>
-                <button type="button" @click="openStart()" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">Start Predictive</button>
+                <x-ui.button class="shrink-0" x-on:click="openStart()">Start Predictive</x-ui.button>
             </div>
         @endif
 
@@ -87,61 +88,83 @@
         @if ($isDashboard)
             @include('predictive.partials.dashboard')
         @else
-            <form method="GET" action="{{ route('predictive.index') }}" class="mb-5 flex flex-wrap items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            @php($hasFilters = request()->hasAny(['search', 'status', 'claim', 'area', 'date_from', 'date_to']))
+            {{-- Filters: plain GET, every field labelled. --}}
+            <form method="GET" action="{{ route('predictive.index') }}" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <input type="hidden" name="tab" value="{{ $tab }}">
-                <input name="search" value="{{ request('search') }}" placeholder="Cari order, mesin, tipe, atau problem" aria-label="Cari WO" class="{{ $inputClass }} sm:w-72">
-                <select name="status" aria-label="Status" class="{{ $inputClass }} sm:w-40">
-                    <option value="">Semua status</option>
-                    <option value="OPEN" @selected(request('status') === 'OPEN')>OPEN</option>
-                    <option value="CLOSED" @selected(request('status') === 'CLOSED')>CLOSED</option>
-                </select>
-                <select name="claim" aria-label="Claim" class="{{ $inputClass }} sm:w-44">
-                    <option value="">Semua claim</option>
-                    <option value="unclaimed" @selected(request('claim') === 'unclaimed')>Belum di-claim</option>
-                    @if (auth()->user()->isPic())
-                        <option value="mine" @selected(request('claim') === 'mine')>Claim saya</option>
-                    @endif
-                </select>
-                @if ($areaOptions->isNotEmpty())
-                    <select name="area" aria-label="Area" class="{{ $inputClass }} sm:w-36">
-                        <option value="">Semua area</option>
-                        @foreach ($areaOptions as $a)
-                            <option value="{{ $a }}" @selected(request('area') === $a)>{{ $a }}</option>
-                        @endforeach
-                    </select>
-                @endif
-                <div class="flex w-full items-center gap-2 text-sm text-slate-600 sm:w-auto">
-                    <span class="shrink-0">Tanggal WO</span>
-                    <input type="date" name="date_from" value="{{ request('date_from') }}" aria-label="Dari tanggal WO" class="{{ $inputClass }} min-w-0 flex-1 sm:w-40 sm:flex-none">
-                    <span class="shrink-0">s/d</span>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}" aria-label="Sampai tanggal WO" class="{{ $inputClass }} min-w-0 flex-1 sm:w-40 sm:flex-none">
+                <div class="grid gap-1.5 sm:w-72">
+                    <label for="pv-search" class="text-xs font-medium text-text-muted">Cari</label>
+                    <input id="pv-search" name="search" value="{{ request('search') }}" placeholder="Order, mesin, tipe, atau problem" class="input lg:min-h-9">
                 </div>
-                <div class="flex w-full gap-2 sm:w-auto">
-                    <button class="min-h-11 flex-1 rounded-lg bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 sm:flex-none">Filter</button>
-                    <a href="{{ route('predictive.index', ['tab' => $tab]) }}" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-900 sm:flex-none">Reset</a>
+                <div class="grid gap-1.5 sm:w-40">
+                    <label for="pv-status" class="text-xs font-medium text-text-muted">Status</label>
+                    <select id="pv-status" name="status" class="select lg:min-h-9">
+                        <option value="">Semua status</option>
+                        <option value="OPEN" @selected(request('status') === 'OPEN')>OPEN</option>
+                        <option value="CLOSED" @selected(request('status') === 'CLOSED')>CLOSED</option>
+                    </select>
+                </div>
+                <div class="grid gap-1.5 sm:w-44">
+                    <label for="pv-claim" class="text-xs font-medium text-text-muted">Claim</label>
+                    <select id="pv-claim" name="claim" class="select lg:min-h-9">
+                        <option value="">Semua claim</option>
+                        <option value="unclaimed" @selected(request('claim') === 'unclaimed')>Belum di-claim</option>
+                        @if (auth()->user()->isPic())
+                            <option value="mine" @selected(request('claim') === 'mine')>Claim saya</option>
+                        @endif
+                    </select>
+                </div>
+                @if ($areaOptions->isNotEmpty())
+                    <div class="grid gap-1.5 sm:w-36">
+                        <label for="pv-area" class="text-xs font-medium text-text-muted">Area</label>
+                        <select id="pv-area" name="area" class="select lg:min-h-9">
+                            <option value="">Semua area</option>
+                            @foreach ($areaOptions as $a)
+                                <option value="{{ $a }}" @selected(request('area') === $a)>{{ $a }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+                <div class="grid gap-3 sm:flex">
+                    <div class="grid min-w-0 gap-1.5 sm:w-40">
+                        <label for="pv-from" class="text-xs font-medium text-text-muted">Tanggal WO dari</label>
+                        <input id="pv-from" type="date" name="date_from" value="{{ request('date_from') }}" class="input lg:min-h-9">
+                    </div>
+                    <div class="grid min-w-0 gap-1.5 sm:w-40">
+                        <label for="pv-to" class="text-xs font-medium text-text-muted">Sampai</label>
+                        <input id="pv-to" type="date" name="date_to" value="{{ request('date_to') }}" class="input lg:min-h-9">
+                    </div>
+                </div>
+                <div class="flex gap-2 sm:ml-auto">
+                    <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                    <x-ui.button variant="ghost" href="{{ route('predictive.index', ['tab' => $tab]) }}" class="lg:min-h-9">Reset</x-ui.button>
                 </div>
             </form>
 
             @if ($workOrders->isEmpty())
-                <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500">
-                    @if (request()->hasAny(['search', 'status', 'claim', 'area', 'date_from', 'date_to']))
-                        Tidak ada WO {{ $categoryLabel }} yang sesuai filter.
-                    @else
-                        Belum ada WO {{ $categoryLabel }}.@if ($canManage) Gunakan Add WO atau Import WO untuk menambahkan.@endif
-                    @endif
-                </div>
+                @if ($hasFilters)
+                    <x-ui.empty-state title="Tidak ada WO {{ $categoryLabel }} yang sesuai filter." description="Longgarkan filter, atau reset untuk melihat semua WO.">
+                        <x-ui.button variant="outline" href="{{ route('predictive.index', ['tab' => $tab]) }}">Reset filter</x-ui.button>
+                    </x-ui.empty-state>
+                @else
+                    <x-ui.empty-state title="Belum ada WO {{ $categoryLabel }}."
+                        :description="$canManage ? 'Gunakan Add WO atau Import WO untuk menambahkan.' : 'WO dari hasil pemeriksaan di area Anda akan muncul di sini.'" />
+                @endif
             @else
-                <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50">
+                {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+                <div class="card hidden overflow-hidden md:block">
+                    <div class="relative overflow-x-auto">
+                        <table class="data-table min-w-full">
+                            <thead>
                                 <tr>
-                                    @foreach (['Order Number', 'Area', 'Machine', 'Date / Due Date', 'Problem Description', 'PIC', 'Status', 'Action'] as $h)
-                                        <th scope="col" class="whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $h }}</th>
+                                    @foreach (['Order Number', 'Status / PIC', 'Area', 'Machine', 'Date / Due Date', 'Problem Description'] as $h)
+                                        <th scope="col" class="whitespace-nowrap">{{ $h }}</th>
                                     @endforeach
+                                    {{-- Actions stay pinned on the right when the table scrolls sideways. --}}
+                                    <th scope="col" class="sticky right-0 bg-surface-sunken"><span class="sr-only">Action</span></th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100 bg-white" data-infinite-list="wos">
+                            <tbody data-infinite-list="wos">
                                 @foreach ($workOrders as $wo)
                                     @include('predictive.partials.wo-row', ['wo' => $wo])
                                 @endforeach
@@ -150,22 +173,25 @@
                     </div>
                 </div>
 
+                {{-- Phone cards (below md). Second list with the same key: the loader appends to both, only one is visible. --}}
                 <div class="space-y-3 md:hidden" data-infinite-list="wos">
                     @foreach ($workOrders as $wo)
                         @include('predictive.partials.wo-card', ['wo' => $wo])
                     @endforeach
                 </div>
 
-                {{-- Table and card list share one key: the loader appends to both, only one is visible. --}}
-                <div class="mt-5"><x-infinite-scroll :paginator="$workOrders" key="wos" /></div>
+                <x-infinite-scroll :paginator="$workOrders" key="wos" />
             @endif
 
-            @if ($canManage)
-                @include('predictive.partials.machine-picker-script')
-                @include('predictive.partials.add-modal')
-                @include('predictive.partials.import-modal')
-                @include('predictive.partials.edit-modal')
-            @endif
+        @endif
+        </div>
+
+        {{-- Dialogs sit outside the space-y wrapper: its margin would shorten a fixed inset-0 overlay. --}}
+        @if ($canManage && ! $isDashboard)
+            @include('predictive.partials.machine-picker-script')
+            @include('predictive.partials.add-modal')
+            @include('predictive.partials.import-modal')
+            @include('predictive.partials.edit-modal')
         @endif
 
         @include('predictive.partials.action-modal')
@@ -174,32 +200,32 @@
             {{-- Daily Start prompt, same flow as Oil Audit Action: NO only closes it (the banner above stays), YES asks for the start time. --}}
             @if ($promptStart)
             <div x-show="promptOpen" x-cloak x-transition.opacity.duration.150ms @keydown.escape.window="promptOpen = false"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="predictive-prompt-title">
-                <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-                    <h3 id="predictive-prompt-title" class="text-lg font-semibold text-slate-800">APAKAH ANDA INGIN MEMULAI ACTION PREDICTIVE?</h3>
-                    <p class="mt-2 text-sm text-slate-500">Aktivitas ini tercatat di Today's Activity. Tanpa memulainya, Anda belum bisa Claim maupun mengisi Action.</p>
+                class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="predictive-prompt-title">
+                <div class="w-full max-w-sm rounded-card border border-border bg-surface p-6 text-center shadow-popover">
+                    <h3 id="predictive-prompt-title" class="text-lg font-semibold text-text">APAKAH ANDA INGIN MEMULAI ACTION PREDICTIVE?</h3>
+                    <p class="mt-2 text-sm text-text-muted">Aktivitas ini tercatat di Today's Activity. Tanpa memulainya, Anda belum bisa Claim maupun mengisi Action.</p>
                     <div class="mt-5 flex justify-center gap-3">
-                        <button type="button" @click="promptOpen = false" class="min-h-11 rounded-lg border border-slate-300 px-6 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">NO</button>
-                        <button type="button" @click="openStart()" class="min-h-11 rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700">YES</button>
+                        <button type="button" @click="promptOpen = false" class="btn btn-outline min-h-11 px-6">NO</button>
+                        <button type="button" @click="openStart()" class="btn btn-primary min-h-11 px-6">YES</button>
                     </div>
                 </div>
             </div>
             @endif
 
             <div x-show="startOpen" x-cloak x-transition.opacity.duration.150ms @keydown.escape.window="startOpen = false"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="predictive-start-title">
-                <div @click.outside="startOpen = false" class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-                    <h3 id="predictive-start-title" class="text-lg font-semibold text-slate-800">Start Action Predictive Activity</h3>
+                class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="predictive-start-title">
+                <div @click.outside="startOpen = false" class="w-full max-w-sm rounded-card border border-border bg-surface p-6 shadow-popover">
+                    <h3 id="predictive-start-title" class="text-lg font-semibold text-text">Start Action Predictive Activity</h3>
                     <form method="POST" action="{{ route('predictive.start') }}" class="mt-4 space-y-4" x-data="{ busy: false }" @submit="busy = true">
                         @csrf
                         <div>
-                            <label for="predictive-start-at" class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
+                            <label for="predictive-start-at" class="form-label">Start Date &amp; Time</label>
                             <input id="predictive-start-at" type="datetime-local" name="started_at" x-model="startAt" required
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100">
+                                class="input">
                         </div>
                         <div class="flex justify-end gap-2">
-                            <button type="button" @click="startOpen = false" class="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Cancel</button>
-                            <button type="submit" x-bind:disabled="busy" class="min-h-11 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">START</button>
+                            <button type="button" @click="startOpen = false" class="btn btn-ghost min-h-11">Cancel</button>
+                            <button type="submit" x-bind:disabled="busy" class="btn btn-primary min-h-11">START</button>
                         </div>
                     </form>
                 </div>

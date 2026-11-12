@@ -1,576 +1,413 @@
 @extends('layouts.app')
 
+@php
+    $fullWidth = true;
+    $canEditPic = auth()->user()->isAdmin() || auth()->user()->isKoordinator();
+    $sessions = $pmSchedule->workSessions ?? collect();
+
+    // Row and button classes shared with the rows resources/js/pm/edit.js adds at runtime;
+    // keep the two in step so added rows look like the saved ones.
+    $removeBtn = 'btn btn-ghost min-h-11 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9';
+    $entryRow = 'grid gap-2 rounded-control border border-border bg-surface-sunken p-3 sm:items-center sm:border-0 sm:bg-transparent sm:p-0';
+
+    // Problem rows: what the user just sent when validation bounced it back, otherwise what is saved.
+    $problemRows = session()->hasOldInput('problems')
+        ? collect(old('problems'))->map(fn ($row) => [
+            'problem' => $row['problem'] ?? null,
+            'finding' => $row['finding'] ?? null,
+            'severity' => $row['severity'] ?? null,
+        ])
+        : collect($pmProblems)->map(fn ($p) => [
+            'problem' => $p->machine_problem_id,
+            'finding' => $p->machine_problem_finding_id,
+            'severity' => $p->severity,
+        ]);
+    // Next index for rows added in the browser; must not reuse an index already on the page.
+    $nextProblemIndex = $problemRows->isEmpty() ? 0 : max(array_map('intval', $problemRows->keys()->all())) + 1;
+@endphp
+
 @section('content')
-    <h1 class="text-2xl font-bold mb-6">
-        Fill PM Record
-    </h1>
+    <div class="space-y-5">
+        <x-ui.page-header title="Fill PM Record" :description="$pmSchedule->machine_number . ' · ' . $pmSchedule->machine_type">
+            <x-slot:actions>
+                <x-ui.button variant="outline" href="{{ route('pm-schedules.index', ['page' => request('page')]) }}">Back to PM Schedule</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
-    @if (session('warning'))
-        <div class="mb-4 rounded-xl bg-red-100 border border-red-300 text-red-700 px-4 py-3">
-            <strong>Warning!</strong><br>
-            {{ session('warning') }}
-        </div>
-    @endif
+        @if (session('warning'))
+            <x-ui.alert tone="danger" title="Warning!">{{ session('warning') }}</x-ui.alert>
+        @endif
 
-    {{--
-        FreeDOMS offline-first PM Save (Task 5). Hidden by default; shown by
-        resources/js/pm/save.js only when a local draft or "saved offline"
-        state actually exists for this PM. No layout/behavior change for
-        anyone who never goes offline.
-    --}}
-    <div id="pm-draft-banner" class="mb-4 hidden rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800"></div>
+        @if ($errors->any())
+            <x-ui.alert tone="danger" title="Not saved yet">
+                {{ $errors->count() === 1 ? 'One field needs attention' : $errors->count() . ' fields need attention' }}. They are marked in red below.
+            </x-ui.alert>
+        @endif
 
-    <form id="pm-save-form" method="POST" action="{{ route('pm-schedules.update', $pmSchedule) }}"
-        class="bg-white p-6 rounded shadow max-sm:p-4">
+        {{-- Offline-first PM Save: hidden by default; resources/js/pm/save.js shows it only when a
+             local draft or "saved offline" state exists for this PM. --}}
+        <div id="pm-draft-banner" class="alert alert-info hidden" role="status"></div>
 
-        <div id="pm-data" data-findings='@json($problemFindings)' data-spareparts='@json($spareparts)'
-            data-big-problems='@json($bigProblems)' data-problem-index='@json(isset($pmProblems) ? $pmProblems->count() : 0)'
-            data-sparepart-index='@json(isset($pmSpareparts) ? $pmSpareparts->count() : 0)'
-            data-pm-schedule-id="{{ $pmSchedule->id }}" data-pm-status="{{ $pmSchedule->status }}"></div>
+        <form id="pm-save-form" method="POST" action="{{ route('pm-schedules.update', $pmSchedule) }}" class="space-y-5">
 
-        @csrf
-        @method('PUT')
-        <input type="hidden" name="return_page" value="{{ request('page') }}">
+            <div id="pm-data" data-findings='@json($problemFindings)' data-spareparts='@json($spareparts)'
+                data-big-problems='@json($bigProblems)' data-problem-index='@json($nextProblemIndex)'
+                data-sparepart-index='@json(isset($pmSpareparts) ? $pmSpareparts->count() : 0)'
+                data-pm-schedule-id="{{ $pmSchedule->id }}" data-pm-status="{{ $pmSchedule->status }}"></div>
 
-        <div class="bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-xl p-6 shadow mb-6 max-sm:p-4">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
 
-            <h2 class="text-xl font-bold mb-4">
-                Machine Information
-            </h2>
+            {{-- Machine: the context a technician checks first before touching anything. --}}
+            <section class="card p-5" aria-labelledby="machine-heading">
+                <h2 id="machine-heading" class="sr-only">Machine Information</h2>
+                <dl class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <div>
+                        <dt class="text-xs text-text-muted">Machine Number</dt>
+                        <dd class="font-signage text-2xl font-semibold text-text">{{ $pmSchedule->machine_number }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-text-muted">Machine Type</dt>
+                        <dd class="mt-1 font-medium text-text">{{ $pmSchedule->machine_type }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-text-muted">Last PM Date</dt>
+                        <dd class="mt-1 font-medium text-text">{{ $lastPm ? $lastPm->format('d-m-Y') : '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-text-muted">Status</dt>
+                        <dd class="mt-1">@include('pm-schedules.partials.status-badge', ['status' => $pmSchedule->status])</dd>
+                    </div>
+                </dl>
+            </section>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            @include('pm-schedules._open-findings')
 
-                <div>
-                    <p class="text-sm opacity-80">Machine Number</p>
-                    <p class="font-semibold text-lg">
-                        {{ $pmSchedule->machine_number }}
-                    </p>
+            {{-- 1. PM information --}}
+            <x-ui.card title="PM Information">
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    <x-ui.field label="Order Number" for="order_number" class="min-w-0">
+                        <input id="order_number" value="{{ old('order_number', $pmSchedule->order_number) }}" readonly required
+                            name="order_number" type="text" class="input">
+                    </x-ui.field>
+
+                    <x-ui.field label="Completion Date" for="completion_date_display" hint="Filled in automatically when the PM is completed." class="min-w-0">
+                        <input id="completion_date_display" name="completion_date_display" type="date" readonly
+                            value="{{ $pmSchedule->actual_date ? \Carbon\Carbon::parse($pmSchedule->actual_date)->format('Y-m-d') : '' }}"
+                            class="input">
+                    </x-ui.field>
+
+                    <x-ui.field label="PIC PM" for="pm-pic" class="min-w-0">
+                        <select id="pm-pic" name="pic" class="select" {{ ! $canEditPic ? 'disabled' : '' }}>
+                            <option value="">Select PIC</option>
+                            @foreach ($pics as $pic)
+                                <option value="{{ $pic->name }}" {{ old('pic', $pmSchedule->pic) == $pic->name ? 'selected' : '' }}>{{ $pic->name }}</option>
+                            @endforeach
+                        </select>
+                        @if (! $canEditPic)
+                            <input type="hidden" name="pic" value="{{ $pmSchedule->pic }}">
+                        @endif
+                    </x-ui.field>
                 </div>
 
-                <div>
-                    <p class="text-sm opacity-80">Machine Type</p>
-                    <p class="font-semibold text-lg">
-                        {{ $pmSchedule->machine_type }}
-                    </p>
-                </div>
+                <div class="mt-6 border-t border-border pt-5">
+                    <div class="flex flex-wrap items-baseline justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-text">PM Work Sessions</h3>
+                        <p class="text-sm text-text-muted">Total PM Duration:
+                            <span id="total-duration" class="font-semibold text-text" data-initial="{{ $pmSchedule->duration_formatted }}">{{ $pmSchedule->duration_formatted }}</span>
+                        </p>
+                    </div>
+                    <p class="mt-1 text-xs text-text-muted">One row per working day. Add a day when the PM runs past one shift.</p>
 
-                <div>
-                    <p class="text-sm opacity-80">Last PM Date</p>
-                    <p class="font-semibold text-lg">
-                        {{ $lastPm ? $lastPm->format('d-m-Y') : '-' }}
-                    </p>
-                </div>
-
-            </div>
-
-        </div>
-
-        @include('pm-schedules._open-findings')
-
-        <div class="bg-white rounded-xl shadow p-6 mb-6 max-sm:p-4">
-
-            <h3 class="text-lg font-semibold mb-6">
-                PM Information
-            </h3>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-                <div class="min-w-0">
-                    <label class="block mb-2 text-sm font-medium">
-                        Order Number
-                    </label>
-
-                    <input value="{{ old('order_number', $pmSchedule->order_number) }}" readonly required
-                        name="order_number" type="text" class="w-full min-w-0 bg-gray-100 border rounded-2xl p-3">
-                </div>
-
-                <div class="min-w-0">
-                    <label class="block mb-2 text-sm font-medium">
-                        Completion Date
-                    </label>
-
-                    <input name="completion_date_display" type="date" readonly
-                        value="{{ $pmSchedule->actual_date ? \Carbon\Carbon::parse($pmSchedule->actual_date)->format('Y-m-d') : '' }}"
-                        class="w-full min-w-0 border rounded-2xl p-3 bg-gray-100">
-                    <p class="text-xs text-slate-500 mt-1">Displayed only when PM is completed</p>
-                </div>
-
-                <div class="min-w-0">
-                    <label class="block mb-2 text-sm font-medium">
-                        PIC PM
-                    </label>
-
-                    @php
-                        $canEditPic = auth()->user()->isAdmin() || auth()->user()->isKoordinator();
-                    @endphp
-
-                    <select name="pic"
-                        class="w-full min-w-0 rounded-2xl border border-gray-300 px-3 py-3 {{ !$canEditPic ? 'bg-gray-100 cursor-not-allowed' : '' }}"
-                        {{ !$canEditPic ? 'disabled' : '' }}>
-
-                        <option value="">-- Select PIC --</option>
-
-                        @foreach ($pics as $pic)
-                            <option value="{{ $pic->name }}"
-                                {{ old('pic', $pmSchedule->pic) == $pic->name ? 'selected' : '' }}>
-                                {{ $pic->name }}
-                            </option>
-                        @endforeach
-
-                    </select>
-
-                    @if (!$canEditPic)
-                        <input type="hidden" name="pic" value="{{ $pmSchedule->pic }}">
-                    @endif
-                </div>
-
-
-
-                <div class="lg:col-span-2">
-                    <h4 class="mb-2 text-sm font-medium">PM Work Sessions</h4>
-
-                    <div id="work-sessions" class="space-y-3">
-                        @php
-                            $sessions = $pmSchedule->workSessions ?? collect();
-                        @endphp
-
+                    <div id="work-sessions" class="mt-3 space-y-3">
                         @if ($sessions->isNotEmpty())
                             @foreach ($sessions as $i => $s)
-                                <div class="session-row rounded-lg border p-3" data-index="{{ $i }}">
-                                    <input type="hidden" name="sessions[{{ $i }}][id]"
-                                        value="{{ $s->id }}">
-
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div>
-                                            <label class="text-xs">Date</label>
-                                            <input type="date" name="sessions[{{ $i }}][actual_date]"
-                                                value="{{ $s->actual_date }}" class="w-full border rounded-2xl p-2">
-                                        </div>
-
-                                        <div>
-                                            <label class="text-xs">Start</label>
-                                            <input type="time" name="sessions[{{ $i }}][start_time]"
-                                                value="{{ $s->start_time ? \Carbon\Carbon::parse($s->start_time)->format('H:i') : '' }}"
-                                                class="w-full border rounded-2xl p-2 session-start">
-                                        </div>
-
-                                        <div>
-                                            <label class="text-xs">End</label>
-                                            <input type="time" name="sessions[{{ $i }}][end_time]"
-                                                value="{{ $s->end_time ? \Carbon\Carbon::parse($s->end_time)->format('H:i') : '' }}"
-                                                class="w-full border rounded-2xl p-2 session-end">
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-2 flex items-center justify-between">
-                                        <div class="text-sm text-slate-600">Duration: <span
-                                                class="session-duration">{{ $s->duration ? floor($s->duration / 60) . ' Hours ' . $s->duration % 60 . ' Minutes' : '-' }}</span>
-                                        </div>
-                                        <div>
-                                            @if ($i > 0)
-                                                <button type="button"
-                                                    class="remove-session inline-flex items-center rounded-lg bg-red-500 px-3 py-1 text-white">Remove
-                                                    Day</button>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
+                                @include('pm-schedules.partials.session-row', [
+                                    'index' => $i,
+                                    'id' => $s->id,
+                                    'date' => old("sessions.$i.actual_date", $s->actual_date),
+                                    'start' => old("sessions.$i.start_time", $s->start_time ? \Carbon\Carbon::parse($s->start_time)->format('H:i') : ''),
+                                    'end' => old("sessions.$i.end_time", $s->end_time ? \Carbon\Carbon::parse($s->end_time)->format('H:i') : ''),
+                                    'duration' => $s->duration ? floor($s->duration / 60) . ' Hours ' . $s->duration % 60 . ' Minutes' : '-',
+                                    'removable' => $i > 0,
+                                ])
                             @endforeach
                         @else
                             {{-- Default Day 1 preset from legacy fields (no DB write) --}}
-                            <div class="session-row rounded-lg border p-3" data-index="0">
-                                <input type="hidden" name="sessions[0][id]" value="">
-
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div>
-                                        <label class="text-xs">Date</label>
-                                        <input type="date" name="sessions[0][actual_date]"
-                                            value="{{ old('sessions.0.actual_date', $pmSchedule->actual_date ?? date('Y-m-d')) }}"
-                                            class="w-full border rounded-2xl p-2">
-                                    </div>
-
-                                    <div>
-                                        <label class="text-xs">Start</label>
-                                        <input type="time" name="sessions[0][start_time]"
-                                            value="{{ old('sessions.0.start_time', $pmSchedule->start_time ? \Carbon\Carbon::parse($pmSchedule->start_time)->format('H:i') : '') }}"
-                                            class="w-full border rounded-2xl p-2 session-start">
-                                    </div>
-
-                                    <div>
-                                        <label class="text-xs">End</label>
-                                        <input type="time" name="sessions[0][end_time]"
-                                            value="{{ old('sessions.0.end_time', $pmSchedule->end_time ? \Carbon\Carbon::parse($pmSchedule->end_time)->format('H:i') : '') }}"
-                                            class="w-full border rounded-2xl p-2 session-end">
-                                    </div>
-                                </div>
-
-                                <div class="mt-2 flex items-center justify-between">
-                                    <div class="text-sm text-slate-600">Duration: <span
-                                            class="session-duration">{{ $pmSchedule->duration ? floor($pmSchedule->duration / 60) . ' Hours ' . $pmSchedule->duration % 60 . ' Minutes' : '-' }}</span>
-                                    </div>
-                                    <div></div>
-                                </div>
-                            </div>
+                            @include('pm-schedules.partials.session-row', [
+                                'index' => 0,
+                                'id' => '',
+                                'date' => old('sessions.0.actual_date', $pmSchedule->actual_date ?? date('Y-m-d')),
+                                'start' => old('sessions.0.start_time', $pmSchedule->start_time ? \Carbon\Carbon::parse($pmSchedule->start_time)->format('H:i') : ''),
+                                'end' => old('sessions.0.end_time', $pmSchedule->end_time ? \Carbon\Carbon::parse($pmSchedule->end_time)->format('H:i') : ''),
+                                'duration' => $pmSchedule->duration ? floor($pmSchedule->duration / 60) . ' Hours ' . $pmSchedule->duration % 60 . ' Minutes' : '-',
+                                'removable' => false,
+                            ])
                         @endif
-
                     </div>
 
-                    <div class="mt-3 flex items-center gap-2">
-                        <button type="button" id="add-session" class="bg-green-600 text-white px-3 py-1 rounded-xl">+ Add
-                            Day</button>
-                        <div class="text-sm text-slate-600">Total PM Duration: <span id="total-duration"
-                                data-initial="{{ $pmSchedule->duration_formatted }}">{{ $pmSchedule->duration_formatted }}</span>
-                        </div>
-                    </div>
+                    <x-ui.button variant="outline" size="sm" id="add-session" class="mt-3">Add day</x-ui.button>
                 </div>
 
-            </div>
+                <div class="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-5 sm:grid-cols-3">
+                    @if ($pmSchedule->requiresOilChange())
+                        <x-ui.field label="Oil Change" for="oil_change">
+                            <select id="oil_change" name="oil_change" class="select">
+                                <option value="">Select</option>
+                                <option value="YES" @if ($pmSchedule->oil_change == 'YES') selected @endif>YES</option>
+                                <option value="NO" @if ($pmSchedule->oil_change == 'NO') selected @endif>NO</option>
+                            </select>
+                        </x-ui.field>
+                    @endif
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-
-                @if ($pmSchedule->requiresOilChange())
-                    <div>
-                        <label class="block mb-2 text-sm font-medium">
-                            Oil Change
-                        </label>
-
-                        <select name="oil_change" class="w-full border rounded-2xl p-3">
-                            <option value="">-- Select --</option>
-                            <option value="YES" @if ($pmSchedule->oil_change == 'YES') selected @endif>YES</option>
-                            <option value="NO" @if ($pmSchedule->oil_change == 'NO') selected @endif>NO</option>
+                    <x-ui.field label="Greasing" for="greasing">
+                        <select id="greasing" name="greasing" class="select">
+                            <option value="">Select</option>
+                            <option value="YES" @if ($pmSchedule->greasing == 'YES') selected @endif>YES</option>
+                            <option value="NO" @if ($pmSchedule->greasing == 'NO') selected @endif>NO</option>
                         </select>
+                    </x-ui.field>
+
+                    <x-ui.field label="WO ZSBP" for="wo_zsbp">
+                        <select id="wo_zsbp" name="wo_zsbp" class="select">
+                            <option value="">Select</option>
+                            <option value="YES" @if ($pmSchedule->wo_zsbp == 'YES') selected @endif>YES</option>
+                            <option value="NO" @if ($pmSchedule->wo_zsbp == 'NO') selected @endif>NO</option>
+                        </select>
+                    </x-ui.field>
+                </div>
+
+                <x-ui.field label="Remarks" for="remarks" class="mt-5">
+                    <textarea id="remarks" name="remarks" rows="3" class="textarea"
+                        placeholder="Contoh: Kapstan 1,2 oblak, kapstan 3 bocor, ganti ring kapstan 1 dan 4, ganti nylon, ganti spindel, ganti countersheave, gant belt 1200, 1800, 1500">{{ old('remarks', $pmSchedule->remarks) }}</textarea>
+                </x-ui.field>
+            </x-ui.card>
+
+            {{-- 2. PM result --}}
+            <x-ui.card title="PM Result" description="Record every problem found, or tick the box when there was none.">
+                <label class="flex min-h-11 items-center gap-3 text-sm font-medium text-text">
+                    <input type="checkbox" name="no_problem" value="1" class="checkbox h-5 w-5"
+                        data-none-toggle="problem-entry" @checked(session()->hasOldInput() ? old('no_problem') : $pmSchedule->no_problem)>
+                    No problem found during this PM
+                </label>
+
+                @error('no_problem')
+                    <p class="form-error mt-1">{{ $message }}</p>
+                @enderror
+
+                <div id="problem-entry" class="mt-3">
+                    <div class="mb-1.5 hidden gap-2 px-0.5 text-xs font-medium text-text-muted sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_9rem_6rem]" aria-hidden="true">
+                        <span>Problem</span><span>Finding</span><span>Severity</span><span></span>
+                    </div>
+                    <div id="problem-wrapper" class="space-y-2">
+                        @foreach ($problemRows as $i => $row)
+                            @php
+                                $findingError = $errors->first("problems.$i.finding");
+                                $severityError = $errors->first("problems.$i.severity");
+                            @endphp
+                            {{-- finding/severity become required once a problem is picked (resources/js/pm/edit.js); the server checks the same rule. --}}
+                            <div class="problem-row {{ $entryRow }} sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_9rem_6rem]">
+                                <select name="problems[{{ $i }}][problem]" class="problem-select select" aria-label="Problem">
+                                    <option value="">-- Select Problem --</option>
+                                    @foreach ($bigProblems as $problem)
+                                        <option value="{{ $problem->id }}"
+                                            data-category="{{ strtolower(trim($problem->category)) }}"
+                                            {{ $row['problem'] == $problem->id ? 'selected' : '' }}>
+                                            {{ $problem->problem }}
+                                        </option>
+                                    @endforeach
+                                </select>
+
+                                <select name="problems[{{ $i }}][finding]" aria-label="Finding" data-old-finding="{{ $row['finding'] }}"
+                                    @class(['finding-select select', 'is-invalid' => $findingError])
+                                    @if ($findingError) aria-invalid="true" aria-describedby="problem-{{ $i }}-error" @endif
+                                    @if (filled($row['problem'])) required @endif>
+                                    <option value="">-- Finding --</option>
+                                </select>
+
+                                <select name="problems[{{ $i }}][severity]" aria-label="Severity"
+                                    @class(['severity-select select', 'is-invalid' => $severityError])
+                                    @if ($severityError) aria-invalid="true" aria-describedby="problem-{{ $i }}-error" @endif
+                                    @if (filled($row['problem'])) required @endif>
+                                    <option value="">-- Severity --</option>
+                                    <option value="Low" {{ $row['severity'] == 'Low' ? 'selected' : '' }}>Low</option>
+                                    <option value="Medium" {{ $row['severity'] == 'Medium' ? 'selected' : '' }}>Medium</option>
+                                    <option value="High" {{ $row['severity'] == 'High' ? 'selected' : '' }}>High</option>
+                                </select>
+
+                                <button type="button" onclick="removeProblem(this)" class="{{ $removeBtn }}" aria-label="Remove this problem">Remove</button>
+
+                                @if ($findingError || $severityError)
+                                    <p id="problem-{{ $i }}-error" class="form-error sm:col-span-4">
+                                        {{ collect([$findingError, $severityError])->filter()->implode(' ') }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <x-ui.button variant="outline" size="sm" onclick="addProblem()" class="mt-3">Add problem</x-ui.button>
+                </div>
+            </x-ui.card>
+
+            {{-- 3. Measurement --}}
+            <x-ui.card title="Measurement" description="Enter the actual reading next to each standard." :padded="false">
+                @if ($measurements->isEmpty())
+                    <div class="p-4 sm:p-5">
+                        <x-ui.empty-state title="No Measurement Found"
+                            :description="'No measurement items are set for ' . $pmSchedule->machine_type . '. They are managed in Master Data, Measurement.'" />
+                    </div>
+                @else
+                    {{-- Desktop: table --}}
+                    <div class="relative hidden overflow-x-auto md:block">
+                        <table class="data-table min-w-full">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Measurement Item</th>
+                                    <th scope="col" class="text-center">Standard</th>
+                                    <th scope="col" class="w-56 text-center">Actual</th>
+                                    <th scope="col" class="text-center">Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($measurements as $i => $item)
+                                    @php($oldMeasurement = $pmMeasurements->where('machine_measurement_id', $item->id)->first())
+                                    <tr>
+                                        <td class="font-medium">
+                                            {{ $item->measurement_item }}
+                                            <input type="hidden" name="measurements[{{ $i }}][machine_measurement_id]" value="{{ $item->id }}">
+                                            <input type="hidden" name="measurements[{{ $i }}][measurement_item]" value="{{ $item->measurement_item }}">
+                                        </td>
+                                        <td class="text-center text-text-muted">
+                                            {{ $item->standard ?? '-' }}
+                                            <input type="hidden" name="measurements[{{ $i }}][standard]" value="{{ $item->standard }}">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="measurements[{{ $i }}][measurement_value]"
+                                                value="{{ $oldMeasurement->measurement_value ?? '' }}"
+                                                aria-label="Actual {{ $item->measurement_item }}"
+                                                class="input text-center lg:min-h-9">
+                                        </td>
+                                        <td class="text-center text-text-muted">
+                                            {{ $item->unit }}
+                                            <input type="hidden" name="measurements[{{ $i }}][unit]" value="{{ $item->unit }}">
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {{-- Phone: one card per item. The value input only gets its name below 768px (script below). --}}
+                    <div class="space-y-3 p-4 md:hidden">
+                        @foreach ($measurements as $i => $item)
+                            @php($oldMeasurement = $pmMeasurements->where('machine_measurement_id', $item->id)->first())
+                            <div class="rounded-control border border-border bg-surface-sunken p-3">
+                                <div class="mb-2 flex items-start justify-between gap-3">
+                                    <label for="measure-m-{{ $i }}" class="text-sm font-medium text-text">{{ $item->measurement_item }}</label>
+                                    <span class="shrink-0 text-xs text-text-muted">Std: {{ $item->standard ?? '-' }} {{ $item->unit }}</span>
+                                </div>
+
+                                <input type="hidden" name="measurements[{{ $i }}][machine_measurement_id]" value="{{ $item->id }}">
+                                <input type="hidden" name="measurements[{{ $i }}][measurement_item]" value="{{ $item->measurement_item }}">
+                                <input type="hidden" name="measurements[{{ $i }}][standard]" value="{{ $item->standard }}">
+                                <input type="hidden" name="measurements[{{ $i }}][unit]" value="{{ $item->unit }}">
+
+                                <div class="flex items-center gap-2">
+                                    <input id="measure-m-{{ $i }}" type="text" data-name="measurements[{{ $i }}][measurement_value]"
+                                        value="{{ $oldMeasurement->measurement_value ?? '' }}"
+                                        placeholder="Masukkan nilai actual" class="input text-center">
+                                    <span class="shrink-0 text-sm text-text-muted">{{ $item->unit }}</span>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 @endif
+            </x-ui.card>
 
-                <div>
-                    <label class="block mb-2 text-sm font-medium">
-                        Greasing
+            {{-- 4. Sparepart usage --}}
+            <x-ui.card title="Sparepart Usage" description="Every part used on this machine during the PM.">
+                {{-- Warehouse-injected usage is real usage, so "none used" is not offered then. --}}
+                @unless ($pmSpareparts->contains(fn ($spare) => $spare->isFromWarehouse()))
+                    <label class="flex min-h-11 items-center gap-3 text-sm font-medium text-text">
+                        <input type="checkbox" name="no_sparepart" value="1" class="checkbox h-5 w-5"
+                            data-none-toggle="sparepart-entry" @checked(session()->hasOldInput() ? old('no_sparepart') : $pmSchedule->no_sparepart)>
+                        No sparepart used during this PM
                     </label>
+                @endunless
 
-                    <select name="greasing" class="w-full border rounded-2xl p-3">
-                        <option value="">-- Select --</option>
-                        <option value="YES" @if ($pmSchedule->greasing == 'YES') selected @endif>YES</option>
-                        <option value="NO" @if ($pmSchedule->greasing == 'NO') selected @endif>NO</option>
-                    </select>
-                </div>
+                @error('no_sparepart')
+                    <p class="form-error mt-1">{{ $message }}</p>
+                @enderror
 
-                <div>
-                    <label class="block mb-2 text-sm font-medium">
-                        WO ZSBP
-                    </label>
+                <div id="sparepart-entry" class="mt-3">
+                    @if (! empty($mandatoryPrefilled))
+                        <x-ui.alert tone="info" class="mb-3">
+                            Mandatory spareparts for {{ $pmSchedule->machine_type }} are pre-filled below. They are only
+                            recorded as usage when you save this PM. Adjust the quantity or remove a row if it was not used.
+                        </x-ui.alert>
+                    @endif
 
-                    <select name="wo_zsbp" class="w-full border rounded-2xl p-3">
-                        <option value="">-- Select --</option>
-                        <option value="YES" @if ($pmSchedule->wo_zsbp == 'YES') selected @endif>YES</option>
-                        <option value="NO" @if ($pmSchedule->wo_zsbp == 'NO') selected @endif>NO</option>
-                    </select>
-                </div>
-
-            </div>
-            <div class="gap-3 mt-5">
-                <label class="block mb-2 text-sm font-medium">
-                    Remarks
-                </label>
-
-                <textarea name="remarks" rows="3" class="w-full border rounded-2xl p-3"
-                    placeholder="Contoh: Kapstan 1,2 oblak, kapstan 3 bocor, ganti ring kapstan 1 dan 4, ganti nylon, ganti spindel, ganti countersheave, gant belt 1200, 1800, 1500">{{ old('remarks', $pmSchedule->remarks) }}</textarea>
-            </div>
-
-        </div>
-
-        <div class="bg-white rounded-xl shadow p-6 mb-6 max-sm:p-4">
-
-            <h3 class="text-lg font-semibold mb-4">
-                PM Result
-            </h3>
-
-            <label class="mb-4 flex items-center gap-2 text-sm">
-                <input type="checkbox" name="no_problem" value="1" class="h-4 w-4 rounded"
-                    data-none-toggle="problem-entry" @checked(session()->hasOldInput() ? old('no_problem') : $pmSchedule->no_problem)>
-                No problem found during this PM
-            </label>
-
-            @error('no_problem')
-                <p class="mb-3 text-sm text-red-600">{{ $message }}</p>
-            @enderror
-
-            <div id="problem-entry">
-            <div id="problem-wrapper">
-
-                @foreach ($pmProblems as $i => $oldProblem)
-                    <div
-                        class="problem-row flex gap-2 mb-2 max-sm:flex-col max-sm:bg-gray-50 max-sm:border max-sm:border-gray-200 max-sm:rounded-lg max-sm:p-3 max-sm:mb-3">
-
-                        <select name="problems[{{ $i }}][problem]"
-                            class="problem-select border p-2 w-1/2 rounded-xl max-sm:w-full">
-
-                            <option value="">-- Select Problem --</option>
-
-                            @foreach ($bigProblems as $problem)
-                                <option value="{{ $problem->id }}"
-                                    data-category="{{ strtolower(trim($problem->category)) }}"
-                                    {{ $oldProblem->machine_problem_id == $problem->id ? 'selected' : '' }}>
-                                    {{ $problem->problem }}
-                                </option>
-                            @endforeach
-
-                        </select>
-
-                        <select name="problems[{{ $i }}][finding]"
-                            class="finding-select border p-2 flex-1 rounded-xl max-sm:w-full"
-                            data-old-finding="{{ $oldProblem->machine_problem_finding_id }}">
-
-                            <option value="">-- Finding --</option>
-
-                        </select>
-
-                        <select name="problems[{{ $i }}][severity]"
-                            class="border p-2 rounded-xl w-1/5 max-sm:w-full">
-
-                            <option value="">-- Severity --</option>
-                            <option value="Low" {{ $oldProblem->severity == 'Low' ? 'selected' : '' }}>Low</option>
-                            <option value="Medium" {{ $oldProblem->severity == 'Medium' ? 'selected' : '' }}>Medium
-                            </option>
-                            <option value="High" {{ $oldProblem->severity == 'High' ? 'selected' : '' }}>High</option>
-
-                        </select>
-
-                        <button type="button" onclick="removeProblem(this)"
-                            class="bg-red-500 text-white px-3 rounded-xl max-sm:w-full max-sm:py-2">
-                            X
-                        </button>
-
+                    <div class="mb-1.5 hidden gap-2 px-0.5 text-xs font-medium text-text-muted sm:grid sm:grid-cols-[minmax(0,1fr)_7rem_6rem]" aria-hidden="true">
+                        <span>Sparepart</span><span>Qty</span><span></span>
                     </div>
-                @endforeach
+                    <div id="sparepart-wrapper" class="space-y-2">
+                        @foreach ($pmSpareparts as $i => $oldSpare)
+                            <div class="sparepart-row {{ $entryRow }} sm:grid-cols-[minmax(0,1fr)_7rem_6rem]">
+                                <select name="spareparts[{{ $i }}][sparepart_id]"
+                                    class="sparepart-select select" aria-label="Sparepart"
+                                    placeholder="Select Sparepart" data-selected="{{ $oldSpare->sparepart_id }}"
+                                    @disabled($oldSpare->isFromWarehouse())>
+                                    <option value="{{ $oldSpare->sparepart_id }}">
+                                        {{ $oldSpare->sparepart->material_number }}
+                                        -
+                                        {{ $oldSpare->sparepart->description }}
+                                    </option>
+                                </select>
 
-            </div>
+                                @if ($oldSpare->isFromWarehouse())
+                                    {{-- Injected from a warehouse issue: shown for reference, locked server-side. --}}
+                                    <input type="number" name="spareparts[{{ $i }}][qty]" value="{{ $oldSpare->qty }}" readonly
+                                        class="input" aria-label="Qty">
 
-            <button type="button" onclick="addProblem()"
-                class="mt-2 bg-green-600 text-white px-3 py-1 rounded-xl max-sm:w-full max-sm:py-2">
-                + Add Problem
-            </button>
-            </div>
+                                    <span class="inline-flex min-h-11 items-center justify-center rounded-control bg-success-light px-3 text-xs font-semibold text-success-hover lg:min-h-9"
+                                        title="Recorded from warehouse issue; cannot be edited or removed here">
+                                        Warehouse
+                                    </span>
+                                @else
+                                    <input type="number" name="spareparts[{{ $i }}][qty]" value="{{ $oldSpare->qty }}"
+                                        class="input" aria-label="Qty">
 
-        </div>
-
-
-        {{-- PM Measurement --}}
-
-        <div class="bg-white rounded-lg shadow p-6 mt-6 max-sm:p-4">
-
-            <h2 class="text-lg font-semibold mb-4">
-                Measurement
-            </h2>
-
-            {{-- Desktop: tabel --}}
-            <div class="hidden md:block overflow-x-auto">
-
-                <table class="min-w-full border">
-
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="border px-3 py-2 text-left">Measurement Item</th>
-                            <th class="border px-3 py-2 text-center">Standard</th>
-                            <th class="border px-3 py-2 text-center">Actual</th>
-                            <th class="border px-3 py-2 text-center">Unit</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        @forelse ($measurements as $i => $item)
-                            @php
-                                $oldMeasurement = $pmMeasurements->where('machine_measurement_id', $item->id)->first();
-                            @endphp
-
-                            <tr>
-                                <td class="border px-3 py-2">
-                                    {{ $item->measurement_item }}
-                                    <input type="hidden"
-                                        name="measurements[{{ $i }}][machine_measurement_id]"
-                                        value="{{ $item->id }}">
-                                    <input type="hidden" name="measurements[{{ $i }}][measurement_item]"
-                                        value="{{ $item->measurement_item }}">
-                                </td>
-
-                                <td class="border px-3 py-2 text-center">
-                                    {{ $item->standard ?? '-' }}
-                                    <input type="hidden" name="measurements[{{ $i }}][standard]"
-                                        value="{{ $item->standard }}">
-                                </td>
-
-                                <td class="border px-3 py-2">
-                                    <input type="text" name="measurements[{{ $i }}][measurement_value]"
-                                        value="{{ $oldMeasurement->measurement_value ?? '' }}"
-                                        class="w-full border rounded-xl px-2 py-1 text-center">
-                                </td>
-
-                                <td class="border px-3 py-2 text-center">
-                                    {{ $item->unit }}
-                                    <input type="hidden" name="measurements[{{ $i }}][unit]"
-                                        value="{{ $item->unit }}">
-                                </td>
-                            </tr>
-
-                        @empty
-                            <tr>
-                                <td colspan="4" class="border text-center py-5 text-gray-500">No Measurement Found</td>
-                            </tr>
-                        @endforelse
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            {{-- Mobile: card per item --}}
-            <div class="md:hidden space-y-3">
-
-                @forelse ($measurements as $i => $item)
-                    @php
-                        $oldMeasurement = $pmMeasurements->where('machine_measurement_id', $item->id)->first();
-                    @endphp
-
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                        <div class="mb-2 flex items-center justify-between">
-                            <div class="text-sm font-medium text-gray-800">{{ $item->measurement_item }}</div>
-                            <div class="text-xs text-gray-500">Std: {{ $item->standard ?? '-' }} {{ $item->unit }}
+                                    <button type="button" onclick="removeSparepart(this)" class="{{ $removeBtn }}" aria-label="Remove this sparepart">Remove</button>
+                                @endif
                             </div>
-                        </div>
-
-                        <input type="hidden" name="measurements[{{ $i }}][machine_measurement_id]"
-                            value="{{ $item->id }}">
-                        <input type="hidden" name="measurements[{{ $i }}][measurement_item]"
-                            value="{{ $item->measurement_item }}">
-                        <input type="hidden" name="measurements[{{ $i }}][standard]"
-                            value="{{ $item->standard }}">
-                        <input type="hidden" name="measurements[{{ $i }}][unit]"
-                            value="{{ $item->unit }}">
-
-                        <div class="flex items-center gap-2">
-                            <input type="text" data-name="measurements[{{ $i }}][measurement_value]"
-                                value="{{ $oldMeasurement->measurement_value ?? '' }}"
-                                placeholder="Masukkan nilai actual"
-                                class="w-full rounded-xl border bg-white px-3 py-2 text-center">
-                            <span class="shrink-0 text-sm text-gray-500">{{ $item->unit }}</span>
-                        </div>
+                        @endforeach
                     </div>
 
-                @empty
-                    <div class="rounded-lg border py-5 text-center text-gray-500">
-                        No Measurement Found
-                    </div>
-                @endforelse
+                    <x-ui.button variant="outline" size="sm" onclick="addSparepart()" class="mt-3">Add sparepart</x-ui.button>
+                </div>
+            </x-ui.card>
 
+            {{-- Sticky on every screen so the next step is always one tap away. --}}
+            <div class="sticky bottom-0 z-10 -mx-4 border-t border-border bg-surface/95 px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    {{-- Hidden on phones to keep the sticky bar short. --}}
+                    <p class="hidden text-xs text-text-muted sm:block">Saving takes you to the checklist for this PM.</p>
+                    <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Lihat Checklist</x-ui.button>
+                </div>
             </div>
-
-        </div>
-
-        {{-- Sparepart Usage --}}
-
-        <div class="mt-6 bg-white p-4 rounded shadow">
-
-            <h2 class="text-lg font-bold mb-4">
-                Sparepart Usage
-            </h2>
-
-            {{-- Warehouse-injected usage is real usage, so "none used" is not offered then. --}}
-            @unless ($pmSpareparts->contains(fn ($spare) => $spare->isFromWarehouse()))
-                <label class="mb-4 flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="no_sparepart" value="1" class="h-4 w-4 rounded"
-                        data-none-toggle="sparepart-entry" @checked(session()->hasOldInput() ? old('no_sparepart') : $pmSchedule->no_sparepart)>
-                    No sparepart used during this PM
-                </label>
-            @endunless
-
-            @error('no_sparepart')
-                <p class="mb-3 text-sm text-red-600">{{ $message }}</p>
-            @enderror
-
-            <div id="sparepart-entry">
-            @if (! empty($mandatoryPrefilled))
-                <p class="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                    Mandatory spareparts for {{ $pmSchedule->machine_type }} are pre-filled below. They are only
-                    recorded as usage when you save this PM — adjust the quantity or remove a row if it was not used.
-                </p>
-            @endif
-
-            <div id="sparepart-wrapper">
-
-                @foreach ($pmSpareparts as $i => $oldSpare)
-                    <div
-                        class="sparepart-row flex gap-2 mb-2 max-sm:flex-col max-sm:bg-gray-50 max-sm:border max-sm:border-gray-200 max-sm:rounded-lg max-sm:p-3 max-sm:mb-3">
-
-                        <select name="spareparts[{{ $i }}][sparepart_id]"
-                            class="sparepart-select border p-2 w-2/3 rounded-xl max-sm:w-full"
-                            placeholder="Select Sparepart" data-selected="{{ $oldSpare->sparepart_id }}"
-                            @disabled($oldSpare->isFromWarehouse())>
-                            <option value="{{ $oldSpare->sparepart_id }}">
-                                {{ $oldSpare->sparepart->material_number }}
-                                -
-                                {{ $oldSpare->sparepart->description }}
-                            </option>
-                        </select>
-
-                        @if ($oldSpare->isFromWarehouse())
-                            {{-- Injected from a warehouse issue: shown for reference, locked server-side. --}}
-                            <input type="number" name="spareparts[{{ $i }}][qty]" value="{{ $oldSpare->qty }}" readonly
-                                class="border p-2 w-1/3 rounded-xl bg-gray-100 max-sm:w-full">
-
-                            <span class="self-center whitespace-nowrap rounded-xl bg-emerald-100 px-3 py-2 text-xs font-medium text-emerald-700 max-sm:text-center"
-                                title="Recorded from warehouse issue; cannot be edited or removed here">
-                                Warehouse
-                            </span>
-                        @else
-                            <input type="number" name="spareparts[{{ $i }}][qty]" value="{{ $oldSpare->qty }}"
-                                class="border p-2 w-1/3 rounded-xl max-sm:w-full">
-
-                            <button type="button" onclick="removeSparepart(this)"
-                                class="bg-red-500 text-white px-3 rounded-xl max-sm:w-full max-sm:py-2">
-                                X
-                            </button>
-                        @endif
-
-                    </div>
-                @endforeach
-
-            </div>
-
-            <button type="button" onclick="addSparepart()"
-                class="mt-2 bg-green-600 text-white px-3 py-1 rounded-xl max-sm:w-full max-sm:py-2">
-                + Add Sparepart
-            </button>
-            </div>
-
-        </div>
-
-        <div class="flex justify-end gap-3 mt-8 max-sm:flex-col">
-
-            {{-- <a href="{{ route('pm-schedules.checklist', $pmSchedule->id) }}"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-center max-sm:w-full">
-                Go To Checklist (Dev)
-            </a> --}}
-
-            <button type="submit" class="bg-gray-500 hover:bg-green-700 text-white px-6 py-3 rounded-xl max-sm:w-full">
-                Lihat Checklist
-            </button>
-
-        </div>
-
-    </form>
-
+        </form>
+    </div>
 
     <script>
         function syncMeasurementInput() {
             document.querySelectorAll('[data-name]').forEach(input => {
-
                 if (window.innerWidth < 768) {
                     input.name = input.dataset.name;
                 } else {
                     input.removeAttribute('name');
                 }
-
             });
         }
 

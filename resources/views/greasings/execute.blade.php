@@ -1,155 +1,159 @@
 @extends('layouts.app')
 
-@section('content')
-<div class="mx-auto max-w-3xl">
-    <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5">
-            <h1 class="text-2xl font-semibold text-slate-800">Execute Greasing</h1>
-            <p class="mt-1 text-sm text-slate-500">Fill in the action date and remarks for this schedule, and add findings below.</p>
-        </div>
+@php
+    $fullWidth = true;
+    $canDeleteFinding = auth()->user()->hasRole([\App\Models\User::ROLE_ADMIN, \App\Models\User::ROLE_KOORDINATOR]);
+    $openFindings = $greasing->findings->where('status', '!=', 'COMPLETED')->count();
+@endphp
 
-        <div class="grid gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 sm:grid-cols-2 md:grid-cols-5">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Order Number</p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">{{ $greasing->order_number ?? '-' }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Group</p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">{{ $greasing->group->name ?? '-' }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Cycle</p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">{{ $greasing->cycle }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Plan Date</p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">{{ $greasing->plan_date->format('d M Y') }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Due Date</p>
-                <p class="mt-1 text-sm font-semibold text-slate-800">{{ $greasing->due_date->format('d M Y') }}</p>
-            </div>
-        </div>
+@section('content')
+    <div class="mx-auto max-w-3xl space-y-5">
+        <x-ui.page-header title="Execute Greasing" :description="($greasing->group->name ?? '-') . ' · ' . ($greasing->order_number ?? '-')">
+            <x-slot:actions>
+                <x-ui.button variant="outline" href="{{ route('greasings.index', ['page' => request('page')]) }}">Back to Greasing</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         @if (session('success'))
-            <div class="mx-6 mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {{ session('success') }}
-            </div>
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
         @endif
 
-        <form action="{{ route('greasings.execute.store', $greasing) }}" method="POST" class="space-y-5 p-6">
-            @csrf
-            <input type="hidden" name="return_page" value="{{ request('page') }}">
-
-            <div class="grid gap-5 md:grid-cols-2">
+        <section class="card p-5" aria-labelledby="greasing-summary-heading">
+            <h2 id="greasing-summary-heading" class="sr-only">Schedule</h2>
+            <dl class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                <div class="col-span-2 sm:col-span-1">
+                    <dt class="text-xs text-text-muted">Group</dt>
+                    <dd class="font-signage text-2xl font-semibold text-text">{{ $greasing->group->name ?? '-' }}</dd>
+                </div>
                 <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700">Action Date</label>
-                    <input type="date" name="action_date" required value="{{ old('action_date', optional($greasing->action_date)->format('Y-m-d')) }}"
-                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                    <p class="mt-1 text-xs text-slate-400">Action date is required to save this execution.</p>
-                    @error('action_date')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <dt class="text-xs text-text-muted">Order Number</dt>
+                    <dd class="mt-1 font-medium text-text">{{ $greasing->order_number ?? '-' }}</dd>
                 </div>
-
                 <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700">Current Status</label>
-                    <input type="text" value="{{ $greasing->status }}" disabled
-                        class="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm text-slate-500">
+                    <dt class="text-xs text-text-muted">Cycle</dt>
+                    <dd class="mt-1 font-medium text-text">{{ $greasing->cycle }}</dd>
                 </div>
-
-                <div class="md:col-span-2">
-                    <label class="mb-2 block text-sm font-medium text-slate-700">Remarks</label>
-                    <textarea name="remarks" class="min-h-24 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">{{ old('remarks', $greasing->remarks) }}</textarea>
-                    @error('remarks')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                <div>
+                    <dt class="text-xs text-text-muted">Plan Date</dt>
+                    <dd class="mt-1 font-medium text-text">{{ $greasing->plan_date->format('d M Y') }}</dd>
                 </div>
+                <div>
+                    <dt class="text-xs text-text-muted">Due Date</dt>
+                    <dd class="mt-1 font-medium text-text">{{ $greasing->due_date->format('d M Y') }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-text-muted">Current Status</dt>
+                    <dd class="mt-1">@include('greasings.partials.status-badge', ['status' => $greasing->status])</dd>
+                </div>
+            </dl>
+        </section>
+
+        {{-- 1. Execution --}}
+        <x-ui.card title="Execution" description="Fill in the action date and remarks for this schedule.">
+            <form action="{{ route('greasings.execute.store', $greasing) }}" method="POST" class="space-y-4">
+                @csrf
+                <input type="hidden" name="return_page" value="{{ request('page') }}">
+
+                <x-ui.field label="Action Date" for="action_date" error="action_date" hint="Action date is required to save this execution." required class="sm:max-w-xs">
+                    <input id="action_date" type="date" name="action_date" required value="{{ old('action_date', optional($greasing->action_date)->format('Y-m-d')) }}" class="input">
+                </x-ui.field>
+
+                <x-ui.field label="Remarks" for="execution_remarks" error="remarks">
+                    <textarea id="execution_remarks" name="remarks" rows="3" class="textarea">{{ old('remarks', $greasing->remarks) }}</textarea>
+                </x-ui.field>
+
+                <div class="flex justify-end border-t border-border pt-4">
+                    <x-ui.button type="submit" class="w-full sm:w-auto">Save Execution</x-ui.button>
+                </div>
+            </form>
+        </x-ui.card>
+
+        {{-- 2. Findings: add new ones, then follow up the open ones --}}
+        <section aria-labelledby="findings-heading" class="space-y-3">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 id="findings-heading" class="font-signage text-xl font-semibold text-text">Findings ({{ $greasing->findings->count() }})</h2>
+                @if ($openFindings > 0)
+                    <p class="text-sm font-medium text-warning-text">{{ $openFindings }} still open</p>
+                @endif
             </div>
 
-            <div class="flex flex-wrap gap-3 pt-2">
-                <button class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700">Save Execution</button>
-                <a href="{{ route('greasings.index') }}" class="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100">Back</a>
-            </div>
-        </form>
-    </div>
+            <x-ui.card title="Add Finding" description="New findings are added as OPEN.">
+                <form action="{{ route('greasings.findings.store', $greasing) }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <x-ui.field label="Machine Number" for="finding_machine" error="machine_id" required>
+                            <select id="finding_machine" name="machine_id" required class="select">
+                                <option value="">Select machine</option>
+                                @foreach ($machines as $machine)
+                                    <option value="{{ $machine->id }}" {{ old('machine_id') == $machine->id ? 'selected' : '' }}>{{ $machine->machine_number }}</option>
+                                @endforeach
+                            </select>
+                        </x-ui.field>
+                        <x-ui.field label="Finding Area" for="finding_area" error="finding_area" required>
+                            <input id="finding_area" type="text" name="finding_area" required maxlength="255" value="{{ old('finding_area') }}"
+                                placeholder="e.g. Kapstan, Gearbox, Bearing, Motor" class="input">
+                        </x-ui.field>
+                    </div>
+                    {{-- Shares the "remarks" error key with the execution form (both post a field named remarks). --}}
+                    <x-ui.field label="Remarks" for="finding_remarks" error="remarks" required>
+                        <textarea id="finding_remarks" name="remarks" required maxlength="1000" rows="3" placeholder="Describe the finding" class="textarea">{{ old('remarks') }}</textarea>
+                    </x-ui.field>
+                    <div class="flex justify-end">
+                        <x-ui.button type="submit" variant="success" class="w-full sm:w-auto">Add Finding</x-ui.button>
+                    </div>
+                </form>
+            </x-ui.card>
 
-    <div class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5">
-            <h2 class="text-lg font-semibold text-slate-800">Add Finding</h2>
-            <p class="mt-1 text-xs text-slate-400">New findings are added as OPEN.</p>
-        </div>
-        <form action="{{ route('greasings.findings.store', $greasing) }}" method="POST" class="space-y-4 p-6">
-            @csrf
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Machine Number</label>
-                <select name="machine_id" required class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                    <option value="">-- Select Machine --</option>
-                    @foreach ($machines as $machine)
-                        <option value="{{ $machine->id }}" {{ old('machine_id') == $machine->id ? 'selected' : '' }}>{{ $machine->machine_number }}</option>
-                    @endforeach
-                </select>
-                @error('machine_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-            </div>
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Finding Area</label>
-                <input type="text" name="finding_area" required maxlength="255" value="{{ old('finding_area') }}" placeholder="e.g. Kapstan, Gearbox, Bearing, Motor" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                @error('finding_area')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-            </div>
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Remarks</label>
-                <textarea name="remarks" required maxlength="1000" placeholder="Describe the finding" class="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">{{ old('remarks') }}</textarea>
-                @error('remarks')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-            </div>
-            <button class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700">Add Finding</button>
-        </form>
-    </div>
-
-    <div class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5">
-            <h2 class="text-lg font-semibold text-slate-800">Findings ({{ $greasing->findings->count() }})</h2>
-        </div>
-
-        <div class="divide-y divide-slate-100">
             @forelse ($greasing->findings as $finding)
-                <div class="p-6">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <dl class="grid flex-1 gap-3 sm:grid-cols-2">
-                                <div><dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Machine Number</dt><dd class="text-sm text-slate-800">{{ $finding->machine->machine_number ?? '-' }}</dd></div>
-                                <div><dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Finding Area</dt><dd class="text-sm text-slate-800">{{ $finding->finding_area ?? '-' }}</dd></div>
-                                <div><dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Remarks</dt><dd class="text-sm text-slate-800">{{ $finding->finding }}</dd></div>
-                                <div><dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Action</dt><dd class="text-sm text-slate-800">{{ $finding->action ?? '-' }}</dd></div>
-                                <div><dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Action Date</dt><dd class="text-sm text-slate-800">{{ $finding->action_date ? $finding->action_date->format('d M Y') : '-' }}</dd></div>
-                        </dl>
-                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $finding->status == 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                            {{ $finding->status }}
-                        </span>
+                @php($done = $finding->status == 'COMPLETED')
+                <article class="card p-4 sm:p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            {{-- Older findings may have no machine or area recorded; show what exists. --}}
+                            <h3 class="font-semibold text-text">{{ collect([$finding->machine->machine_number ?? null, $finding->finding_area])->filter()->implode(' · ') ?: 'Machine not recorded' }}</h3>
+                            <p class="mt-1 text-sm text-text">{{ $finding->finding }}</p>
+                        </div>
+                        <x-ui.badge :tone="$done ? 'success' : 'warning'" class="shrink-0">{{ $finding->status }}</x-ui.badge>
                     </div>
 
-                    <form action="{{ route('greasings.findings.update', [$greasing, $finding]) }}" method="POST" class="mt-3 flex flex-wrap items-center gap-2">
-                        @csrf
-                        @method('PATCH')
-                        <input type="text" name="action" value="{{ $finding->action }}" placeholder="Action taken (saving marks this finding COMPLETED)" required
-                            class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                        <button class="rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
-                            Save
-                        </button>
-                    </form>
-
-                    @if (auth()->user()->hasRole([\App\Models\User::ROLE_ADMIN, \App\Models\User::ROLE_KOORDINATOR]))
-                        <form action="{{ route('greasings.findings.destroy', [$greasing, $finding]) }}" method="POST" class="mt-2"
-                            onsubmit="return confirm('Delete this finding? This cannot be undone.')">
-                            @csrf
-                            @method('DELETE')
-                            <button class="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-700">Delete</button>
-                        </form>
+                    @if ($finding->action || $finding->action_date)
+                        <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <dt class="text-xs text-text-muted">Action</dt>
+                                <dd class="text-text">{{ $finding->action ?? '-' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs text-text-muted">Action Date</dt>
+                                <dd class="text-text">{{ $finding->action_date ? $finding->action_date->format('d M Y') : '-' }}</dd>
+                            </div>
+                        </dl>
                     @endif
-                </div>
-            @empty
-                <p class="p-6 text-sm text-slate-500">No finding recorded yet.</p>
-            @endforelse
-        </div>
-    </div>
-</div>
 
+                    <div class="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-end">
+                        <form action="{{ route('greasings.findings.update', [$greasing, $finding]) }}" method="POST" class="flex flex-1 flex-col gap-2 sm:flex-row sm:items-end">
+                            @csrf
+                            @method('PATCH')
+                            <div class="grid flex-1 gap-1.5">
+                                <label for="finding-action-{{ $finding->id }}" class="text-xs font-medium text-text-muted">Action taken (saving marks this finding COMPLETED)</label>
+                                <input id="finding-action-{{ $finding->id }}" type="text" name="action" value="{{ $finding->action }}" required class="input lg:min-h-9">
+                            </div>
+                            <x-ui.button type="submit" variant="outline" class="lg:min-h-9">Save</x-ui.button>
+                        </form>
+
+                        @if ($canDeleteFinding)
+                            <form action="{{ route('greasings.findings.destroy', [$greasing, $finding]) }}" method="POST"
+                                onsubmit="return confirm('Delete this finding? This cannot be undone.')">
+                                @csrf
+                                @method('DELETE')
+                                <x-ui.button type="submit" variant="ghost" class="w-full text-danger hover:bg-danger-light hover:text-danger-hover sm:w-auto lg:min-h-9">Delete</x-ui.button>
+                            </form>
+                        @endif
+                    </div>
+                </article>
+            @empty
+                <x-ui.empty-state title="No finding recorded yet."
+                    description="Add a finding above when greasing reveals a problem on one of this group's machines." />
+            @endforelse
+        </section>
+    </div>
 @endsection

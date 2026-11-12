@@ -1,356 +1,234 @@
 @extends('layouts.app')
 
+@php
+    $fullWidth = true;
+    $canManage = auth()->user()->isAdmin() || auth()->user()->isKoordinator();
+    $hasFilters = collect(request()->except('page'))->filter(fn ($v) => filled($v))->isNotEmpty();
+    // Kept as "[ n Findings ]" / "[ No Finding ]": the greasing report uses the same wording and tests read it.
+    $findingText = fn ($n) => $n > 0 ? '[ ' . $n . ' ' . \Illuminate\Support\Str::plural('Finding', $n) . ' ]' : '[ No Finding ]';
+@endphp
+
 @section('content')
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">Greasing Schedule</h1>
-            <p class="text-sm text-slate-500">Manage machine group greasing schedule</p>
-        </div>
+    <div class="space-y-5">
+        <x-ui.page-header title="Greasing Schedule" description="Greasing per machine group: start it, execute it, or assign a PIC.">
+            @if ($canManage)
+                <x-slot:actions>
+                    <x-ui.button variant="outline" id="greasing-import-open">Import CSV</x-ui.button>
+                    <x-ui.button href="{{ route('greasings.create') }}">Add Schedule</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
 
-        @if (auth()->user()->isAdmin() || auth()->user()->isKoordinator())
-        <div class="flex flex-col gap-3 sm:flex-row">
-            <form action="{{ route('greasings.import') }}" method="POST" enctype="multipart/form-data"
-                class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:flex-row sm:items-center">
-                @csrf
-                <div class="flex items-center gap-2">
-                    <input type="file" id="greasingFileInput" name="file" accept=".csv" class="hidden" onchange="updateGreasingFileName(this)">
-                    <label for="greasingFileInput" class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
-                        Choose File
-                    </label>
-                    <span id="greasingFileName" class="max-w-45 truncate text-sm text-slate-500">No file chosen</span>
-                </div>
-                <button class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700">
-                    Import
-                </button>
-            </form>
-
-            <a href="{{ route('greasings.create') }}" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-                Add Schedule
-            </a>
-        </div>
+        @if ($errors->has('file'))
+            <x-ui.alert tone="danger">{{ $errors->first('file') }}</x-ui.alert>
         @endif
-    </div>
+        @if (session('success'))
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
+        @endif
+        @if (session('error'))
+            <x-ui.alert tone="danger">{{ session('error') }}</x-ui.alert>
+        @endif
+        @if (session('warning'))
+            <x-ui.alert tone="warning">{{ session('warning') }}</x-ui.alert>
+        @endif
+        @if (session('greasing_import_result'))
+            @php($importResult = session('greasing_import_result'))
+            <x-ui.alert tone="info" title="Import result">
+                <span class="font-semibold">{{ $importResult['imported'] }}</span> imported,
+                <span class="font-semibold">{{ $importResult['duplicate'] }}</span> duplicate,
+                <span class="font-semibold">{{ $importResult['skipped'] }}</span> skipped or invalid.
+            </x-ui.alert>
+        @endif
 
-    @if ($errors->has('file'))
-        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ $errors->first('file') }}
-        </div>
-    @endif
-
-    @if (session('success'))
-        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if (session('error'))
-        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    @if (session('warning'))
-        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            {{ session('warning') }}
-        </div>
-    @endif
-
-    @if (session('greasing_import_result'))
-        @php($importResult = session('greasing_import_result'))
-        <div class="mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            <span>Import result:</span>
-            <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
-            <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
-            <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
-        </div>
-    @endif
-
-    <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search cycle, pic, or order number..."
-            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-64">
-
-        <select name="group_id" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Group</option>
-            @foreach ($groups as $group)
-                <option value="{{ $group->id }}" {{ request('group_id') == $group->id ? 'selected' : '' }}>{{ $group->name }}</option>
-            @endforeach
-        </select>
-
-        <x-checkbox-dropdown
-            name="status"
-            label="Status"
-            :options="[
-                'OPEN' => 'OPEN',
-                'FINISH' => 'FINISH',
-                'FINISH ON TIME' => 'FINISH ON TIME',
-            ]"
-            :selected="(array) request('status', [])"
-        />
-
-        <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-            Filter
-        </button>
-
-        <a href="{{ route('greasings.index') }}" class="rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">
-            Reset
-        </a>
-    </form>
-
-    {{-- ============ DESKTOP: Table (md and up) ============ --}}
-    <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-        <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Order Number</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Group</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Cycle</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Plan Date</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">PIC</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Finding</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 bg-white" data-infinite-list="greasings">
-                @forelse ($greasings as $greasing)
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $greasing->order_number ?? '-' }}</td>
-                        <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $greasing->group->name ?? '-' }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $greasing->cycle }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $greasing->plan_date->format('d M Y') }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $greasing->due_date->format('d M Y') }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">
-                            @php($area = $greasing->group?->area?->name)
-                            @if ((auth()->user()->isAdmin() || auth()->user()->isKoordinator()) && $area)
-                                <select data-id="{{ $greasing->id }}"
-                                    class="assign-pic w-40 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium shadow-sm transition hover:border-blue-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
-                                    <option value="">Assign PIC</option>
-                                    @foreach ($picsByArea[$area] ?? [] as $picOption)
-                                        <option value="{{ $picOption->name }}" {{ $greasing->pic == $picOption->name ? 'selected' : '' }}>
-                                            👤 {{ \Illuminate\Support\Str::title(strtolower($picOption->name)) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            @else
-                                {{ $greasing->pic ?? '-' }}
-                            @endif
-                        </td>
-                        <td class="px-4 py-3">
-                            <span @class([
-                                'rounded-full px-2.5 py-1 text-xs font-semibold',
-                                'bg-amber-100 text-amber-700' => $greasing->status == 'OPEN',
-                                'bg-rose-100 text-rose-700' => $greasing->status == 'FINISH',
-                                'bg-emerald-100 text-emerald-700' => $greasing->status == 'FINISH ON TIME',
-                            ])>
-                                {{ $greasing->status }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-slate-700">
-                            @if ($greasing->findings_count > 0)
-                                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">[ {{ $greasing->findings_count }} {{ \Illuminate\Support\Str::plural('Finding', $greasing->findings_count) }} ]</span>
-                            @else
-                                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400">[ No Finding ]</span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex flex-wrap items-center gap-2">
-                                @if (auth()->user()->isPic() && ! in_array($greasing->status, ['FINISH', 'FINISH ON TIME'], true))
-                                    @if ($greasing->start_time)
-                                        <span
-                                            class="inline-flex flex-col items-center rounded-lg bg-slate-200 px-3 py-1 text-sm font-semibold text-slate-700"
-                                            title="Greasing activity started">
-                                            STARTED
-                                            <span
-                                                class="text-[10px] font-normal text-slate-500">{{ $greasing->start_time->format('d M Y H:i') }}</span>
-                                        </span>
-                                    @else
-                                        <button type="button"
-                                            class="greasing-start-btn rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
-                                            data-id="{{ $greasing->id }}" data-group="{{ $greasing->group->name ?? '' }}">
-                                            START
-                                        </button>
-                                    @endif
-                                @endif
-                                @unless (auth()->user()->isSupervisor())
-                                <a href="{{ route('greasings.execute', ['greasing' => $greasing->id, 'page' => request('page')]) }}" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-700">
-                                    {{ ! auth()->user()->isAdmin() && $greasing->status !== 'OPEN' ? 'Edit' : 'Execute' }}
-                                </a>
-                                @endunless
-                                @if (auth()->user()->isAdmin() || auth()->user()->isKoordinator())
-                                <a href="{{ route('greasings.edit', ['greasing' => $greasing->id, 'page' => request('page')]) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
-                                    Edit
-                                </a>
-                                <form method="POST" action="{{ route('greasings.destroy', $greasing->id) }}" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700"
-                                        onclick="return confirm('Delete greasing schedule?')">
-                                        Delete
-                                    </button>
-                                </form>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-500">No greasing schedule found</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    {{-- ============ MOBILE: Card List (below md) ============ --}}
-    <div class="space-y-3 md:hidden" data-infinite-list="greasings">
-        @forelse ($greasings as $greasing)
-            @php($area = $greasing->group?->area?->name)
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div class="mb-3 flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                        <div class="truncate text-sm font-semibold text-slate-800">{{ $greasing->group->name ?? '-' }}</div>
-                        <div class="text-xs text-slate-500">{{ $greasing->cycle }} • {{ $greasing->order_number ?? '-' }}</div>
-                    </div>
-                    <span @class([
-                        'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold',
-                        'bg-amber-100 text-amber-700' => $greasing->status == 'OPEN',
-                        'bg-rose-100 text-rose-700' => $greasing->status == 'FINISH',
-                        'bg-emerald-100 text-emerald-700' => $greasing->status == 'FINISH ON TIME',
-                    ])>
-                        {{ $greasing->status }}
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
-                    <div>
-                        <div class="text-slate-400">Plan Date</div>
-                        <div class="font-medium text-slate-700">{{ $greasing->plan_date->format('d M Y') }}</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400">Due Date</div>
-                        <div class="font-medium text-slate-700">{{ $greasing->due_date->format('d M Y') }}</div>
-                    </div>
-                    <div class="col-span-2">
-                        <div class="text-slate-400">PIC</div>
-                        <div class="font-medium text-slate-700">
-                            @if ((auth()->user()->isAdmin() || auth()->user()->isKoordinator()) && $area)
-                                <select data-id="{{ $greasing->id }}"
-                                    class="assign-pic mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
-                                    <option value="">Assign PIC</option>
-                                    @foreach ($picsByArea[$area] ?? [] as $picOption)
-                                        <option value="{{ $picOption->name }}" {{ $greasing->pic == $picOption->name ? 'selected' : '' }}>
-                                            👤 {{ \Illuminate\Support\Str::title(strtolower($picOption->name)) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            @else
-                                {{ $greasing->pic ?? '-' }}
-                            @endif
-                        </div>
-                    </div>
-                    <div class="col-span-2">
-                        <div class="text-slate-400">Finding</div>
-                        <div class="mt-1">
-                            @if ($greasing->findings_count > 0)
-                                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">[ {{ $greasing->findings_count }} {{ \Illuminate\Support\Str::plural('Finding', $greasing->findings_count) }} ]</span>
-                            @else
-                                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400">[ No Finding ]</span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                    @if (auth()->user()->isPic() && ! in_array($greasing->status, ['FINISH', 'FINISH ON TIME'], true))
-                        @if ($greasing->start_time)
-                            <span class="flex-1 rounded-lg bg-slate-200 px-3 py-2 text-center text-xs font-semibold text-slate-700">
-                                STARTED · {{ $greasing->start_time->format('d M Y H:i') }}
-                            </span>
-                        @else
-                            <button type="button"
-                                class="greasing-start-btn flex-1 rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-blue-700"
-                                data-id="{{ $greasing->id }}" data-group="{{ $greasing->group->name ?? '' }}">START</button>
-                        @endif
-                    @endif
-                    @unless (auth()->user()->isSupervisor())
-                    <a href="{{ route('greasings.execute', ['greasing' => $greasing->id, 'page' => request('page')]) }}" class="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-emerald-700">
-                        {{ ! auth()->user()->isAdmin() && $greasing->status !== 'OPEN' ? 'Edit' : 'Execute' }}
-                    </a>
-                    @endunless
-                    @if (auth()->user()->isAdmin() || auth()->user()->isKoordinator())
-                        <a href="{{ route('greasings.edit', ['greasing' => $greasing->id, 'page' => request('page')]) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
-                            Edit
-                        </a>
-                        <form method="POST" action="{{ route('greasings.destroy', $greasing->id) }}" class="flex-1">
-                            @csrf
-                            @method('DELETE')
-                            <button class="w-full rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-rose-700"
-                                onclick="return confirm('Delete greasing schedule?')">
-                                Delete
-                            </button>
-                        </form>
-                    @endif
-                </div>
+        {{-- Filters: plain GET, same parameter names. The multi-select sits on the last row so its
+             open list never covers another control. --}}
+        <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div class="grid gap-1.5 sm:w-72">
+                <label for="greasing-filter-search" class="text-xs font-medium text-text-muted">Search</label>
+                <input id="greasing-filter-search" type="text" name="search" value="{{ request('search') }}"
+                    placeholder="Cycle, PIC, or order number" class="input lg:min-h-9">
             </div>
-        @empty
-            <p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No greasing schedule found</p>
-        @endforelse
-    </div>
 
-    <div class="mt-4">
+            <div class="grid gap-1.5 sm:w-56">
+                <label for="greasing-filter-group" class="text-xs font-medium text-text-muted">Group</label>
+                <select id="greasing-filter-group" name="group_id" class="select lg:min-h-9">
+                    <option value="">All Group</option>
+                    @foreach ($groups as $group)
+                        <option value="{{ $group->id }}" {{ request('group_id') == $group->id ? 'selected' : '' }}>{{ $group->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="grid gap-1.5">
+                <span class="text-xs font-medium text-text-muted">Status</span>
+                <x-checkbox-dropdown name="status" label="Status" :options="[
+                    'OPEN' => 'OPEN',
+                    'FINISH' => 'FINISH',
+                    'FINISH ON TIME' => 'FINISH ON TIME',
+                ]" :selected="(array) request('status', [])" />
+            </div>
+
+            <div class="flex gap-2 sm:ml-auto">
+                <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                <x-ui.button variant="ghost" href="{{ route('greasings.index') }}" class="lg:min-h-9">Reset</x-ui.button>
+            </div>
+        </form>
+
+        @if ($greasings->isEmpty())
+            <x-ui.empty-state
+                :title="$hasFilters ? 'No greasing schedule matches these filters.' : 'No greasing schedule found'"
+                :description="$hasFilters
+                    ? 'Widen the filters, or reset them to see every schedule you can access.'
+                    : ($canManage ? 'Add a schedule or import a CSV to fill this list.' : 'Schedules assigned to you will appear here.')">
+                @if ($hasFilters)
+                    <x-ui.button variant="outline" href="{{ route('greasings.index') }}">Reset filters</x-ui.button>
+                @elseif ($canManage)
+                    <x-ui.button href="{{ route('greasings.create') }}">Add Schedule</x-ui.button>
+                @endif
+            </x-ui.empty-state>
+        @endif
+
+        {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+        <div @class(['card hidden overflow-hidden', 'md:block' => $greasings->isNotEmpty()])>
+            <div class="relative overflow-x-auto">
+                <table class="data-table min-w-full">
+                    <thead>
+                        <tr>
+                            <th scope="col">Group</th>
+                            <th scope="col">Plan</th>
+                            <th scope="col">Due</th>
+                            <th scope="col">PIC</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Finding</th>
+                            {{-- Actions stay pinned on the right when the table scrolls sideways on narrower screens. --}}
+                            <th scope="col" class="sticky right-0 bg-surface-sunken"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody data-infinite-list="greasings">
+                        @foreach ($greasings as $greasing)
+                            @php($area = $greasing->group?->area?->name)
+                            <tr>
+                                <td class="whitespace-nowrap">
+                                    <div class="font-semibold text-text">{{ $greasing->group->name ?? '-' }}</div>
+                                    <div class="text-xs text-text-muted">{{ $greasing->order_number ?? '-' }} · {{ $greasing->cycle }}</div>
+                                </td>
+                                <td class="whitespace-nowrap">{{ $greasing->plan_date->format('d M Y') }}</td>
+                                <td class="whitespace-nowrap">{{ $greasing->due_date->format('d M Y') }}</td>
+                                <td>
+                                    @if ($canManage && $area)
+                                        @include('partials.assign-pic-select', ['id' => 'greasing-pic-t-' . $greasing->id, 'recordId' => $greasing->id, 'label' => $greasing->group->name ?? 'this greasing', 'pics' => $picsByArea[$area] ?? [], 'current' => $greasing->pic])
+                                    @else
+                                        {{ $greasing->pic ?? '-' }}
+                                    @endif
+                                </td>
+                                <td>@include('greasings.partials.status-badge', ['status' => $greasing->status])</td>
+                                <td class="whitespace-nowrap">
+                                    <span @class(['text-sm', 'font-semibold text-warning-text' => $greasing->findings_count > 0, 'text-text-muted' => $greasing->findings_count === 0])>{{ $findingText($greasing->findings_count) }}</span>
+                                </td>
+                                <td class="sticky right-0 bg-surface shadow-[-10px_0_10px_-10px_rgb(15_23_42/0.25)] whitespace-nowrap [&>div]:flex-nowrap">@include('greasings.partials.row-actions')</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- Phone cards (below md). Second list with the same key. --}}
+        <div class="space-y-3 md:hidden" data-infinite-list="greasings">
+            @foreach ($greasings as $greasing)
+                @php($area = $greasing->group?->area?->name)
+                <article class="card min-w-0 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h2 class="truncate text-base font-semibold text-text">{{ $greasing->group->name ?? '-' }}</h2>
+                            <p class="truncate text-sm text-text-muted">{{ $greasing->cycle }} · {{ $greasing->order_number ?? '-' }}</p>
+                        </div>
+                        @include('greasings.partials.status-badge', ['status' => $greasing->status])
+                    </div>
+
+                    <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
+                        <div>
+                            <dt class="text-xs text-text-muted">Plan Date</dt>
+                            <dd class="font-medium text-text">{{ $greasing->plan_date->format('d M Y') }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-text-muted">Due Date</dt>
+                            <dd class="font-medium text-text">{{ $greasing->due_date->format('d M Y') }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-text-muted">Finding</dt>
+                            <dd @class(['font-medium', 'text-warning-text' => $greasing->findings_count > 0, 'text-text-muted' => $greasing->findings_count === 0])>{{ $findingText($greasing->findings_count) }}</dd>
+                        </div>
+                        @unless ($canManage && $area)
+                            <div>
+                                <dt class="text-xs text-text-muted">PIC</dt>
+                                <dd class="font-medium text-text">{{ $greasing->pic ?? '-' }}</dd>
+                            </div>
+                        @endunless
+                    </dl>
+
+                    @if ($canManage && $area)
+                        <div class="mt-3 border-t border-border pt-3">
+                            <p class="mb-1.5 text-xs text-text-muted">PIC</p>
+                            @include('partials.assign-pic-select', ['id' => 'greasing-pic-c-' . $greasing->id, 'recordId' => $greasing->id, 'label' => $greasing->group->name ?? 'this greasing', 'pics' => $picsByArea[$area] ?? [], 'current' => $greasing->pic])
+                        </div>
+                    @endif
+
+                    <div class="mt-3 border-t border-border pt-3">
+                        @include('greasings.partials.row-actions')
+                    </div>
+                </article>
+            @endforeach
+        </div>
+
         <x-infinite-scroll :paginator="$greasings" key="greasings" />
     </div>
 
-    <script>
-        function updateGreasingFileName(input) {
-            const fileName = input.files.length ? input.files[0].name : 'No file chosen';
-            document.getElementById('greasingFileName').textContent = fileName;
-        }
-    </script>
-
-    <script>
-        // delegated: rows are appended later by infinite scroll
-        document.addEventListener('change', function (e) {
-            const select = e.target.closest('.assign-pic');
-            if (!select) return;
-            fetch(`/greasings/${select.dataset.id}/assign-pic`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                },
-                body: JSON.stringify({
-                    pic: select.value,
-                }),
-            });
-        });
-    </script>
-
-    {{-- ============ START GREASING ACTIVITY MODAL ============ --}}
-    <div id="greasing-start-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 class="text-lg font-semibold text-slate-800">Start Greasing Activity</h3>
-            <p id="greasing-start-group" class="mt-1 text-sm text-slate-500"></p>
-
-            <form id="greasing-start-form" method="POST" class="mt-4 space-y-4">
+    @if ($canManage)
+        <x-ui.modal id="greasing-import-modal" title="Import greasing schedules"
+            description="Upload a .csv file in the Greasing import template format.">
+            <form action="{{ route('greasings.import') }}" method="POST" enctype="multipart/form-data" class="mt-5 space-y-4">
                 @csrf
-                <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
-                    <input type="datetime-local" name="started_at" id="greasing-start-input" required
-                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                </div>
-                <div class="flex justify-end gap-2">
-                    <button type="button" id="greasing-start-cancel"
-                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">CANCEL</button>
-                    <button type="submit"
-                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">START</button>
+                <x-ui.field label="CSV file" for="greasingFileInput" error="file" required>
+                    <input type="file" id="greasingFileInput" name="file" accept=".csv" required
+                        class="block w-full text-sm text-text file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-medium file:text-text hover:file:bg-surface-muted">
+                </x-ui.field>
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-ui.button variant="ghost" id="greasing-import-cancel">Cancel</x-ui.button>
+                    <x-ui.button type="submit" variant="success">Import</x-ui.button>
                 </div>
             </form>
-        </div>
-    </div>
+        </x-ui.modal>
+
+        <script>
+            (function () {
+                const modal = document.getElementById('greasing-import-modal');
+                const show = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); };
+                const hide = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+                document.getElementById('greasing-import-open').addEventListener('click', show);
+                document.getElementById('greasing-import-cancel').addEventListener('click', hide);
+                modal.addEventListener('click', (e) => { if (e.target === modal) hide(); });
+                @if ($errors->has('file')) show(); @endif
+            })();
+        </script>
+    @endif
+
+    @include('partials.assign-pic-script', ['baseUrl' => '/greasings'])
+
+    <x-ui.modal id="greasing-start-modal" title="Start greasing activity" size="sm">
+        <p id="greasing-start-group" class="mt-1 text-sm text-text-muted"></p>
+
+        <form id="greasing-start-form" method="POST" class="mt-5 space-y-4">
+            @csrf
+            <x-ui.field label="Start date & time" for="greasing-start-input" required>
+                <input type="datetime-local" name="started_at" id="greasing-start-input" required class="input">
+            </x-ui.field>
+            <div class="flex justify-end gap-2 pt-2">
+                <x-ui.button variant="ghost" id="greasing-start-cancel">Cancel</x-ui.button>
+                <x-ui.button type="submit">START</x-ui.button>
+            </div>
+        </form>
+    </x-ui.modal>
 
     <script>
         (function () {

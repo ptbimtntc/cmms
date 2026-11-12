@@ -28,40 +28,36 @@ function buildProblemRow(index) {
         .join('');
 
     return `
-        <div class="problem-row mb-2 flex gap-2 max-sm:mb-3 max-sm:flex-col max-sm:rounded-xl max-sm:border max-sm:border-gray-200 max-sm:bg-gray-50 max-sm:p-3">
-            <select name="problems[${index}][problem]" class="problem-select w-1/2 rounded-xl border border-gray-300 p-2 text-sm max-sm:w-full">
+        <div class="problem-row grid gap-2 rounded-control border border-border bg-surface-sunken p-3 sm:items-center sm:border-0 sm:bg-transparent sm:p-0 sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_9rem_6rem]">
+            <select name="problems[${index}][problem]" class="problem-select select" aria-label="Problem">
                 <option value="">-- Select Problem --</option>
                 ${options}
             </select>
 
-            <select name="problems[${index}][finding]" class="finding-select flex-1 rounded-xl border border-gray-300 p-2 text-sm max-sm:w-full">
+            <select name="problems[${index}][finding]" class="finding-select select" aria-label="Finding">
                 <option value="">-- Finding --</option>
             </select>
 
-            <select name="problems[${index}][severity]" class="w-1/5 rounded-xl border border-gray-300 p-2 text-sm max-sm:w-full">
+            <select name="problems[${index}][severity]" class="severity-select select" aria-label="Severity">
                 <option value="">-- Severity --</option>
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>
             </select>
 
-            <button type="button" onclick="removeProblem(this)" class="rounded-xl bg-red-500 px-3 py-2 text-white transition hover:bg-red-600 max-sm:w-full max-sm:py-2">
-                X
-            </button>
+            <button type="button" onclick="removeProblem(this)" class="btn btn-ghost min-h-11 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9" aria-label="Remove this problem">Remove</button>
         </div>
     `;
 }
 
 function buildSparepartRow(index) {
     return `
-        <div class="sparepart-row mb-2 flex gap-2 max-sm:mb-3 max-sm:flex-col max-sm:rounded-xl max-sm:border max-sm:border-gray-200 max-sm:bg-gray-50 max-sm:p-3">
-            <select name="spareparts[${index}][sparepart_id]" placeholder="Select Sparepart" class="sparepart-select w-2/3 rounded-xl border border-gray-300 p-2 text-sm max-sm:w-full"></select>
+        <div class="sparepart-row grid gap-2 rounded-control border border-border bg-surface-sunken p-3 sm:items-center sm:border-0 sm:bg-transparent sm:p-0 sm:grid-cols-[minmax(0,1fr)_7rem_6rem]">
+            <select name="spareparts[${index}][sparepart_id]" placeholder="Select Sparepart" class="sparepart-select select" aria-label="Sparepart"></select>
 
-            <input type="number" name="spareparts[${index}][qty]" placeholder="Qty" class="w-1/3 rounded-xl border border-gray-300 p-3 text-sm max-sm:w-full">
+            <input type="number" name="spareparts[${index}][qty]" placeholder="Qty" class="input" aria-label="Qty">
 
-            <button type="button" onclick="removeSparepart(this)" class="rounded-xl bg-red-500 px-3 py-2 text-white transition hover:bg-red-600 max-sm:w-full max-sm:py-2">
-                X
-            </button>
+            <button type="button" onclick="removeSparepart(this)" class="btn btn-ghost min-h-11 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9" aria-label="Remove this sparepart">Remove</button>
         </div>
     `;
 }
@@ -76,6 +72,7 @@ window.addProblem = function () {
     wrapper.insertAdjacentHTML('beforeend', buildProblemRow(problemIndex));
     problemIndex++;
     syncProblemOptions();
+    syncProblemRequired(wrapper.lastElementChild);
 };
 
 window.removeProblem = function (button) {
@@ -118,6 +115,20 @@ function loadFinding(problemSelect) {
             `;
         });
     }
+}
+
+// A picked problem needs its finding and severity. Marking them `required` lets the browser block
+// the submit (online and offline alike) before PMScheduleSaveService::rules() would reject it.
+function syncProblemRequired(row) {
+    if (!row) {
+        return;
+    }
+
+    const hasProblem = Boolean(row.querySelector('.problem-select')?.value);
+
+    row.querySelectorAll('.finding-select, .severity-select').forEach(function (select) {
+        select.required = hasProblem;
+    });
 }
 
 function initProblemFindings() {
@@ -332,6 +343,7 @@ function initPage() {
         if (event.target.classList.contains('problem-select')) {
             loadFinding(event.target);
             syncProblemOptions();
+            syncProblemRequired(event.target.closest('.problem-row'));
         }
 
         // sessions change handlers
@@ -346,6 +358,7 @@ function initPage() {
 
     initProblemFindings();
     syncProblemOptions();
+    document.querySelectorAll('.problem-row').forEach(syncProblemRequired);
 
     // migrate single start/end inputs if present (legacy); keep compatibility but not required for multi-day
     const startInput = document.getElementById('start_time');
@@ -440,28 +453,27 @@ function addSession() {
 
     const index = container.querySelectorAll('.session-row').length;
 
+    // Mirrors resources/views/pm-schedules/partials/session-row.blade.php.
     const html = `
-        <div class="session-row rounded-lg border p-3" data-index="${index}">
+        <div class="session-row rounded-control border border-border bg-surface-sunken p-3" data-index="${index}">
             <input type="hidden" name="sessions[${index}][id]" value="">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                    <label class="text-xs">Date</label>
-                    <input type="date" name="sessions[${index}][actual_date]" value="" class="w-full border rounded-2xl p-2">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div class="grid gap-1.5">
+                    <label for="session-${index}-date" class="text-xs font-medium text-text-muted">Date</label>
+                    <input id="session-${index}-date" type="date" name="sessions[${index}][actual_date]" value="" required class="input">
                 </div>
-                <div>
-                    <label class="text-xs">Start</label>
-                    <input type="time" name="sessions[${index}][start_time]" value="" class="w-full border rounded-2xl p-2 session-start">
+                <div class="grid gap-1.5">
+                    <label for="session-${index}-start" class="text-xs font-medium text-text-muted">Start</label>
+                    <input id="session-${index}-start" type="time" name="sessions[${index}][start_time]" value="" required class="input session-start">
                 </div>
-                <div>
-                    <label class="text-xs">End</label>
-                    <input type="time" name="sessions[${index}][end_time]" value="" class="w-full border rounded-2xl p-2 session-end">
+                <div class="grid gap-1.5">
+                    <label for="session-${index}-end" class="text-xs font-medium text-text-muted">End</label>
+                    <input id="session-${index}-end" type="time" name="sessions[${index}][end_time]" value="" class="input session-end">
                 </div>
             </div>
-            <div class="mt-2 flex items-center justify-between">
-                <div class="text-sm text-slate-600">Duration: <span class="session-duration">-</span></div>
-                <div>
-                    <button type="button" class="remove-session inline-flex items-center rounded-lg bg-red-500 px-3 py-1 text-white">Remove Day</button>
-                </div>
+            <div class="mt-2 flex min-h-11 items-center justify-between gap-3 lg:min-h-9">
+                <p class="text-sm text-text-muted">Duration: <span class="session-duration font-medium text-text">-</span></p>
+                <button type="button" class="remove-session btn btn-ghost min-h-11 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9">Remove Day</button>
             </div>
         </div>
     `;

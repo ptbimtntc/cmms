@@ -1,24 +1,23 @@
-{{-- Single Oil Audit Action mobile card. Extracted so the initial page
-     render and the infinite-scroll JSON endpoint (OilAuditController::
-     actionMore()) share the exact same markup — never two copies. --}}
+{{-- Single Oil Audit Action phone card. Shared by the initial page render and the infinite-scroll
+     JSON endpoint (OilAuditController::actionMore()), so both always produce the same markup. --}}
 @php($colors = $audit->conditionColor())
-<article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+<article class="card min-w-0 p-4">
     <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-            <p class="truncate font-mono text-base font-bold text-slate-900">{{ $audit->machine_number }}</p>
-            <p class="mt-0.5 truncate text-xs text-slate-500">{{ $audit->machine_type }} · {{ $audit->area }} · {{ $audit->audited_at->format('d M Y, H:i') }}</p>
+            <h2 class="truncate text-base font-semibold text-text">{{ $audit->machine_number }}</h2>
+            <p class="mt-0.5 truncate text-sm text-text-muted">{{ $audit->machine_type }} · {{ $audit->area }} · {{ $audit->audited_at->format('d M Y, H:i') }}</p>
         </div>
         <span class="shrink-0 wrap-anywhere rounded-full px-2.5 py-1 text-xs font-bold {{ $colors['badge'] }}">{{ $audit->conditionLabel() }}</span>
     </div>
 
-    <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-100 pt-3 text-xs">
+    <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3 text-sm">
         <div class="min-w-0">
-            <p class="text-slate-400">PIC</p>
-            <p class="mt-0.5 truncate font-medium text-slate-700">{{ $audit->audited_by_name ?: '-' }}</p>
+            <dt class="text-xs text-text-muted">PIC</dt>
+            <dd class="mt-0.5 truncate font-medium text-text">{{ $audit->audited_by_name ?: '-' }}</dd>
         </div>
         <div class="min-w-0">
-            <p class="text-slate-400">Finding</p>
-            <p class="mt-0.5 wrap-anywhere font-medium text-slate-700">
+            <dt class="text-xs text-text-muted">Finding</dt>
+            <dd class="mt-0.5 wrap-anywhere font-medium text-text">
                 @if (! $audit->needsFollowUp())
                     No Finding
                 @elseif ($audit->followUp)
@@ -26,25 +25,25 @@
                 @else
                     {{ $audit->conditionLabel() }} (Pending)
                 @endif
-            </p>
+            </dd>
         </div>
-    </div>
+    </dl>
 
-    <div class="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
         @if ($audit->needsFollowUp() && ! $audit->followUp)
-            <span class="text-xs font-semibold text-orange-700">Follow up diperlukan</span>
+            <x-ui.badge tone="warning">Follow up diperlukan</x-ui.badge>
         @elseif ($audit->followUp)
-            <span class="text-xs font-semibold text-emerald-700">✓ Action selesai</span>
+            <x-ui.badge tone="success">Action selesai</x-ui.badge>
         @else
-            <span class="text-xs text-slate-400">&nbsp;</span>
+            <span aria-hidden="true"></span>
         @endif
         <div class="flex items-center gap-2">
-            <a href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Buka riwayat</a>
+            <x-ui.button size="sm" variant="outline" href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}">Buka riwayat</x-ui.button>
             @if ($canDeleteAudit)
                 <form method="POST" action="{{ route('oil-audits.destroy', $audit) }}" onsubmit="return confirm('Hapus temuan audit oli mesin {{ $audit->machine_number }} ({{ $audit->audited_at->format('d-m-Y') }})? Tindak lanjutnya juga akan terhapus.')">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50">Delete</button>
+                    <x-ui.button type="submit" size="sm" variant="ghost" class="text-danger hover:bg-danger-light hover:text-danger-hover">Delete</x-ui.button>
                 </form>
             @endif
         </div>

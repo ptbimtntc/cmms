@@ -1,39 +1,33 @@
-    {{-- Daftarkan Alpine store sekali saja. Idealnya taruh di layout utama (app.blade.php)
-     sebelum script Alpine di-load, tapi kalau belum ada, taruh di sini juga aman. --}}
-    <script>
-document.addEventListener('alpine:init', () => {
-    Alpine.store('sidebar', {
-        open: false,
-    });
-});
-    </script>
-
-    <aside x-cloak :class="$store.sidebar.open ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0
-       z-40 w-72
-       flex h-dvh flex-col
-       border-r border-sidebar-border
-       bg-sidebar text-sidebar-foreground
-       transition-transform duration-300
+    {{-- The `sidebar` Alpine store is registered in layouts/app.blade.php. Below lg the
+         drawer is inert while closed, so Tab never lands on links that are off-screen. --}}
+    <aside id="app-sidebar" x-cloak
+        :class="$store.sidebar.open ? 'translate-x-0' : '-translate-x-full'"
+        :inert="!$store.sidebar.open && !$store.sidebar.desktop"
+        @keydown.escape.window="$store.sidebar.open = false"
+        aria-label="Menu utama"
+        class="fixed inset-y-0 left-0 z-40 flex h-dvh w-72 flex-col
+       border-r border-sidebar-border bg-sidebar text-sidebar-foreground
+       motion-safe:transition-transform motion-safe:duration-300
        lg:translate-x-0">
 
-        <div class="border-b border-sidebar-border px-4 py-5">
-            <div class="flex items-center justify-between gap-3">
+        <div class="px-4 pb-4 pt-5">
+            <div class="flex items-center justify-between gap-2">
 
                 <a href="{{ route('home') }}" title="Go to landing page"
-                    class="flex min-w-0 items-center gap-3 transition hover:opacity-80">
-                    <x-brand-logo class="h-10 w-auto shrink-0" aria-hidden="true" />
-                    <div class="min-w-0">
-                        <div class="text-base font-semibold tracking-wide text-sidebar-foreground">FreeDOMS</div>
-                        <div class="mt-0.5 text-xs text-sidebar-muted">Preventive Maintenance System</div>
-                    </div>
+                    class="flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition hover:opacity-80">
+                    <x-brand-logo :framed="false" class="h-7 w-auto shrink-0" aria-hidden="true" />
+                    <span class="min-w-0">
+                        <span class="block font-signage text-lg font-semibold leading-none text-sidebar-foreground">FreeDOMS</span>
+                        {{-- Hidden in the mobile drawer, where it would wrap to three lines beside the close button. --}}
+                        <span class="mt-1 hidden text-xs text-sidebar-muted lg:block">Preventive Maintenance System</span>
+                    </span>
                 </a>
 
-                {{-- Tombol Close (X) --}}
-                <button @click="$store.sidebar.open = false"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg text-sidebar-muted transition hover:bg-sidebar-hover hover:text-sidebar-foreground lg:hidden"
-                    title="Close Sidebar">
+                <button type="button" @click="$store.sidebar.open = false"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sidebar-muted transition hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-border lg:hidden"
+                    aria-label="Tutup menu">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5" aria-hidden="true">
                         <path d="M18 6 6 18" />
                         <path d="m6 6 12 12" />
                     </svg>
@@ -114,7 +108,7 @@ document.addEventListener('alpine:init', () => {
         @php
         $machineHistoryActive = request()->routeIs('machine-history.*') && ! $cameFromReportPm && ! $cameFromReportMachine;
         @endphp
-        <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm" x-data="{
+        <nav class="flex-1 overflow-y-auto overscroll-contain px-3 pb-4 text-sm" x-data="{
             openGroup: '{{ $dashboardActive || $todayActivityActive || $pmScheduleActive || $weeklyPlanActive || $oilAuditActive || $oilAuditActionActive || $predictiveActive || $greasingActive || $smallPmActive ? 'main' :
                         ($machineActive || $machineQrActive || $groupActive || $smallPmRowActive || $sparepartActive || $sparepartPlanningActive || $measurementActive || $checklistActive || $problemCategoryActive || $problemFindingsActive || $predictiveMasterActive ? 'master' :
                         ($machineHistoryActive || $reportActive ? 'report' : 'system')) }}',
@@ -232,10 +226,14 @@ document.addEventListener('alpine:init', () => {
             'route' => route('small-pm.index'),
             'label' => 'Small PM',
             'active' => $smallPmActive,
-            // fan: the motor cooling fan behind the grille being cleaned
+            // brush-cleaning: both Small PM jobs are cleaning work (motor grille
+            // cleaning, blower panel filter replacement). The old fan glyph read
+            // as a shuriken at sidebar size.
             'icon' => '
-            <path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 1 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 1-7.002 8.618l1.45-5.412Z" />
-            <path d="M12 12v.01" />',
+            <path d="m16 22-1-4" />
+            <path d="M19 13.99a1 1 0 0 0 1-1V12a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v.99a1 1 0 0 0 1 1" />
+            <path d="M5 14h14l1.973 6.767A1 1 0 0 1 20 22H4a1 1 0 0 1-.973-1.233z" />
+            <path d="m8 22 1-4" />',
             'visible' =>
             $hasWwdArea && ($isAdmin || $isKoordinator || $isPic || $isSupervisor),
             ],
@@ -575,77 +573,79 @@ document.addEventListener('alpine:init', () => {
             ];
             @endphp
 
+            @php
+            // Shared row classes. Active rows carry bold text and aria-current as well as the
+            // tint, so the state never rests on colour alone. Tests look for bg-sidebar-active
+            // in the class attribute that directly follows href, so keep that order.
+            $rowBase = 'flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors';
+            $rowActive = 'bg-sidebar-active font-semibold text-sidebar-active-foreground';
+            $rowIdle = 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-border';
+            @endphp
+
             @foreach ($groups as $group)
             @if (!isset($group['visible']) || $group['visible'])
-            <div class="mb-3 rounded-2xl border border-sidebar-border bg-sidebar-elevated">
+            <div class="mt-2 border-t border-sidebar-border pt-2 first:mt-0 first:border-t-0 first:pt-0">
                 <button type="button"
                     @click="openGroup = (openGroup === '{{ $group['key'] }}') ? '' : '{{ $group['key'] }}'"
-                    class="flex w-full items-center justify-between px-3 py-2.5 text-left">
-                    <div class="flex items-center gap-2">
-                        <span
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-hover text-sidebar-foreground">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-                                class="h-4 w-4">
-                                {!! $group['icon'] !!}
-                            </svg>
-                        </span>
-                        <span
-                            class="text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-muted">{{ $group['title'] }}</span>
-                    </div>
-                    <span class="text-sm text-sidebar-muted" x-show="openGroup !== '{{ $group['key'] }}'">+</span>
-                    <span class="text-sm text-sidebar-muted" x-show="openGroup === '{{ $group['key'] }}'">−</span>
+                    :aria-expanded="(openGroup === '{{ $group['key'] }}').toString()"
+                    aria-controls="nav-group-{{ $group['key'] }}"
+                    class="flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-left text-xs font-semibold text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground">
+                    <span>{{ $group['title'] }}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                        class="h-4 w-4 shrink-0 motion-safe:transition-transform"
+                        :class="{ 'rotate-180': openGroup === '{{ $group['key'] }}' }">
+                        <path d="m6 9 6 6 6-6" />
+                    </svg>
                 </button>
 
-                <div x-show="openGroup === '{{ $group['key'] }}'" class="space-y-1 px-2 pb-2">
+                <div id="nav-group-{{ $group['key'] }}" x-show="openGroup === '{{ $group['key'] }}'" class="space-y-0.5 pb-1">
                     @foreach ($group['items'] as $item)
                     @if (!isset($item['visible']) || $item['visible'])
                     @if (($item['type'] ?? 'link') === 'submenu')
                     {{-- Sub-accordion: toggles independently of the parent group, revealing its own direct links below. --}}
                     <button type="button"
                         @click="openSubmenu = (openSubmenu === '{{ $item['key'] }}') ? '' : '{{ $item['key'] }}'"
-                        class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-all {{ $item['active'] ? 'text-sidebar-foreground' : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground' }}">
+                        :aria-expanded="(openSubmenu === '{{ $item['key'] }}').toString()"
+                        aria-controls="nav-sub-{{ $item['key'] }}"
+                        class="{{ $rowBase }} w-full justify-between text-left {{ $item['active'] ? 'font-semibold text-sidebar-active-foreground hover:bg-sidebar-hover' : $rowIdle }}">
                         <span class="flex min-w-0 items-center gap-3">
-                            <span
-                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-hover text-sm text-sidebar-foreground">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-                                    class="h-4 w-4">
-                                    {!! $item['icon'] !!}
-                                </svg>
-                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                                class="h-5 w-5 shrink-0" aria-hidden="true">
+                                {!! $item['icon'] !!}
+                            </svg>
                             <span class="truncate">{{ $item['label'] }}</span>
                         </span>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            class="h-4 w-4 shrink-0 transition-transform"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                            class="h-4 w-4 shrink-0 motion-safe:transition-transform"
                             :class="{ 'rotate-90': openSubmenu === '{{ $item['key'] }}' }">
                             <path d="m9 18 6-6-6-6" />
                         </svg>
                     </button>
 
-                    <div x-show="openSubmenu === '{{ $item['key'] }}'"
-                        class="ml-4 space-y-1 border-l border-sidebar-border py-1 pl-4">
+                    <div id="nav-sub-{{ $item['key'] }}" x-show="openSubmenu === '{{ $item['key'] }}'"
+                        class="ml-5 space-y-0.5 border-l border-sidebar-border py-1 pl-3">
                         @foreach ($item['children'] as $child)
                         @if (!isset($child['visible']) || $child['visible'])
                         <a href="{{ $child['route'] }}"
-                            class="block truncate rounded-lg px-3 py-2 text-sm transition-all {{ $child['active'] ? 'bg-sidebar-active text-white shadow-sm' : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground' }}">
-                            {{ $child['label'] }}
+                            class="{{ $rowBase }} {{ $child['active'] ? $rowActive : $rowIdle }}"
+                            @if ($child['active']) aria-current="page" @endif>
+                            <span class="truncate">{{ $child['label'] }}</span>
                         </a>
                         @endif
                         @endforeach
                     </div>
                     @else
                     <a href="{{ $item['route'] }}"
-                        class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all {{ $item['active'] ? 'bg-sidebar-active text-white shadow-sm' : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground' }}">
-                        <span
-                            class="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-hover text-sm text-sidebar-foreground">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-                                class="h-4 w-4">
-                                {!! $item['icon'] !!}
-                            </svg>
-                        </span>
+                        class="{{ $rowBase }} {{ $item['active'] ? $rowActive : $rowIdle }}"
+                        @if ($item['active']) aria-current="page" @endif>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                            class="h-5 w-5 shrink-0" aria-hidden="true">
+                            {!! $item['icon'] !!}
+                        </svg>
                         <span class="truncate">{{ $item['label'] }}</span>
                     </a>
                     @endif
@@ -662,8 +662,7 @@ document.addEventListener('alpine:init', () => {
         </div>
     </aside>
 
-    {{-- Overlay untuk mobile, klik di luar sidebar buat nutup --}}
+    {{-- Mobile backdrop: tapping outside the drawer closes it. --}}
     <div x-show="$store.sidebar.open" x-cloak @click="$store.sidebar.open = false"
-        class="fixed inset-0 z-30 bg-black/40 lg:hidden" x-transition.opacity>
+        class="fixed inset-0 z-30 bg-neutral-900/40 lg:hidden" x-transition.opacity aria-hidden="true">
     </div>
-    </aside>

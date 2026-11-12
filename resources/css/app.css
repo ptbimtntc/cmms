@@ -50,7 +50,17 @@ select:focus[data-flux-control] {
 .ts-wrapper .ts-control {
     border: 1px solid var(--color-border-strong) !important;
     border-radius: var(--radius-control) !important;
-    padding: .5rem !important;
-    min-height: 12px;
+    padding: .5rem .75rem !important;
+    min-height: 2.75rem; /* 44px touch target, same as .input/.select */
+    align-items: center;
     box-shadow: none !important;
+}
+
+/* Tom Select copies the <select>'s classes onto its wrapper. When that select
+   uses .select, the wrapper would draw a second box around .ts-control. */
+.ts-wrapper.select {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent !important;
 }

@@ -1,18 +1,12 @@
-<div class="bg-surface border border-border rounded-xl shadow-sm p-4 flex flex-col {{ $height ?? 'h-56 md:h-64' }}">
-    <div class="flex items-start justify-between mb-1">
-        <div>
-            <div class="text-sm font-medium text-text">{{ $title }}</div>
-            @if(isset($subtitle))
-                <div class="text-xs text-text-muted">{{ $subtitle }}</div>
-            @endif
-        </div>
-        @if(isset($filters))
-            <div class="space-x-2 text-sm text-text-muted">
-                {!! $filters !!}
-            </div>
-        @endif
+{{-- Canvas chart card. Params: title, subtitle, id, height, summary (screen-reader text for the canvas). --}}
+<section class="card flex flex-col p-5 {{ $height ?? 'h-56 md:h-64' }}">
+    <div>
+        <h3 class="text-sm font-semibold text-text">{{ $title }}</h3>
+        @isset($subtitle)
+            <p class="text-xs text-text-muted">{{ $subtitle }}</p>
+        @endisset
     </div>
-    <div class="flex-1 min-h-0 mt-3">
-        <canvas id="{{ $id }}" class="block h-full w-full"></canvas>
+    <div class="mt-3 min-h-0 flex-1">
+        <canvas id="{{ $id }}" class="block h-full w-full" role="img" aria-label="{{ $summary ?? $title }}"></canvas>
     </div>
-</div>
+</section>

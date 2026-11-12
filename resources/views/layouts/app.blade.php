@@ -21,6 +21,21 @@
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+    <script>
+        // Mobile drawer state for partials/sidebar + partials/topbar. `desktop` tracks the lg
+        // breakpoint so the drawer is only made inert where it actually slides off-screen.
+        document.addEventListener('alpine:init', () => {
+            const lg = window.matchMedia('(min-width: 1024px)');
+            Alpine.store('sidebar', {
+                open: false,
+                desktop: lg.matches,
+            });
+            lg.addEventListener('change', (event) => {
+                Alpine.store('sidebar').desktop = event.matches;
+                if (event.matches) Alpine.store('sidebar').open = false;
+            });
+        });
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
@@ -83,7 +98,9 @@
                     @if ($fullWidth ?? false)
                         @yield('content')
                     @else
-                        <div class="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6 lg:p-8">
+                        {{-- Page-level frame for pages not yet moved to x-ui components. Flat
+                             (border, no shadow): it is the ground plane, not a raised surface. --}}
+                        <div class="rounded-card border border-border bg-surface p-4 sm:p-6 lg:p-8">
                             @yield('content')
                         </div>
                     @endif

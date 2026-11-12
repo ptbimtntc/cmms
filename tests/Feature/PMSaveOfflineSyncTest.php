@@ -88,7 +88,7 @@ test('PM_SAVE idempotency: retrying the same operation_uuid never duplicates mea
         'start_time' => '08:00',
         'end_time' => '10:00',
         'measurements' => [['machine_measurement_id' => $machineMeasurement->id, 'measurement_item' => 'Vibration', 'standard' => '<=5', 'measurement_value' => '3', 'unit' => 'mm/s']],
-        'problems' => [['problem' => $machineProblem->id, 'finding' => null, 'severity' => 'Low']],
+        'problems' => [['problem' => $machineProblem->id, 'finding' => pmTestFindingId(), 'severity' => 'Low']],
         'spareparts' => [['sparepart_id' => $sparepart->id, 'qty' => 2]],
     ]);
 
@@ -161,8 +161,8 @@ test('PM_SAVE aggregate integrity: one operation_uuid persists header + sessions
             ['machine_measurement_id' => $mm2->id, 'measurement_item' => 'Temperature', 'standard' => null, 'measurement_value' => '40', 'unit' => 'C'],
         ],
         'problems' => [
-            ['problem' => $mp1->id, 'finding' => null, 'severity' => 'Low'],
-            ['problem' => $mp2->id, 'finding' => null, 'severity' => 'High'],
+            ['problem' => $mp1->id, 'finding' => pmTestFindingId(), 'severity' => 'Low'],
+            ['problem' => $mp2->id, 'finding' => pmTestFindingId(), 'severity' => 'High'],
         ],
         'spareparts' => [
             ['sparepart_id' => $sp1->id, 'qty' => 1],
@@ -223,7 +223,7 @@ test('PM_SAVE via sync computes gearbox_problem the same way as online, from pro
         'pic' => 'Budi',
         'actual_date' => now()->toDateString(),
         'start_time' => '08:00',
-        'problems' => [['problem' => $mainshaftProblem->id, 'finding' => null, 'severity' => 'High']],
+        'problems' => [['problem' => $mainshaftProblem->id, 'finding' => pmTestFindingId(), 'severity' => 'High']],
     ]));
 
     $response->assertOk();

@@ -1,161 +1,192 @@
 @extends('layouts.app')
 
+@php
+    $fullWidth = true;
+    $finishConfirm = "return confirm('Remove this activity from the monitor? The underlying work is NOT completed.');";
+@endphp
+
 @section('content')
     <div class="space-y-6">
 
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h1 class="text-xl font-semibold text-text">Today's Activity</h1>
-                <p class="mt-1 text-sm text-text-muted">
-                    {{ now()->translatedFormat('l, d F Y') }}
-                    @unless ($canViewAll)
-                        · {{ auth()->user()->name }}
-                    @endunless
-                </p>
-            </div>
-
+        <x-ui.page-header title="Today's Activity"
+            :description="now()->translatedFormat('l, d F Y') . ($canViewAll ? '' : ' · ' . auth()->user()->name)">
             @if ($canManage)
-                <button type="button" id="manual-activity-open"
-                    class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 5v14" />
-                        <path d="M5 12h14" />
-                    </svg>
-                    ACTIVITY
-                </button>
+                <x-slot:actions>
+                    <x-ui.button id="manual-activity-open">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 5v14" />
+                            <path d="M5 12h14" />
+                        </svg>
+                        Start activity
+                    </x-ui.button>
+                </x-slot:actions>
             @endif
-        </div>
+        </x-ui.page-header>
 
         @if (session('success'))
-            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {{ session('success') }}
-            </div>
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
         @endif
         @if (session('warning'))
-            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                {{ session('warning') }}
-            </div>
+            <x-ui.alert tone="warning">{{ session('warning') }}</x-ui.alert>
         @endif
 
-        {{-- ------------------------------------------------------------------ --}}
-        {{-- ACTIVE NOW                                                          --}}
-        {{-- ------------------------------------------------------------------ --}}
-        <div class="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
-                Active Now ({{ $activeRows->count() }})
+        {{-- Active now: the screen's main question, who is working on what right now. --}}
+        <section aria-labelledby="active-now-heading">
+            <div class="mb-3 flex items-baseline gap-2">
+                <h2 id="active-now-heading" class="font-signage text-xl font-semibold text-text">Active now</h2>
+                <span class="text-sm text-text-muted">{{ $activeRows->count() }} {{ \Illuminate\Support\Str::plural('activity', $activeRows->count()) }}</span>
             </div>
 
             @if ($activeRows->isEmpty())
-                <p class="text-sm text-text-muted">No active activity right now.</p>
+                <x-ui.empty-state title="No active activity right now."
+                    description="A card appears here as soon as a PIC starts PM, greasing, oil audit, predictive, small PM, or a manual activity." />
             @else
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     @foreach ($activeRows as $row)
                         @php($a = $row['activity'])
-                        <div class="flex flex-col rounded-xl border border-border bg-surface-muted/40 p-4">
-                            <div class="flex items-start justify-between gap-2">
+                        <article class="card flex min-w-0 flex-col p-4">
+                            <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    <div class="truncate text-sm font-medium text-text-muted">{{ $row['pic']->name }}</div>
-                                    <div class="truncate text-base font-semibold text-text">{{ $a->displayLabel() }}</div>
-                                    <div class="mt-1 truncate text-xs text-text-muted">
+                                    <p class="truncate text-sm text-text-muted">{{ $row['pic']->name }}</p>
+                                    <h3 class="truncate text-base font-semibold text-text">{{ $a->displayLabel() }}</h3>
+                                    <p class="mt-1 truncate text-sm text-text-muted">
                                         {{ $a->label }}@if ($a->locationLabel()) · {{ $a->locationLabel() }}@endif
-                                    </div>
-                                    <div class="text-xs text-text-muted">Since {{ $a->startedAt->format('H:i') }}</div>
+                                    </p>
                                 </div>
-                                <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">ACTIVE</span>
+                                <x-ui.badge tone="success" class="shrink-0">ACTIVE</x-ui.badge>
                             </div>
+                            <p class="mt-2 text-sm text-text-muted">Since <span class="font-semibold text-text">{{ $a->startedAt->format('H:i') }}</span></p>
 
                             @if ($canManage)
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    @if ($a->source === 'MANUAL')
-                                        <button type="button"
-                                            class="manual-edit-btn rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                            data-id="{{ $a->recordId }}" data-name="{{ $a->title }}"
-                                            data-machine="{{ $a->machineNumber }}"
-                                            data-started="{{ $a->startedAt->format('Y-m-d\TH:i') }}">Edit</button>
-                                    @elseif ($row['moduleLink'])
-                                        <a href="{{ $row['moduleLink']['url'] }}"
-                                            class="rounded-lg border border-emerald-600 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">{{ $row['moduleLink']['label'] }}</a>
-                                    @endif
-                                    <form method="POST" action="{{ route('today-activity.finish') }}"
-                                        onsubmit="return confirm('Remove this activity from the monitor? The underlying work is NOT completed.');">
-                                        @csrf
-                                        <input type="hidden" name="source" value="{{ $a->source }}">
-                                        <input type="hidden" name="source_key" value="{{ $row['monitorKey'] }}">
-                                        <input type="hidden" name="pic_user_id" value="{{ $row['pic']->id }}">
-                                        <button type="submit"
-                                            class="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">Finish</button>
-                                    </form>
+                                <div class="mt-4 border-t border-border pt-3 [&>div]:justify-start">
+                                    @include('today-activity.partials.row-actions', ['showFinish' => true])
                                 </div>
                             @endif
-                        </div>
+                        </article>
                     @endforeach
                 </div>
             @endif
-        </div>
+        </section>
 
-        {{-- ------------------------------------------------------------------ --}}
-        {{-- PIC AVAILABILITY (ADMIN / KOORDINATOR)                              --}}
-        {{-- ------------------------------------------------------------------ --}}
+        {{-- PIC availability (ADMIN / KOORDINATOR / SUPERVISOR) --}}
         @if ($canViewAll)
-            <div class="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-                <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">PIC Availability</div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="text-text-muted">
+            <x-ui.card title="PIC Availability" description="Who can take work today." :padded="false">
+                {{-- Phone: one row per PIC, actions under the name. --}}
+                <ul class="divide-y divide-border md:hidden">
+                    @foreach ($picStatuses as $s)
+                        <li class="space-y-2 px-4 py-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <span class="min-w-0 font-medium text-text">{{ $s['pic']->name }}</span>
+                                @include('today-activity.partials.status-badge', ['status' => $s['status']])
+                            </div>
+                            @if ($s['availability'])
+                                <p class="text-sm text-text-muted">{{ $s['availability']->reason }}@if ($s['availability']->notes): {{ $s['availability']->notes }}@endif</p>
+                            @endif
+                            @if ($canManage && in_array($s['status'], ['NOT STARTED', 'INACTIVE'], true))
+                                <div class="[&>div]:justify-start">@include('today-activity.partials.pic-actions')</div>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+
+                <div class="relative hidden overflow-x-auto md:block">
+                    <table class="data-table min-w-full">
+                        <thead>
                             <tr>
-                                <th class="pb-2 pr-4">PIC</th>
-                                <th class="pb-2 pr-4">Status</th>
-                                <th class="pb-2 pr-4">Reason</th>
+                                <th scope="col">PIC</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Reason</th>
                                 @if ($canManage)
-                                    <th class="pb-2">Actions</th>
+                                    <th scope="col"><span class="sr-only">Actions</span></th>
                                 @endif
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-border text-text">
+                        <tbody>
                             @foreach ($picStatuses as $s)
                                 <tr>
-                                    <td class="py-2 pr-4 font-medium">{{ $s['pic']->name }}</td>
-                                    <td class="py-2 pr-4">
-                                        @if ($s['status'] === 'ACTIVE')
-                                            <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">ACTIVE</span>
-                                        @elseif ($s['status'] === 'INACTIVE')
-                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">INACTIVE</span>
-                                        @else
-                                            <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">NOT STARTED</span>
-                                        @endif
-                                    </td>
-                                    <td class="py-2 pr-4 text-text-muted">
+                                    <td class="font-medium">{{ $s['pic']->name }}</td>
+                                    <td>@include('today-activity.partials.status-badge', ['status' => $s['status']])</td>
+                                    <td class="text-text-muted">
                                         @if ($s['availability'])
-                                            {{ $s['availability']->reason }}@if ($s['availability']->notes) — {{ $s['availability']->notes }}@endif
+                                            {{ $s['availability']->reason }}@if ($s['availability']->notes): {{ $s['availability']->notes }}@endif
                                         @else
-                                            —
+                                            <span class="text-text-disabled">None</span>
                                         @endif
                                     </td>
                                     @if ($canManage)
-                                        <td class="py-2">
-                                            <div class="flex flex-wrap gap-2">
-                                                @if ($s['status'] === 'NOT STARTED')
-                                                    <button type="button"
-                                                        class="pic-inactive-btn rounded-lg border border-amber-500 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
-                                                        data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
-                                                        data-reason="" data-notes="">Set Inactive</button>
-                                                @elseif ($s['status'] === 'INACTIVE')
-                                                    <button type="button"
-                                                        class="pic-inactive-btn rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                                        data-id="{{ $s['pic']->id }}" data-name="{{ $s['pic']->name }}"
-                                                        data-reason="{{ $s['availability']->reason }}"
-                                                        data-notes="{{ $s['availability']->notes }}">Edit</button>
-                                                    <form method="POST" action="{{ route('today-activity.inactive.clear', $s['availability']->id) }}">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit"
-                                                            class="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700">Set Available</button>
-                                                    </form>
-                                                @else
-                                                    <span class="text-xs text-text-disabled">—</span>
-                                                @endif
-                                            </div>
+                                        <td class="whitespace-nowrap">@include('today-activity.partials.pic-actions')</td>
+                                    @endif
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </x-ui.card>
+        @endif
+
+        {{-- Started today: the day's log, newest work and finished work together. --}}
+        <x-ui.card title="Started Today" :padded="false">
+            @if ($rows->isEmpty())
+                <div class="p-4 sm:p-5">
+                    <x-ui.empty-state title="No activity started today."
+                        description="Every PM, greasing, oil audit, predictive, small PM, and manual activity started today is listed here." />
+                </div>
+            @else
+                {{-- Inline @php on purpose: a block @php after the inline ones above trips Blade's parser. --}}
+                @php($rowStatus = fn ($row) => $row['isActive'] ? 'ACTIVE' : ($row['activity']->isFinished() ? 'FINISHED' : 'CLOSED'))
+
+                {{-- Phone: a time-ordered list, each entry readable without sideways scrolling. --}}
+                <ol class="divide-y divide-border md:hidden">
+                    @foreach ($rows as $row)
+                        @php($a = $row['activity'])
+                        <li class="space-y-1.5 px-4 py-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <p class="min-w-0 text-sm text-text-muted">
+                                    <span class="font-semibold text-text tabular-nums">{{ $a->startedAt->format('H:i') }}</span>
+                                    · {{ $row['pic']->name }}
+                                </p>
+                                @include('today-activity.partials.status-badge', ['status' => $rowStatus($row)])
+                            </div>
+                            <p class="font-medium text-text">{{ $a->displayLabel() }}</p>
+                            <p class="text-sm text-text-muted">{{ $a->label }}@if ($a->locationLabel()) · {{ $a->locationLabel() }}@endif</p>
+                            @if ($canManage)
+                                <div class="pt-1 [&>div]:justify-start">
+                                    @include('today-activity.partials.row-actions', ['showFinish' => ! $a->isFinished()])
+                                </div>
+                            @endif
+                        </li>
+                    @endforeach
+                </ol>
+
+                <div class="relative hidden overflow-x-auto md:block">
+                    <table class="data-table min-w-full">
+                        <thead>
+                            <tr>
+                                <th scope="col">Start</th>
+                                <th scope="col">PIC</th>
+                                <th scope="col">Activity</th>
+                                <th scope="col">Source</th>
+                                <th scope="col">Machine / Location</th>
+                                <th scope="col">Status</th>
+                                @if ($canManage)
+                                    <th scope="col"><span class="sr-only">Actions</span></th>
+                                @endif
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($rows as $row)
+                                @php($a = $row['activity'])
+                                <tr>
+                                    <td class="font-semibold tabular-nums">{{ $a->startedAt->format('H:i') }}</td>
+                                    <td class="whitespace-nowrap">{{ $row['pic']->name }}</td>
+                                    <td>{{ $a->displayLabel() }}</td>
+                                    <td class="text-text-muted">{{ $a->label }}</td>
+                                    <td>{{ $a->locationLabel() ?: '-' }}</td>
+                                    <td>@include('today-activity.partials.status-badge', ['status' => $rowStatus($row)])</td>
+                                    @if ($canManage)
+                                        <td class="whitespace-nowrap">
+                                            @include('today-activity.partials.row-actions', ['showFinish' => ! $a->isFinished()])
                                         </td>
                                     @endif
                                 </tr>
@@ -163,216 +194,90 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
-        @endif
-
-        {{-- ------------------------------------------------------------------ --}}
-        {{-- STARTED TODAY                                                       --}}
-        {{-- ------------------------------------------------------------------ --}}
-        <div class="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Started Today</div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="text-text-muted">
-                        <tr>
-                            <th class="pb-2 pr-4">PIC</th>
-                            <th class="pb-2 pr-4">Activity</th>
-                            <th class="pb-2 pr-4">Source</th>
-                            <th class="pb-2 pr-4">Machine / Location</th>
-                            <th class="pb-2 pr-4">Start</th>
-                            <th class="pb-2 pr-4">Status</th>
-                            @if ($canManage)
-                                <th class="pb-2">Actions</th>
-                            @endif
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border text-text">
-                        @forelse ($rows as $row)
-                            @php($a = $row['activity'])
-                            <tr>
-                                <td class="py-2 pr-4">{{ $row['pic']->name }}</td>
-                                <td class="py-2 pr-4">{{ $a->displayLabel() }}</td>
-                                <td class="py-2 pr-4 text-text-muted">{{ $a->label }}</td>
-                                <td class="py-2 pr-4">{{ $a->locationLabel() ?: '—' }}</td>
-                                <td class="py-2 pr-4 tabular-nums">{{ $a->startedAt->format('H:i') }}</td>
-                                <td class="py-2 pr-4">
-                                    @if ($row['isActive'])
-                                        <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">ACTIVE</span>
-                                    @elseif ($a->isFinished())
-                                        <span class="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">FINISHED</span>
-                                    @else
-                                        <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">CLOSED</span>
-                                    @endif
-                                </td>
-                                @if ($canManage)
-                                    <td class="py-2">
-                                        <div class="flex flex-wrap gap-2">
-                                            @if ($a->source === 'MANUAL')
-                                                <button type="button"
-                                                    class="manual-edit-btn rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                                                    data-id="{{ $a->recordId }}" data-name="{{ $a->title }}"
-                                                    data-machine="{{ $a->machineNumber }}"
-                                                    data-started="{{ $a->startedAt->format('Y-m-d\TH:i') }}">Edit</button>
-                                            @elseif ($row['moduleLink'])
-                                                <a href="{{ $row['moduleLink']['url'] }}"
-                                                    class="rounded-lg border border-emerald-600 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50">{{ $row['moduleLink']['label'] }}</a>
-                                            @endif
-                                            @unless ($a->isFinished())
-                                                <form method="POST" action="{{ route('today-activity.finish') }}"
-                                                    onsubmit="return confirm('Remove this activity from the monitor? The underlying work is NOT completed.');">
-                                                    @csrf
-                                                    <input type="hidden" name="source" value="{{ $a->source }}">
-                                                    <input type="hidden" name="source_key" value="{{ $row['monitorKey'] }}">
-                                                    <input type="hidden" name="pic_user_id" value="{{ $row['pic']->id }}">
-                                                    <button type="submit"
-                                                        class="rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700">Finish</button>
-                                                </form>
-                                            @endunless
-                                        </div>
-                                    </td>
-                                @endif
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="{{ $canManage ? 7 : 6 }}" class="py-4 text-center text-text-muted">No activity started today.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            @endif
+        </x-ui.card>
     </div>
 
     @if ($canManage)
-        {{-- ============ START MANUAL ACTIVITY MODAL ============ --}}
-        <div id="manual-activity-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-            <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-                <h3 class="text-lg font-semibold text-slate-800">Start Manual Activity</h3>
+        <x-ui.modal id="manual-activity-modal" title="Start manual activity"
+            description="For work outside PM, greasing, oil audit, and predictive. It shows on the monitor until finished.">
+            <form method="POST" action="{{ route('today-activity.manual.store') }}" class="mt-5 space-y-4">
+                @csrf
+                <x-ui.field label="User / PIC" for="manual-activity-user" error="user_id" required>
+                    <select name="user_id" id="manual-activity-user" required class="select">
+                        <option value="">Select PIC</option>
+                        @foreach ($assignablePics as $pic)
+                            <option value="{{ $pic->id }}" @selected((string) old('user_id') === (string) $pic->id)>
+                                {{ $pic->name }} ({{ $pic->role }})
+                            </option>
+                        @endforeach
+                    </select>
+                </x-ui.field>
+                <x-ui.field label="Activity name" for="manual-activity-name" error="name" required>
+                    <input type="text" name="name" id="manual-activity-name" value="{{ old('name') }}" required maxlength="255"
+                        placeholder="e.g. Repair Conveyor" class="input">
+                </x-ui.field>
+                <x-ui.field label="Machine / Location" for="manual-activity-machine" error="machine_number" hint="Optional.">
+                    <input type="text" name="machine_number" id="manual-activity-machine" value="{{ old('machine_number') }}" maxlength="255"
+                        placeholder="e.g. M-1023 or Workshop" class="input">
+                </x-ui.field>
+                <x-ui.field label="Start date & time" for="manual-activity-started-at" error="started_at" required>
+                    <input type="datetime-local" name="started_at" id="manual-activity-started-at" required class="input">
+                </x-ui.field>
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-ui.button variant="ghost" id="manual-activity-cancel">Cancel</x-ui.button>
+                    <x-ui.button type="submit">Start activity</x-ui.button>
+                </div>
+            </form>
+        </x-ui.modal>
 
-                <form method="POST" action="{{ route('today-activity.manual.store') }}" class="mt-4 space-y-4">
-                    @csrf
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">User / PIC</label>
-                        <select name="user_id" required
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                            <option value="">— Select PIC —</option>
-                            @foreach ($assignablePics as $pic)
-                                <option value="{{ $pic->id }}" @selected((string) old('user_id') === (string) $pic->id)>
-                                    {{ $pic->name }} ({{ $pic->role }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('user_id')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Activity Name</label>
-                        <input type="text" name="name" value="{{ old('name') }}" required maxlength="255"
-                            placeholder="e.g. Repair Conveyor"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                        @error('name')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Machine / Location <span class="text-slate-400">(optional)</span></label>
-                        <input type="text" name="machine_number" value="{{ old('machine_number') }}" maxlength="255"
-                            placeholder="e.g. M-1023 or Workshop"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                        @error('machine_number')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
-                        <input type="datetime-local" name="started_at" id="manual-activity-started-at" required
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                        @error('started_at')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button type="button" id="manual-activity-cancel"
-                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">CANCEL</button>
-                        <button type="submit"
-                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">START</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <x-ui.modal id="manual-edit-modal" title="Edit manual activity">
+            <form id="manual-edit-form" method="POST" class="mt-5 space-y-4">
+                @csrf
+                @method('PATCH')
+                <x-ui.field label="Activity name" for="manual-edit-name" required>
+                    <input type="text" name="name" id="manual-edit-name" required maxlength="255" class="input">
+                </x-ui.field>
+                <x-ui.field label="Machine / Location" for="manual-edit-machine" hint="Optional.">
+                    <input type="text" name="machine_number" id="manual-edit-machine" maxlength="255" class="input">
+                </x-ui.field>
+                <x-ui.field label="Start date & time" for="manual-edit-started" required>
+                    <input type="datetime-local" name="started_at" id="manual-edit-started" required class="input">
+                </x-ui.field>
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-ui.button variant="ghost" id="manual-edit-cancel">Cancel</x-ui.button>
+                    <x-ui.button type="submit">Save changes</x-ui.button>
+                </div>
+            </form>
+        </x-ui.modal>
 
-        {{-- ============ EDIT MANUAL ACTIVITY MODAL ============ --}}
-        <div id="manual-edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-            <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-                <h3 class="text-lg font-semibold text-slate-800">Edit Manual Activity</h3>
+        <x-ui.modal id="pic-inactive-modal" title="Set PIC inactive">
+            <p id="pic-inactive-name" class="mt-1 text-sm font-medium text-text-muted"></p>
 
-                <form id="manual-edit-form" method="POST" class="mt-4 space-y-4">
-                    @csrf
-                    @method('PATCH')
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Activity Name</label>
-                        <input type="text" name="name" id="manual-edit-name" required maxlength="255"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Machine / Location <span class="text-slate-400">(optional)</span></label>
-                        <input type="text" name="machine_number" id="manual-edit-machine" maxlength="255"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Start Date &amp; Time</label>
-                        <input type="datetime-local" name="started_at" id="manual-edit-started" required
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button type="button" id="manual-edit-cancel"
-                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">CANCEL</button>
-                        <button type="submit"
-                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">SAVE</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        {{-- ============ SET PIC INACTIVE MODAL ============ --}}
-        <div id="pic-inactive-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-            <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-                <h3 class="text-lg font-semibold text-slate-800">Set PIC Inactive</h3>
-                <p id="pic-inactive-name" class="mt-1 text-sm font-medium text-slate-500"></p>
-
-                <form method="POST" action="{{ route('today-activity.inactive.set') }}" class="mt-4 space-y-4">
-                    @csrf
-                    <input type="hidden" name="user_id" id="pic-inactive-user-id">
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Reason</label>
-                        <select name="reason" id="pic-inactive-reason" required
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                            @foreach ($inactiveReasons as $reason)
-                                <option value="{{ $reason }}">{{ $reason }}</option>
-                            @endforeach
-                        </select>
-                        @error('reason')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div id="pic-inactive-notes-wrap">
-                        <label class="mb-1 block text-sm font-medium text-slate-700">
-                            Notes <span id="pic-inactive-notes-opt" class="text-slate-400">(optional)</span>
-                        </label>
-                        <input type="text" name="notes" id="pic-inactive-notes" maxlength="255"
-                            placeholder="e.g. detail keterangan"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                        @error('notes')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button type="button" id="pic-inactive-cancel"
-                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">CANCEL</button>
-                        <button type="submit"
-                            class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">SAVE</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+            <form method="POST" action="{{ route('today-activity.inactive.set') }}" class="mt-5 space-y-4">
+                @csrf
+                <input type="hidden" name="user_id" id="pic-inactive-user-id">
+                <x-ui.field label="Reason" for="pic-inactive-reason" error="reason" required>
+                    <select name="reason" id="pic-inactive-reason" required class="select">
+                        @foreach ($inactiveReasons as $reason)
+                            <option value="{{ $reason }}">{{ $reason }}</option>
+                        @endforeach
+                    </select>
+                </x-ui.field>
+                <div id="pic-inactive-notes-wrap" class="grid gap-1.5">
+                    <label for="pic-inactive-notes" class="form-label mb-0">
+                        Notes <span id="pic-inactive-notes-opt" class="font-normal text-text-muted">(optional)</span>
+                    </label>
+                    <input type="text" name="notes" id="pic-inactive-notes" maxlength="255"
+                        placeholder="e.g. detail keterangan" class="input">
+                    @error('notes')<p class="form-error">{{ $message }}</p>@enderror
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-ui.button variant="ghost" id="pic-inactive-cancel">Cancel</x-ui.button>
+                    <x-ui.button type="submit">Set inactive</x-ui.button>
+                </div>
+            </form>
+        </x-ui.modal>
 
         <script>
             (function () {

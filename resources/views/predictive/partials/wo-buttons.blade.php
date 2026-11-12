@@ -7,42 +7,44 @@
 --}}
 @php
     $u = auth()->user();
-    $btn = ($size ?? 'row') === 'card'
-        ? 'inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold'
-        : 'inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold';
-    $focus = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1';
+    $card = ($size ?? 'row') === 'card';
+    $btnSize = $card ? 'md' : 'sm';
+    $grow = $card ? 'flex-1' : '';
+    // Same classes x-ui.button gives these sizes; the two Alpine buttons below are plain
+    // <button>s because Blade does not compile @js inside a component tag's attributes.
+    $sizeClass = $card ? 'min-h-11' : 'btn-sm min-h-11 lg:min-h-9';
     // Claim and Action need an active Action Predictive activity (see PredictiveController::canWork).
     $ready = $canWork ?? true;
-    $blocked = 'cursor-not-allowed bg-slate-200 text-slate-500';
+    // pointer-events-auto keeps the title tooltip working on a disabled .btn.
+    $blocked = 'pointer-events-auto ' . $grow;
     $blockedHint = 'Mulai aktivitas Action Predictive dulu';
 @endphp
-<div class="flex flex-wrap items-center gap-2">
+<div @class(['flex flex-wrap items-center gap-2', 'w-full' => $card])>
     @if ($showDetail ?? true)
-        <a href="{{ route('predictive.show', $wo) }}" class="{{ $btn }} {{ $focus }} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">Detail</a>
+        <x-ui.button variant="outline" :size="$btnSize" class="{{ $grow }}" href="{{ route('predictive.show', $wo) }}">Detail</x-ui.button>
     @endif
 
     @if ($wo->canBeClaimedBy($u) && ! $ready)
-        <button type="button" disabled title="{{ $blockedHint }}" class="{{ $btn }} {{ $blocked }}">Claim WO</button>
+        <x-ui.button :size="$btnSize" disabled title="{{ $blockedHint }}" class="{{ $blocked }}">Claim WO</x-ui.button>
     @elseif ($wo->canBeClaimedBy($u))
-        <form method="POST" action="{{ route('predictive.claim', $wo) }}" class="{{ ($size ?? 'row') === 'card' ? 'flex-1' : '' }}">
+        <form method="POST" action="{{ route('predictive.claim', $wo) }}" class="{{ $grow }}">
             @csrf
-            <button type="submit" class="{{ $btn }} {{ $focus }} w-full bg-sky-600 text-white hover:bg-sky-700">Claim WO</button>
+            <x-ui.button type="submit" :size="$btnSize" class="w-full">Claim WO</x-ui.button>
         </form>
     @endif
 
     @if ($wo->canBeActionedBy($u) && ! $ready)
-        <button type="button" disabled title="{{ $blockedHint }}" class="{{ $btn }} {{ $blocked }}">Action / Closing</button>
+        <x-ui.button variant="success" :size="$btnSize" disabled title="{{ $blockedHint }}" class="{{ $blocked }}">Action / Closing</x-ui.button>
     @elseif ($wo->canBeActionedBy($u))
-        <button type="button"
-            @click="action = @js(['id' => $wo->id, 'order' => $wo->order_number, 'machine' => $wo->machine_number, 'url' => route('predictive.action', $wo), 'next' => ($wo->actions_count ?? $wo->actions()->count()) + 1])"
-            class="{{ $btn }} {{ $focus }} bg-slate-900 text-white hover:bg-slate-700">Action / Closing</button>
+        <button type="button" class="btn btn-success {{ $sizeClass }} {{ $grow }}"
+            @click="action = @js(['id' => $wo->id, 'order' => $wo->order_number, 'machine' => $wo->machine_number, 'url' => route('predictive.action', $wo), 'next' => ($wo->actions_count ?? $wo->actions()->count()) + 1])">Action / Closing</button>
     @endif
 
     @if ($wo->canBeReopenedBy($u))
-        <form method="POST" action="{{ route('predictive.reopen', $wo) }}" class="{{ ($size ?? 'row') === 'card' ? 'flex-1' : '' }}"
+        <form method="POST" action="{{ route('predictive.reopen', $wo) }}" class="{{ $grow }}"
             onsubmit="return confirm('Reopen WO {{ $wo->order_number }}? Status kembali OPEN dan WO bisa di-claim PIC lagi. Riwayat Action tetap tersimpan.')">
             @csrf
-            <button type="submit" class="{{ $btn }} {{ $focus }} w-full border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100">Reopen</button>
+            <x-ui.button type="submit" variant="outline" :size="$btnSize" class="w-full border-warning/50 text-warning-text hover:bg-warning-light">Reopen</x-ui.button>
         </form>
     @endif
 
@@ -61,13 +63,12 @@
                 'locked' => $wo->pic_user_id !== null || $historyCount > 0,
             ];
         @endphp
-        <button type="button" @click="edit = @js($editPayload)"
-            class="{{ $btn }} {{ $focus }} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">Edit</button>
-        <form method="POST" action="{{ route('predictive.destroy', $wo) }}" class="{{ ($size ?? 'row') === 'card' ? 'flex-1' : '' }}"
+        <button type="button" class="btn btn-outline {{ $sizeClass }} {{ $grow }}" @click="edit = @js($editPayload)">Edit</button>
+        <form method="POST" action="{{ route('predictive.destroy', $wo) }}" class="{{ $grow }}"
             onsubmit="return confirm(@js('Hapus WO '.$wo->order_number.'?'.($historyCount > 0 ? ' Seluruh riwayat Action dan Reopen WO ini ikut terhapus.' : '').' Tindakan ini tidak bisa dibatalkan.'))">
             @csrf
             @method('DELETE')
-            <button type="submit" class="{{ $btn }} {{ $focus }} w-full border border-rose-200 bg-white text-rose-700 hover:bg-rose-50">Hapus</button>
+            <x-ui.button type="submit" variant="ghost" :size="$btnSize" class="w-full text-danger hover:bg-danger-light hover:text-danger-hover">Hapus</x-ui.button>
         </form>
     @endif
 </div>

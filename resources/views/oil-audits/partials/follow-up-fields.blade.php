@@ -1,12 +1,14 @@
 {{--
     Nested Problem -> Finding fields for the Oil Audit follow-up form.
-    Shared by the create form and the (initially hidden) edit form.
+    Shared by the create form and the (initially hidden) edit form. The <template>s in
+    follow-up-scripts.blade.php build the same rows for resources/js/oil-audits/follow-up.js;
+    keep the two in step (js-* classes, the label <span>s the script renumbers).
 
     Expects:
-      $audit          — the OilAudit this follow-up belongs to
-      $problemOptions  — OilAudit::PROBLEM_OPTIONS (Problem dropdown)
-      $findingOptions  — OilAudit::FINDING_OPTIONS (Finding dropdown)
-      $mode            — 'create' | 'edit'
+      $audit          the OilAudit this follow-up belongs to
+      $problemOptions  OilAudit::PROBLEM_OPTIONS (Problem dropdown)
+      $findingOptions  OilAudit::FINDING_OPTIONS (Finding dropdown)
+      $mode            'create' | 'edit'
 --}}
 @php
     $fu = $audit->followUp;
@@ -25,29 +27,26 @@
         $fuProblems = [['problem' => '', 'findings' => [['finding' => '']]]];
     }
     $fuActionTaken = $fuIsOld ? old('action_taken', '') : ($fu?->action_taken ?? '');
+    $removeBtn = 'btn btn-ghost min-h-11 shrink-0 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9';
 @endphp
 
 <input type="hidden" name="_followup_audit" value="{{ $audit->id }}">
 
-<div class="js-followup-banner mb-3 hidden rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800"></div>
+<div class="js-followup-banner alert alert-info mb-3 hidden" role="status"></div>
 
-<div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-        <h3 class="font-bold text-slate-900">
-            {{ $mode === 'edit' ? 'Ubah tindak lanjut' : 'Catat tindak lanjut' }}
-        </h3>
-        <p class="text-xs text-slate-600">
-            Setiap problem hanya boleh dipilih sekali, punya minimal satu finding, dan finding dalam satu problem tidak boleh sama.
-            @if ($mode === 'create')
-                PIC akan tercatat otomatis sebagai {{ auth()->user()->name }}.
-            @endif
-        </p>
-    </div>
+<div class="mb-4">
+    <h3 class="font-semibold text-text">{{ $mode === 'edit' ? 'Ubah tindak lanjut' : 'Catat tindak lanjut' }}</h3>
+    <p class="mt-0.5 text-sm text-text-muted">
+        Setiap problem hanya boleh dipilih sekali, punya minimal satu finding, dan finding dalam satu problem tidak boleh sama.
+        @if ($mode === 'create')
+            PIC akan tercatat otomatis sebagai {{ auth()->user()->name }}.
+        @endif
+    </p>
 </div>
 
 {{-- Server-side validation errors, scoped to the form that was actually submitted --}}
 @if ($fuIsOld && $errors->any())
-    <div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+    <div class="alert alert-danger mb-3" role="alert">
         <ul class="list-disc space-y-0.5 pl-4">
             @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
@@ -59,70 +58,67 @@
 <div class="js-problem-list space-y-3">
     @foreach ($fuProblems as $pi => $problem)
         @php($rowFindingOptions = \App\Models\OilAudit::findingOptionsFor($problem['problem'] ?? ''))
-        <div class="js-problem-row rounded-lg border border-slate-200 bg-white p-3">
-            <div class="flex items-start gap-2">
-                <div class="min-w-0 flex-1">
-                    <label class="js-problem-label mb-1.5 block text-xs font-semibold text-slate-700">Problem #{{ $pi + 1 }}</label>
-                    <select name="problems[{{ $pi }}][problem]" required
-                        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
+        <div class="js-problem-row rounded-control border border-border bg-surface p-3">
+            <div class="flex items-end gap-2">
+                <label class="grid min-w-0 flex-1 gap-1.5">
+                    <span class="js-problem-label text-xs font-semibold text-text">Problem #{{ $pi + 1 }}</span>
+                    <select name="problems[{{ $pi }}][problem]" required class="select">
                         <option value="">Pilih problem</option>
                         @foreach ($problemOptions as $opt)
                             <option value="{{ $opt }}" @selected(($problem['problem'] ?? '') === $opt)>{{ $opt }}</option>
                         @endforeach
                     </select>
-                </div>
-                <button type="button" class="js-remove-problem mt-6 rounded-lg border border-red-200 px-3 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50">Hapus</button>
+                </label>
+                <button type="button" class="js-remove-problem {{ $removeBtn }}">Hapus</button>
             </div>
 
-            <div class="js-finding-list mt-2 space-y-2 border-l border-slate-200 pl-3">
+            <div class="js-finding-list mt-3 space-y-2 border-l-2 border-border pl-3">
                 @foreach (($problem['findings'] ?? [['finding' => '']]) as $fi => $finding)
-                    <div class="js-finding-row flex items-start gap-2">
-                        <div class="min-w-0 flex-1">
-                            <label class="js-finding-label mb-1 block text-[11px] font-semibold text-slate-500">Finding #{{ $fi + 1 }}</label>
-                            <select name="problems[{{ $pi }}][findings][{{ $fi }}][finding]" required
-                                class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
+                    <div class="js-finding-row flex items-end gap-2">
+                        <label class="grid min-w-0 flex-1 gap-1">
+                            <span class="js-finding-label text-xs font-medium text-text-muted">Finding #{{ $fi + 1 }}</span>
+                            <select name="problems[{{ $pi }}][findings][{{ $fi }}][finding]" required class="select">
                                 <option value="">Pilih finding</option>
                                 @foreach ($rowFindingOptions as $fopt)
                                     <option value="{{ $fopt }}" @selected(($finding['finding'] ?? '') === $fopt)>{{ $fopt }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <button type="button" class="js-remove-finding mt-5 rounded-lg border border-red-200 px-2.5 py-2 text-[11px] font-semibold text-red-600 hover:bg-red-50">Hapus</button>
+                        </label>
+                        <button type="button" class="js-remove-finding {{ $removeBtn }}">Hapus</button>
                     </div>
                 @endforeach
             </div>
 
-            <button type="button" class="js-add-finding mt-2 ml-3 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">+ Add Finding</button>
+            <button type="button" class="js-add-finding btn btn-ghost btn-sm mt-2 min-h-11 lg:min-h-9">Tambah finding</button>
         </div>
     @endforeach
 </div>
 
 {{-- Client-side duplicate-finding warning, shown inside this audit card only --}}
-<div class="js-dup-warning mt-3 rounded-lg border border-rose-300 bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-800" hidden></div>
+<div class="js-dup-warning alert alert-danger mt-3 font-semibold" role="alert" hidden></div>
 
-<button type="button" class="js-add-problem mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">+ Add Problem</button>
+<button type="button" class="js-add-problem btn btn-outline btn-sm mt-3 min-h-11 lg:min-h-9">Tambah problem</button>
 
-<div class="mt-3">
-    <label class="mb-1.5 block text-xs font-semibold text-slate-700">Tindakan yang dilakukan</label>
+<label class="mt-4 grid gap-1.5">
+    <span class="text-sm font-semibold text-text">Tindakan yang dilakukan <span class="text-danger" aria-hidden="true">*</span></span>
     <textarea name="action_taken" required rows="3" maxlength="2000"
-        placeholder="Contoh: Ganti seal dan perbaiki bearing."
-        class="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100">{{ $fuActionTaken }}</textarea>
-</div>
+        placeholder="Contoh: Ganti seal dan perbaiki bearing." class="textarea">{{ $fuActionTaken }}</textarea>
+</label>
 
-<div class="mt-3 flex flex-wrap justify-end gap-2">
+<div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
     @if ($mode === 'edit')
-        <button type="button" class="js-followup-edit-toggle rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" data-target="{{ $audit->id }}">Batal</button>
+        <button type="button" class="js-followup-edit-toggle btn btn-ghost min-h-11" data-target="{{ $audit->id }}">Batal</button>
     @endif
     @if ($mode === 'create' && ($canDeleteFollowUp ?? false))
-        {{-- Belongs to the standalone form #delete-audit-{id} (HTML forms
-             cannot nest), rendered right after this follow-up form. --}}
+        {{-- Belongs to the standalone form #delete-audit-{id} (HTML forms cannot nest),
+             rendered right after this follow-up form. --}}
         <button type="submit" form="delete-audit-{{ $audit->id }}"
             onclick="return confirm('Hapus hasil audit oli ini ({{ $audit->audited_at->format('d-m-Y H:i') }})? Data audit tidak dapat dikembalikan.')"
-            class="w-full rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto">
+            class="btn btn-ghost min-h-11 text-danger hover:bg-danger-light hover:text-danger-hover">
             Delete
         </button>
     @endif
-    <button type="submit" class="js-followup-submit w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+    <button type="submit" class="js-followup-submit btn btn-primary min-h-11">
         {{ $mode === 'edit' ? 'Simpan perubahan' : 'Simpan & tandai selesai' }}
     </button>
 </div>

@@ -59,7 +59,7 @@ test('wwd pm schedule flagged yes when a problem mentions mainshaft', function (
     ]);
 
     submitPmUpdate($admin, $pmSchedule, [
-        ['problem' => $mainshaftProblem->id, 'finding' => null, 'severity' => 'Low'],
+        ['problem' => $mainshaftProblem->id, 'finding' => pmTestFindingId(), 'severity' => 'Low'],
     ]);
 
     expect($pmSchedule->fresh()->gearbox_problem)->toBe('YES');
@@ -77,7 +77,7 @@ test('wwd pm schedule flagged yes when a problem mentions innershaft', function 
     ]);
 
     submitPmUpdate($admin, $pmSchedule, [
-        ['problem' => $innershaftProblem->id, 'finding' => null, 'severity' => 'Medium'],
+        ['problem' => $innershaftProblem->id, 'finding' => pmTestFindingId(), 'severity' => 'Medium'],
     ]);
 
     expect($pmSchedule->fresh()->gearbox_problem)->toBe('YES');
@@ -95,7 +95,7 @@ test('wwd pm schedule stays no when problems are unrelated to the gearbox', func
     ]);
 
     submitPmUpdate($admin, $pmSchedule, [
-        ['problem' => $otherProblem->id, 'finding' => null, 'severity' => 'Low'],
+        ['problem' => $otherProblem->id, 'finding' => pmTestFindingId(), 'severity' => 'Low'],
     ]);
 
     expect($pmSchedule->fresh()->gearbox_problem)->toBe('NO');
@@ -123,7 +123,7 @@ test('bul pm schedule stays no even with a mainshaft problem recorded', function
     ]);
 
     submitPmUpdate($admin, $pmSchedule, [
-        ['problem' => $mainshaftProblem->id, 'finding' => null, 'severity' => 'High'],
+        ['problem' => $mainshaftProblem->id, 'finding' => pmTestFindingId(), 'severity' => 'High'],
     ]);
 
     expect($pmSchedule->fresh()->gearbox_problem)->toBe('NO');

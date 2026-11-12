@@ -1,78 +1,83 @@
 @extends('layouts.app')
 
+@php
+    $fullWidth = true;
+
+    // One colour per PM status, shared by the donut and its legend so the two always agree.
+    // Validated with the dataviz palette checker (adjacent CVD ΔE >= 8.1). Legend labels
+    // carry identity, so no segment depends on colour alone.
+    $statusColors = [
+        'Open' => '#f59e0b',
+        'In Progress' => '#2563eb',
+        'Finished' => '#10b981',
+        'Finished On Time' => '#047857',
+        'Missed' => '#d32f2f',
+    ];
+
+    $yearOptions = collect($years)->mapWithKeys(fn ($y) => [$y => $y])->all();
+    $monthOptions = collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all();
+@endphp
+
 @section('content')
     <div class="space-y-6">
-        @if ($isAdmin)
-            <div class="flex items-center justify-end gap-2">
-                <label for="dashAreaFilter" class="text-xs font-medium text-text-muted">Area</label>
-                <select id="dashAreaFilter" onchange="dashFilter('area', this.value)" class="border border-border-strong bg-surface text-text rounded px-2 py-1 text-sm">
-                    <option value="" {{ $selectedArea ? '' : 'selected' }}>ALL</option>
-                    @foreach ($areas as $areaOption)
-                        <option value="{{ $areaOption }}" {{ $selectedArea === $areaOption ? 'selected' : '' }}>{{ $areaOption }}</option>
-                    @endforeach
-                </select>
-            </div>
-        @endif
+        <x-ui.page-header title="PM this month"
+            :description="now()->format('F Y') . ($isAdmin ? ' · ' . ($selectedArea ?: 'All areas') : '')">
+            <x-slot:actions>
+                @if ($isAdmin)
+                    <div class="flex items-center gap-2">
+                        <label for="dashAreaFilter" class="text-xs font-medium text-text-muted">Area</label>
+                        <select id="dashAreaFilter" onchange="dashFilter('area', this.value)"
+                            class="min-h-11 rounded-control border border-border-strong bg-surface px-2 text-sm text-text lg:min-h-9">
+                            <option value="" {{ $selectedArea ? '' : 'selected' }}>ALL</option>
+                            @foreach ($areas as $areaOption)
+                                <option value="{{ $areaOption }}" {{ $selectedArea === $areaOption ? 'selected' : '' }}>{{ $areaOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+                <x-ui.button variant="outline" href="{{ route('qr.scan') }}">Scan QR</x-ui.button>
+                <x-ui.button href="{{ route('pm-schedules.index') }}">Open PM Schedule</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
-        {{-- KPI Summary --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            @include('partials.dashboard-kpi-card', [
-                'title' => 'PM Closing (%)  (Current Month)',
-                'value' => $monthKpi['completion_percent'] . '%',
-                'icon' =>
-                    '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/></svg>',
-            ])
-
-            @include('partials.dashboard-kpi-card', [
-                'title' => 'Target Machine (Current Month)',
-                'value' => $monthKpi['target'],
-                'icon' =>
-                    '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v4a1 1 0 001 1h3m10 0h3a1 1 0 001-1V7M7 7V5a2 2 0 012-2h6a2 2 0 012 2v2"/></svg>',
-            ])
-
-            @include('partials.dashboard-kpi-card', [
-                'title' => 'Actual Machine (Current Month)',
-                'value' => $monthKpi['actual'],
-                'icon' =>
-                    '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2v4h6v-4c0-1.105-1.343-2-3-2zM6 20h12"/></svg>',
-            ])
-
-            @include('partials.dashboard-kpi-card', [
-                'title' => 'Remaining PM  (Current Month)',
-                'value' => $monthKpi['remaining'],
-                'icon' =>
-                    '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"/></svg>',
-            ])
-
-            @include('partials.dashboard-kpi-card', [
-                'title' => 'Overdue PM (Current Month)',
-                'value' => $overdue,
-                'icon' =>
-                    '<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12A9 9 0 1112 3a9 9 0 019 9z"/></svg>',
-            ])
-        </div>
-
-        {{-- Main content grid --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div class="lg:col-span-2 space-y-4">
-                {{-- PM Completion Progress Card --}}
+        {{-- This month: the focal closing figure, then what needs attention. --}}
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div class="lg:col-span-2">
                 @include('partials.dashboard-progress-card', [
-                    'percentage' => $monthKpi['completion_percent'] . '%',
                     'percent_value' => $monthKpi['completion_percent'],
                     'target' => $monthKpi['target'],
                     'actual' => $monthKpi['actual'],
                     'remaining' => $monthKpi['remaining'],
+                    'targetPercent' => $pmTargetPercent,
                 ])
-
-                {{-- Completion by Area --}}
-                @include('partials.dashboard-area-progress', [
-                    'areas' => $areaProgress,
-                ])
-
-
             </div>
 
-            <div class="space-y-4">
+            {{-- Missed counts every PM still in MISSED status, across all months (not only this one). --}}
+            <a href="{{ route('pm-schedules.index', array_filter(['status' => ['MISSED'], 'area' => $selectedArea])) }}"
+                @class([
+                    'card group flex flex-col justify-between gap-4 p-5 transition-colors',
+                    'border-danger/40 bg-danger-light hover:bg-danger-light/70' => $overdue > 0,
+                    'hover:bg-surface-sunken' => $overdue === 0,
+                ])>
+                <div>
+                    <h2 class="text-sm font-semibold text-text">Missed PM</h2>
+                    <p class="text-xs text-text-muted">All months, still in Missed status</p>
+                </div>
+                <div class="flex items-end justify-between gap-3">
+                    <span @class(['font-signage text-6xl font-semibold leading-none', 'text-danger-hover' => $overdue > 0, 'text-text' => $overdue === 0])>{{ $overdue }}</span>
+                    <span class="text-sm font-medium text-primary group-hover:underline">
+                        {{ $overdue > 0 ? 'Review missed PM' : 'Nothing missed' }}
+                    </span>
+                </div>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            @include('partials.dashboard-area-progress', [
+                'areas' => $areaProgress,
+            ])
+
+            <div class="lg:col-span-2">
                 @include('partials.dashboard-greasing-card', [
                     'greasing' => $greasing,
                     'subtitle' => $greasingSubtitle,
@@ -80,136 +85,67 @@
                     'selectedYear' => $selectedGreasingYear,
                     'selectedMonth' => $selectedGreasingMonth,
                 ])
-
-                {{-- Quick Actions --}}
-                <div class="grid grid-cols-2 gap-3">
-                    <a href="#" class="bg-white rounded-xl shadow-sm p-4 flex items-center space-x-3">
-                        <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                            <!-- PM Schedule Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7H3v12a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xs text-gray-500">PM Schedule</div>
-                            <div class="text-sm font-medium text-gray-800">Open</div>
-                        </div>
-                    </a>
-
-                    <a href="#" class="bg-white rounded-xl shadow-sm p-4 flex items-center space-x-3">
-                        <div class="p-2 bg-green-50 text-green-600 rounded-lg">
-                            <!-- Scan QR Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 7h4V3m0 0H3v4m0 0v10a2 2 0 002 2h10v-2H7a2 2 0 01-2-2V7zM21 17h-4v4h4v-4zM17 3h4v4h-4V3zM7 17h10v-4H7v4z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xs text-gray-500">Scan QR</div>
-                            <div class="text-sm font-medium text-gray-800">Scanner</div>
-                        </div>
-                    </a>
-
-                </div>
-
             </div>
         </div>
 
-        {{-- ROW 1: PM Completion Trend + PM Status Breakdown — 50/50, PM stays the most prominent row --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            @include('partials.dashboard-chart-card', [
-                'title' => 'PM Closing Trend',
-                'subtitle' => 'Actual vs ' . $pmTargetPercent . '% target · gray bars = no PM planned that month',
-                'id' => 'pmTrendChart',
-                'height' => 'h-72 md:h-[380px]',
-                'filters' =>
-                    '<select onchange="dashFilter(\'year\', this.value)" class="border rounded px-2 py-1">' .
-                    collect($years)->map(fn($y) => '<option value="' .
-                        $y .
-                        '" ' .
-                        ($y == $selectedYear ? 'selected' : '') .
-                        '>' .
-                        $y .
-                        '</option>')->implode('') .
-                    '</select>',
-            ])
-
-            @include('partials.dashboard-donut-card', [
-                'title' => 'PM Status',
-                'subtitle' => $statusSubtitle,
-                'legend' => $statusLegend,
-                'id' => 'pmStatusDonut',
-                'size' => 240,
-                'height' => 'h-72 md:h-[380px]',
-                'filters' =>
-                    '<select onchange="dashFilter(\'year\', this.value)" class="border rounded px-1.5 py-1">' .
-                    collect($years)->map(fn($y) => '<option value="' .
-                        $y .
-                        '" ' .
-                        ($y == $selectedYear ? 'selected' : '') .
-                        '>' .
-                        $y .
-                        '</option>')->implode('') .
-                    '</select> ' .
-                    '<select onchange="dashFilter(\'month\', this.value)" class="border rounded px-1.5 py-1">' .
-                    '<option value="">All Months</option>' .
-                    collect(range(1, 12))->map(fn($m) => '<option value="' .
-                        $m .
-                        '" ' .
-                        ($m == $selectedMonth ? 'selected' : '') .
-                        '>' .
-                        \Carbon\Carbon::create(null, $m, 1)->format('F') .
-                        '</option>')->implode('') .
-                    '</select>',
-            ])
-        </div>
-
-        {{-- ROW 2: Sparepart Usage + Greasing — 50/50 --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            @include('partials.dashboard-top-bars', [
-                'title' => 'Top 10 Sparepart Usage',
-                'items' => $topSpareparts,
-                'filters' =>
-                    '<select onchange="dashFilter(\'year\', this.value)" class="border rounded px-2 py-1">' .
-                    collect($years)->map(fn($y) => '<option value="' .
-                        $y .
-                        '" ' .
-                        ($y == $selectedYear ? 'selected' : '') .
-                        '>' .
-                        $y .
-                        '</option>')->implode('') .
-                    '</select>',
-            ])
-
-            {{-- Top 10 Problem Categories --}}
-            @include('partials.dashboard-top-bars', [
-                'title' => 'Top 10 Problem Categories',
-                'items' => $topProblems,
-                'filters' =>
-                    '<select onchange="dashFilter(\'year\', this.value)" class="border rounded px-2 py-1">' .
-                    collect($years)->map(fn($y) => '<option value="' .
-                        $y .
-                        '" ' .
-                        ($y == $selectedYear ? 'selected' : '') .
-                        '>' .
-                        $y .
-                        '</option>')->implode('') .
-                    '</select>',
-            ])
-
-        </div>
-
-        {{-- ROW 3: Oil Audit (WWD-only module — hidden entirely for BUL roles) --}}
+        {{-- Oil Audit (WWD-only module, hidden entirely for BUL roles) --}}
         @if ($oilAudit)
             @include('partials.dashboard-oil-audit-card', [
                 'oilAudit' => $oilAudit,
             ])
         @endif
 
+        {{-- Year view. One Year filter scopes every chart below it. --}}
+        <section class="space-y-4 pt-2" aria-labelledby="year-heading">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 id="year-heading" class="font-signage text-xl font-semibold text-text">Year {{ $selectedYear }}</h2>
+                    <p class="text-sm text-text-muted">Trend, status, spareparts and problems for the selected year.</p>
+                </div>
+                @include('partials.dashboard-select', [
+                    'id' => 'dashYear', 'param' => 'year', 'label' => 'Year',
+                    'options' => $yearOptions, 'selected' => $selectedYear,
+                ])
+            </div>
 
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                @include('partials.dashboard-chart-card', [
+                    'title' => 'Did monthly PM closing reach ' . $pmTargetPercent . '%?',
+                    'subtitle' => 'Closing per month. Grey bars: no PM planned that month.',
+                    'summary' => 'Bar chart of monthly PM closing for ' . $selectedYear . ' against a ' . $pmTargetPercent . '% target. Each bar is labelled with its value.',
+                    'id' => 'pmTrendChart',
+                    'height' => 'h-80 md:h-[380px]',
+                ])
+
+                @include('partials.dashboard-donut-card', [
+                    'title' => 'PM Status',
+                    'subtitle' => $statusSubtitle,
+                    'legend' => $statusLegend,
+                    'colors' => $statusColors,
+                    'id' => 'pmStatusDonut',
+                    'size' => 240,
+                    'height' => 'md:h-[380px]',
+                    'filters' => view('partials.dashboard-select', [
+                        'id' => 'dashStatusMonth', 'param' => 'month', 'label' => 'Month',
+                        'options' => $monthOptions, 'selected' => $selectedMonth, 'allLabel' => 'All Months',
+                    ])->render(),
+                ])
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                @include('partials.dashboard-top-bars', [
+                    'title' => 'Top 10 Sparepart Usage',
+                    'items' => $topSpareparts,
+                    'emptyText' => 'Sparepart usage appears once PM checklists record parts.',
+                ])
+
+                @include('partials.dashboard-top-bars', [
+                    'title' => 'Top 10 Problem Categories',
+                    'items' => $topProblems,
+                    'emptyText' => 'Problem categories appear once findings are recorded.',
+                ])
+            </div>
+        </section>
     </div>
 
     <script>
@@ -222,6 +158,18 @@
             }
             window.location.href = url.toString();
         }
+
+        // Chart colours mirror tokens in resources/css/theme.css (canvas cannot read Tailwind classes).
+        const CHART = {
+            bar: '#0284c7',        // --color-chart-1
+            barCurrent: '#075985', // --color-chart-1-strong
+            empty: '#e2e8f0',      // --color-border
+            grid: '#e2e8f0',
+            axis: '#5b6b80',       // --color-text-muted
+            ink: '#1e293b',        // --color-text
+            surface: '#ffffff',
+            font: '"Instrument Sans", ui-sans-serif, system-ui, sans-serif',
+        };
 
         function drawBarChart(canvasId, points, targetPercent, currentLabel) {
             const canvas = document.getElementById(canvasId);
@@ -236,7 +184,7 @@
 
             const w = rect.width;
             const h = rect.height;
-            const paddingLeft = 34;
+            const paddingLeft = 36;
             const paddingBottom = 28;
             const paddingTop = 22;
             const max = 100;
@@ -244,10 +192,10 @@
             ctx.clearRect(0, 0, w, h);
 
             if (points.length === 0) {
-                ctx.fillStyle = '#9ca3af';
-                ctx.font = '12px sans-serif';
+                ctx.fillStyle = CHART.axis;
+                ctx.font = '13px ' + CHART.font;
                 ctx.textAlign = 'center';
-                ctx.fillText('No data available', w / 2, h / 2);
+                ctx.fillText('No PM planned in this year yet', w / 2, h / 2);
                 return;
             }
 
@@ -255,33 +203,38 @@
             const plotWidth = w - paddingLeft - 10;
             const yOf = (v) => (h - paddingBottom) - (v / max) * plotHeight;
 
-            // Y-axis gridlines at 0/25/50/75/100 for readability at this larger size.
-            ctx.strokeStyle = '#f1f5f9';
-            ctx.fillStyle = '#9ca3af';
-            ctx.font = '10px sans-serif';
+            // Solid hairline gridlines; dashes are reserved for the target line.
+            ctx.strokeStyle = CHART.grid;
+            ctx.lineWidth = 1;
+            ctx.fillStyle = CHART.axis;
+            ctx.font = '11px ' + CHART.font;
             ctx.textAlign = 'right';
             [0, 25, 50, 75, 100].forEach((v) => {
-                const y = yOf(v);
+                const y = Math.round(yOf(v)) + 0.5;
                 ctx.beginPath();
                 ctx.moveTo(paddingLeft, y);
                 ctx.lineTo(w - 4, y);
                 ctx.stroke();
-                ctx.fillText(v + '%', paddingLeft - 6, y + 3);
+                ctx.fillText(v + '%', paddingLeft - 6, y + 4);
             });
 
             const slot = plotWidth / points.length;
-            const barWidth = Math.min(slot * 0.5, 42);
+            const barWidth = Math.max(Math.min(slot - 2, slot * 0.6, 36), 4);
+            const showAllValues = slot >= 28;
+            // On a phone twelve "Jan".."Dec" labels collide; fall back to initials (J F M ...).
+            const shortLabels = slot < 26;
 
             points.forEach((p, i) => {
                 const cx = paddingLeft + slot * i + slot / 2;
                 const barX = cx - barWidth / 2;
                 const isCurrent = p.label === currentLabel;
-                const barValue = p.hasData ? p.value : 0;
-                const barY = yOf(barValue);
+                const barValue = p.hasData ? Math.max(p.value, 0) : 0;
+                const barY = p.hasData ? yOf(barValue) : yOf(4);
 
-                ctx.fillStyle = !p.hasData ? '#e5e7eb' : (isCurrent ? '#4338ca' : '#818cf8');
+                // Rounded data-end, square at the baseline.
+                ctx.fillStyle = !p.hasData ? CHART.empty : (isCurrent ? CHART.barCurrent : CHART.bar);
+                const r = Math.min(4, barWidth / 2, (h - paddingBottom - barY) || 0);
                 ctx.beginPath();
-                const r = 4;
                 ctx.moveTo(barX, h - paddingBottom);
                 ctx.lineTo(barX, barY + r);
                 ctx.arcTo(barX, barY, barX + r, barY, r);
@@ -291,19 +244,22 @@
                 ctx.closePath();
                 ctx.fill();
 
-                ctx.fillStyle = p.hasData ? '#374151' : '#9ca3af';
-                ctx.font = isCurrent ? 'bold 11px sans-serif' : '11px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(p.hasData ? p.value + '%' : '–', cx, barY - 6);
+                if (p.hasData && (showAllValues || isCurrent)) {
+                    ctx.fillStyle = CHART.ink;
+                    ctx.font = (isCurrent ? '600 ' : '') + '11px ' + CHART.font;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(p.value + '%', cx, barY - 6);
+                }
 
-                ctx.fillStyle = '#9ca3af';
-                ctx.font = '10px sans-serif';
-                ctx.fillText(p.label, cx, h - paddingBottom + 16);
+                ctx.fillStyle = isCurrent ? CHART.ink : CHART.axis;
+                ctx.font = (isCurrent ? '600 ' : '') + '11px ' + CHART.font;
+                ctx.textAlign = 'center';
+                ctx.fillText(shortLabels ? p.label.charAt(0) : p.label, cx, h - paddingBottom + 17);
             });
 
-            // Target reference line, drawn last so it sits on top of the bars.
-            const targetY = yOf(targetPercent);
-            ctx.strokeStyle = '#ef4444';
+            // Target reference line in ink, drawn last so it sits on top of the bars.
+            const targetY = Math.round(yOf(targetPercent)) + 0.5;
+            ctx.strokeStyle = CHART.ink;
             ctx.setLineDash([5, 4]);
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -312,10 +268,14 @@
             ctx.stroke();
             ctx.setLineDash([]);
 
-            ctx.fillStyle = '#ef4444';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('Target ' + targetPercent + '%', paddingLeft + 4, targetY - 5);
+            const label = 'Target ' + targetPercent + '%';
+            ctx.font = '600 11px ' + CHART.font;
+            const lw = ctx.measureText(label).width;
+            ctx.fillStyle = CHART.surface;
+            ctx.fillRect(w - lw - 12, targetY - 16, lw + 8, 14);
+            ctx.fillStyle = CHART.ink;
+            ctx.textAlign = 'right';
+            ctx.fillText(label, w - 8, targetY - 5);
         }
 
         function drawDonutChart(canvasId, segments) {
@@ -334,15 +294,23 @@
             const cx = w / 2;
             const cy = h / 2;
             const radius = Math.min(w, h) / 2 - 6;
+            const inner = radius * 0.64;
             const total = segments.reduce((sum, seg) => sum + seg.value, 0);
 
             ctx.clearRect(0, 0, w, h);
 
             if (total === 0) {
-                ctx.fillStyle = '#9ca3af';
-                ctx.font = '12px sans-serif';
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.arc(cx, cy, inner, 0, Math.PI * 2, true);
+                ctx.fillStyle = CHART.empty;
+                ctx.fill();
+                ctx.fillStyle = CHART.axis;
+                ctx.font = '13px ' + CHART.font;
                 ctx.textAlign = 'center';
-                ctx.fillText('No data available', cx, cy);
+                ctx.textBaseline = 'middle';
+                ctx.fillText('No PM in this period', cx, cy);
+                ctx.textBaseline = 'alphabetic';
                 return;
             }
 
@@ -351,27 +319,26 @@
                 if (seg.value <= 0) return;
                 const angle = (seg.value / total) * Math.PI * 2;
                 ctx.beginPath();
-                ctx.moveTo(cx, cy);
                 ctx.arc(cx, cy, radius, start, start + angle);
+                ctx.arc(cx, cy, inner, start + angle, start, true);
                 ctx.closePath();
                 ctx.fillStyle = seg.color;
                 ctx.fill();
+                // 2px surface gap between segments instead of a border.
+                ctx.strokeStyle = CHART.surface;
+                ctx.lineWidth = 2;
+                ctx.stroke();
                 start += angle;
             });
 
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius * 0.62, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff';
-            ctx.fill();
-
-            ctx.fillStyle = '#1f2937';
-            ctx.font = 'bold ' + Math.round(radius * 0.32) + 'px sans-serif';
+            ctx.fillStyle = CHART.ink;
+            ctx.font = '600 ' + Math.round(radius * 0.34) + 'px ' + CHART.font;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(total, cx, cy - radius * 0.08);
 
-            ctx.fillStyle = '#9ca3af';
-            ctx.font = Math.round(radius * 0.12) + 'px sans-serif';
+            ctx.fillStyle = CHART.axis;
+            ctx.font = Math.round(radius * 0.12) + 'px ' + CHART.font;
             ctx.fillText('Total PM', cx, cy + radius * 0.2);
             ctx.textBaseline = 'alphabetic';
         }
@@ -384,35 +351,28 @@
                 hasData: t.target > 0,
             }));
             const currentLabel = {!! $selectedYear == now()->year ? json_encode(now()->format('M')) : 'null' !!};
-            drawBarChart('pmTrendChart', points, {{ $pmTargetPercent }}, currentLabel);
-
+            const statusColors = @json($statusColors);
             const breakdown = @json($statusBreakdown);
-            drawDonutChart('pmStatusDonut', [{
-                label: 'Open',
-                value: breakdown.OPEN,
-                color: '#f59e0b'
-            },
-            {
-                label: 'In Progress',
-                value: breakdown.IN_PROGRESS,
-                color: '#94a3b8'
-            },
-            {
-                label: 'Finished',
-                value: breakdown.FINISHED,
-                color: '#8b5cf6'
-            },
-            {
-                label: 'Finished On Time',
-                value: breakdown.FINISHED_ON_TIME,
-                color: '#10b981'
-            },
-            {
-                label: 'Missed',
-                value: breakdown.MISSED,
-                color: '#f43f5e'
-            },
-            ]);
+            const segments = [
+                { label: 'Open', value: breakdown.OPEN },
+                { label: 'In Progress', value: breakdown.IN_PROGRESS },
+                { label: 'Finished', value: breakdown.FINISHED },
+                { label: 'Finished On Time', value: breakdown.FINISHED_ON_TIME },
+                { label: 'Missed', value: breakdown.MISSED },
+            ].map((s) => ({ ...s, color: statusColors[s.label] }));
+
+            const draw = () => {
+                drawBarChart('pmTrendChart', points, {{ $pmTargetPercent }}, currentLabel);
+                drawDonutChart('pmStatusDonut', segments);
+            };
+
+            // Draw once the web font is in, so canvas text uses Instrument Sans; redraw on resize.
+            (document.fonts ? document.fonts.ready : Promise.resolve()).then(draw);
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(draw, 150);
+            });
         });
     </script>
 @endsection

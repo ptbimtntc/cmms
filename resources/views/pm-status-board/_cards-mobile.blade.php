@@ -1,55 +1,32 @@
+{{-- Also rendered alone as JSON for "load next month"; keep it self-contained. --}}
 @foreach ($schedules as $schedule)
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div class="mb-3 flex items-start justify-between gap-2">
-            <div>
-                <div class="font-semibold text-slate-800">{{ $schedule['machine_number'] }}</div>
-                <div class="mt-1 flex flex-wrap items-center gap-1.5"
-                    data-pm-status-cell
-                    data-pm-status-id="{{ $schedule['id'] }}"
-                    data-pm-status-original="{{ $schedule['status'] }}">
-                    <span data-pm-status-badge
-                        class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold
-                        {{ $schedule['status'] === 'CLOSED' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800' }}">
-                        {{ $schedule['status'] }}
-                    </span>
-                    @if ($canOverrideStatus)
-                        <span data-pm-status-override-tag
-                            class="hidden text-[10px] font-medium text-slate-400"
-                            title="Tampilan status ini diubah manual, data mesin asli tidak berubah.">
-                            (manual)
-                        </span>
-                        <button type="button"
-                            data-pm-status-toggle
-                            class="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                            title="Override tampilan status (tidak mengubah data mesin asli)">
-                            Ubah
-                        </button>
-                    @endif
-                </div>
+    <article class="card min-w-0 p-4">
+        <div class="flex items-start justify-between gap-3">
+            <h2 class="min-w-0 break-words text-base font-semibold text-text">{{ $schedule['machine_number'] }}</h2>
+            <div class="flex shrink-0 flex-col items-end gap-1">
+                <span class="text-xs text-text-muted">Gap Day</span>
+                <span @class([
+                    'rounded-full px-2.5 py-0.5 text-sm font-semibold tabular-nums',
+                    'bg-red-100 text-red-800' => $schedule['is_gap_day_out_of_range'],
+                    'bg-slate-100 text-slate-800' => ! $schedule['is_gap_day_out_of_range'],
+                ])>{{ $schedule['gap_day'] > 0 ? '+' : '' }}{{ $schedule['gap_day'] }}</span>
             </div>
         </div>
+        <div class="mt-2">@include('pm-status-board._status-cell')</div>
 
-        <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
+        <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
             <div>
-                <div class="text-slate-400">Bulan</div>
-                <div class="font-medium text-slate-700">{{ $schedule['month_label'] }}</div>
+                <dt class="text-xs text-text-muted">Bulan</dt>
+                <dd class="font-medium text-text">{{ $schedule['month_label'] }}</dd>
             </div>
             <div>
-                <div class="text-slate-400">Plan Date</div>
-                <div class="font-medium text-slate-700">{{ $schedule['plan_date'] }}</div>
+                <dt class="text-xs text-text-muted">Plan Date</dt>
+                <dd class="font-medium text-text">{{ $schedule['plan_date'] }}</dd>
             </div>
-            <div>
-                <div class="text-slate-400">Gap Day</div>
-                <div
-                    class="font-medium
-                    {{ $schedule['is_gap_day_out_of_range'] ? 'text-red-600' : 'text-slate-700' }}">
-                    {{ $schedule['gap_day'] > 0 ? '+' : '' }}{{ $schedule['gap_day'] }}
-                </div>
+            <div class="col-span-2">
+                <dt class="text-xs text-text-muted">Actual PM Date</dt>
+                <dd class="font-medium text-text">{{ $schedule['actual_date'] ?? '-' }}</dd>
             </div>
-            <div>
-                <div class="text-slate-400">Actual PM Date</div>
-                <div class="font-medium text-slate-700">{{ $schedule['actual_date'] ?? '—' }}</div>
-            </div>
-        </div>
-    </div>
+        </dl>
+    </article>
 @endforeach

@@ -112,9 +112,9 @@ function initScanPage() {
 
         if (info) {
             info.innerHTML = `
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Mesin terdeteksi (offline)</p>
-                <h2 class="mt-1 font-mono text-3xl font-bold tracking-tight text-slate-950">${machine.machine_number}</h2>
-                <p class="mt-1 text-sm text-slate-600">${machine.machine_type} &middot; ${machine.area}</p>
+                <p class="text-sm font-medium text-text-muted">Mesin terdeteksi (offline)</p>
+                <h2 class="mt-1 font-signage text-3xl font-semibold text-text">${machine.machine_number}</h2>
+                <p class="mt-1 text-sm text-text-muted">${machine.machine_type} &middot; ${machine.area}</p>
             `;
         }
 
@@ -128,7 +128,7 @@ function initScanPage() {
 
                 button.type = 'button';
                 button.textContent = label;
-                button.className = 'flex min-h-20 w-full flex-col items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 p-4 text-center text-sm font-bold text-slate-800 transition hover:border-sky-500 hover:bg-sky-50 focus:outline-none focus:ring-4 focus:ring-sky-200';
+                button.className = 'flex min-h-20 w-full flex-col items-center justify-center rounded-card border-2 border-border bg-surface-sunken p-4 text-center text-sm font-bold text-text transition hover:border-primary hover:bg-primary-light focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30';
                 button.addEventListener('click', () => submitOfflineAudit(machine, key, button));
                 buttonsContainer.appendChild(button);
             });

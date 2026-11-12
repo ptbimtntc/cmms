@@ -1,89 +1,81 @@
 @extends('layouts.app')
 
+@php($fullWidth = true)
+
+{{-- "PM Status — {area}" is the page's public name (bookmarked by Production, pinned by tests). --}}
 @section('title', 'PM Status — '.$currentArea)
 
 @section('content')
+    <div class="space-y-5">
+        @guest
+            {{-- Guests get no sidebar or topbar, so the page carries the brand itself. --}}
+            <x-brand-logo :framed="false" class="h-7 w-auto" />
+        @endguest
 
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold">PM Status — {{ $currentArea }}</h1>
-            <p class="text-slate-500">
-                Informasi status pelaksanaan Preventive Maintenance.
-            </p>
-        </div>
+        <x-ui.page-header title="PM Status — {{ $currentArea }}" description="Status pelaksanaan Preventive Maintenance per mesin. Cek GAP DAY sebelum meminta geser jadwal.">
+            <x-slot:actions>
+                {{-- Area switcher: each active area has its own public URL (not a filter), read
+                     from the Area master so a new area appears here by itself.
+                     bg-blue-600 marks the current area; tests look for it. --}}
+                <nav class="inline-flex max-w-full overflow-x-auto rounded-control border border-border bg-surface-muted p-1" aria-label="Pilih area">
+                    @foreach ($areas as $areaOption)
+                        @php($isCurrent = $areaSlug === $areaOption->slug)
+                        <a href="{{ route('pm-status.show', $areaOption->slug) }}" @if ($isCurrent) aria-current="page" @endif
+                            class="{{ $isCurrent ? 'bg-blue-600 text-white shadow-sm' : 'text-text-muted hover:bg-surface hover:text-text' }} inline-flex min-h-11 items-center whitespace-nowrap rounded-[calc(var(--radius-control)-4px)] px-4 text-sm font-semibold transition-colors lg:min-h-9">
+                            {{ $areaOption->name }}
+                        </a>
+                    @endforeach
+                </nav>
+            </x-slot:actions>
+        </x-ui.page-header>
 
-        {{-- AREA SWITCHER — navigation to each active area's own URL, not a
-             filter. Sourced from the live Area master list (passed in by
-             the controller), not a hardcoded map, so a newly added area
-             appears here automatically. --}}
-        <div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Area switcher">
-            @foreach ($areas as $areaOption)
-                <a href="{{ route('pm-status.show', $areaOption->slug) }}"
-                    class="rounded-md px-4 py-2 text-sm font-semibold transition
-                    {{ $areaSlug === $areaOption->slug ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200' }}">
-                    {{ $areaOption->name }}
-                </a>
-            @endforeach
-        </div>
-    </div>
+        <x-ui.alert tone="info" title="Cara membaca GAP DAY">
+            <p><span class="font-semibold">GAP DAY</span> = hari ini dikurangi Plan Date. Batas normal <span class="font-semibold">-14 sampai +14 hari</span>.</p>
+            <p class="mt-1">GAP DAY merah berarti sudah di luar batas itu, sebaiknya tidak dipilih untuk mesin pengganti.</p>
+        </x-ui.alert>
 
-    {{-- LEGEND --}}
-    <div class="mb-6 rounded-lg border border-slate-200 bg-blue-50 p-4 text-sm text-slate-600">
-        <p class="font-medium text-slate-800 mb-2">ℹ️ Informasi</p>
-        <p><strong>GAP DAY</strong> = Today − Plan Date</p>
-        <p class="mt-1">Batas normal: <strong>-14 sampai +14 hari</strong></p>
-        <p class="mt-1 text-slate-500">GAP DAY merah menunjukkan sudah di luar batas ±14 hari, sebaiknya tidak dipilih untuk mesin pengganti.</p>
-    </div>
-
-    {{-- DESKTOP TABLE --}}
-    <div class="mb-4 hidden rounded-xl border border-slate-200 bg-white overflow-hidden md:block">
-        <table class="w-full">
-            <thead class="bg-slate-100 border-b border-slate-200">
-                <tr>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Status</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Bulan</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Machine</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Plan Date</th>
-                    <th class="px-4 py-3 text-center text-sm font-semibold text-slate-700">Gap Day</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">Actual PM Date</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100" data-pm-rows-desktop @if ($canOverrideStatus) data-pm-can-override @endif>
-                @include('pm-status-board._rows-desktop')
-                @if ($schedules->isEmpty())
-                    <tr data-pm-empty>
-                        <td colspan="6" class="py-8 text-center text-slate-500">
-                            Tidak ada mesin PM yang masih open.
-                        </td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-    </div>
-
-    {{-- MOBILE CARDS --}}
-    <div class="space-y-3 md:hidden" data-pm-rows-mobile @if ($canOverrideStatus) data-pm-can-override @endif>
-        @include('pm-status-board._cards-mobile')
-        @if ($schedules->isEmpty())
-            <div data-pm-empty class="rounded-lg border border-slate-200 bg-white p-8 text-center">
-                <p class="text-slate-500">Tidak ada mesin PM yang masih open.</p>
+        {{-- Desktop table. Rows for later months are appended by resources/js/pm-status/load-month.js. --}}
+        <div class="card hidden overflow-hidden md:block">
+            <div class="relative overflow-x-auto">
+                <table class="data-table min-w-full">
+                    <thead>
+                        <tr>
+                            <th scope="col">Status</th>
+                            <th scope="col">Bulan</th>
+                            <th scope="col">Machine</th>
+                            <th scope="col">Plan Date</th>
+                            <th scope="col" class="text-center">Gap Day</th>
+                            <th scope="col">Actual PM Date</th>
+                        </tr>
+                    </thead>
+                    <tbody data-pm-rows-desktop @if ($canOverrideStatus) data-pm-can-override @endif>
+                        @include('pm-status-board._rows-desktop')
+                        @if ($schedules->isEmpty())
+                            <tr data-pm-empty>
+                                <td colspan="6" class="py-10 text-center text-text-muted">Tidak ada mesin PM yang masih open.</td>
+                            </tr>
+                        @endif
+                    </tbody>
+                </table>
             </div>
-        @endif
-    </div>
+        </div>
 
-    {{-- LOAD NEXT MONTH — fetches one future month at a time (up to
-         $maxMonthOffset months ahead) and appends it without a reload. --}}
-    <div class="mt-6 text-center">
-        <button type="button"
-            data-pm-month-next
-            data-url="{{ route('pm-status.month', $areaSlug) }}"
-            data-offset="1"
-            class="text-sm text-slate-400 underline-offset-2 transition hover:text-blue-600 hover:underline">
-            Klik disini untuk memuat mesin bulan {{ $nextMonthLabel }}
-        </button>
-        <p data-pm-month-error class="mt-2 hidden text-xs text-red-600">
-            Gagal memuat data, coba lagi.
-        </p>
-    </div>
+        {{-- Phone cards. --}}
+        <div class="space-y-3 md:hidden" data-pm-rows-mobile @if ($canOverrideStatus) data-pm-can-override @endif>
+            @include('pm-status-board._cards-mobile')
+            @if ($schedules->isEmpty())
+                <x-ui.empty-state data-pm-empty title="Tidak ada mesin PM yang masih open." description="Muat bulan berikutnya untuk melihat jadwal yang akan datang." />
+            @endif
+        </div>
 
+        {{-- Loads one future month at a time (up to $maxMonthOffset ahead) without a reload. --}}
+        <div class="flex flex-col items-center gap-2">
+            <button type="button"
+                data-pm-month-next
+                data-url="{{ route('pm-status.month', $areaSlug) }}"
+                data-offset="1"
+                class="btn btn-outline min-h-11 w-full whitespace-normal text-center sm:w-auto">Klik disini untuk memuat mesin bulan {{ $nextMonthLabel }}</button>
+            <p data-pm-month-error class="form-error hidden" role="alert">Gagal memuat data, coba lagi.</p>
+        </div>
+    </div>
 @endsection

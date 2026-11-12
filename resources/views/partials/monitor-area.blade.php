@@ -5,18 +5,18 @@
     Only shows the area(s) actually in scope: when the Area filter narrows
     the board to one area, $area only has that one key (see
     TodayActivityMonitorController::board()), so only that row renders here
-    — no misleading "0 ACTIVE / 0 AVAILABLE" row for the excluded area.
+   , no misleading "0 ACTIVE / 0 AVAILABLE" row for the excluded area.
 
-    @param array $area  [areaName => ['active'=>int,'available'=>int], ...] — one row
+    @param array $area  [areaName => ['active'=>int,'available'=>int], ...], one row
     per active Area (see App\Models\Area), or just the filtered one.
 --}}
 @foreach ($area as $k => $stats)
-    <div class="flex items-center justify-between gap-2 text-xs">
-        <span class="font-bold uppercase tracking-wider text-slate-500">{{ $k }}</span>
-        <span class="tabular-nums text-slate-700">
-            <span class="font-bold text-emerald-600">{{ $stats['active'] ?? 0 }}</span> ACTIVE
-            <span class="text-slate-300">/</span>
-            <span class="font-bold text-slate-900">{{ $stats['available'] ?? 0 }}</span> AVAILABLE
+    <div class="flex items-center justify-between gap-2 text-sm">
+        <span class="font-semibold text-text">{{ $k }}</span>
+        <span class="tabular-nums text-text-muted">
+            <span class="font-semibold text-text">{{ $stats['active'] ?? 0 }}</span> active
+            <span aria-hidden="true">/</span>
+            <span class="font-semibold text-text">{{ $stats['available'] ?? 0 }}</span> available
         </span>
     </div>
 @endforeach

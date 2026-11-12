@@ -18,9 +18,9 @@
 <div {{ $attributes->merge(['class' => 'grid gap-1.5']) }}>
     <label @if ($for) for="{{ $for }}" @endif class="form-label mb-0">
         {{ $label }}
+        {{-- Visual marker only; the control's own `required` attribute is what assistive tech announces. --}}
         @if ($required)
             <span class="text-danger" aria-hidden="true">*</span>
-            <span class="sr-only">(wajib)</span>
         @endif
     </label>
 
