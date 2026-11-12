@@ -1,69 +1,55 @@
 @extends('layouts.app')
 
+@section('title', $row->name)
+
 @section('content')
-<div class="mx-auto max-w-3xl">
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">{{ $row->name }}</h1>
-            <p class="text-sm text-slate-500">
-                {{ $machines->count() }} mesin · Urutan {{ $row->sort_order }}
-                @if ($row->area)
-                    · Area: {{ $row->area->name }}
-                @endif
-            </p>
-        </div>
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-4xl';
+    @endphp
 
-        <a href="{{ route('small-pm-rows.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
-            Kembali ke Row Small PM
-        </a>
-    </div>
+    <div class="space-y-5">
+        <x-ui.button variant="ghost" href="{{ route('small-pm-rows.index') }}" class="-ml-2">Kembali ke Row Small PM</x-ui.button>
+        <x-ui.page-header :title="$row->name" :description="$machines->count().' mesin · Urutan '.$row->sort_order.($row->area ? ' · Area: '.$row->area->name : '')" />
 
-    {{-- ============ DESKTOP: Table (md and up) ============ --}}
-    <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-        <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Number</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Type</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Area</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 bg-white">
-                @forelse ($machines as $machine)
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $machine->machine_number }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $machine->machine_type }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $machine->area }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $machine->status }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">Belum ada mesin di row ini</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    {{-- ============ MOBILE: Card List (below md) ============ --}}
-    <div class="space-y-3 md:hidden">
-        @forelse ($machines as $machine)
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                        <div class="truncate text-sm font-semibold text-slate-800">{{ $machine->machine_number }}</div>
-                        <div class="text-xs text-slate-500">{{ $machine->machine_type }}</div>
-                    </div>
-                    <span class="shrink-0 text-xs text-slate-500">{{ $machine->status }}</span>
+        @if ($machines->isEmpty())
+            <x-ui.empty-state title="Belum ada mesin di row ini" />
+        @else
+            <div class="card hidden overflow-hidden md:block">
+                <div class="relative overflow-x-auto">
+                    <table class="data-table min-w-full">
+                        <thead>
+                            <tr>
+                                <th scope="col">Machine Number</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Area</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($machines as $machine)
+                                <tr>
+                                    <td class="whitespace-nowrap font-semibold text-text">{{ $machine->machine_number }}</td>
+                                    <td>{{ $machine->machine_type }}</td>
+                                    <td>{{ $machine->area }}</td>
+                                    <td><x-ui.badge :tone="$machine->status === 'ACTIVE' ? 'success' : 'neutral'">{{ $machine->status }}</x-ui.badge></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
-                <div class="mt-2 text-xs text-slate-500">Area: {{ $machine->area }}</div>
             </div>
-        @empty
-            <p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">Belum ada mesin di row ini</p>
-        @endforelse
+            <ul class="card divide-y divide-border md:hidden">
+                @foreach ($machines as $machine)
+                    <li class="flex items-start justify-between gap-3 p-4">
+                        <div class="min-w-0">
+                            <p class="break-words font-semibold text-text">{{ $machine->machine_number }}</p>
+                            <p class="text-sm text-text-muted">{{ $machine->machine_type }} · {{ $machine->area }}</p>
+                        </div>
+                        <x-ui.badge :tone="$machine->status === 'ACTIVE' ? 'success' : 'neutral'" class="shrink-0">{{ $machine->status }}</x-ui.badge>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
     </div>
-</div>
 @endsection

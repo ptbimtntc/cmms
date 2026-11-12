@@ -1,99 +1,58 @@
 @extends('layouts.guest')
 
+@section('title', 'Scan QR Mesin · FreeDOMS')
+
 @section('content')
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
-
-<div class="min-h-screen bg-slate-100">
-
-    <div class="max-w-5xl mx-auto py-16 px-6">
-
-        <div class="mb-8">
-
-            <a
-                href="{{ route('home') }}"
-                class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors">
-
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 111.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
-
-                Kembali ke Beranda
-
-            </a>
-
-        </div>
-
-        <div class="text-center">
-
-            <h1 class="text-4xl font-bold">
-
-                Scan QR Mesin
-
-            </h1>
-
-            <p class="mt-4 text-slate-500">
-
-                Arahkan kamera ke QR Code yang terdapat pada mesin.
-
-            </p>
-
-        </div>
-
-        <div class="mt-12">
-
-            <div
-                id="reader"
-                class="mx-auto rounded-3xl overflow-hidden shadow-xl bg-black max-w-xl h-[450px]">
-
+    <div class="min-h-dvh bg-bg text-text">
+        <div class="mx-auto max-w-xl px-4 py-8 sm:px-6 sm:py-12">
+            <div class="flex items-center justify-between gap-3">
+                <a href="{{ route('home') }}" class="btn btn-ghost -ml-2 min-h-11">Kembali ke Beranda</a>
+                <x-brand-logo :framed="false" class="h-6 w-auto" aria-hidden="true" />
             </div>
 
+            <div class="mt-8 text-center">
+                <h1 class="font-signage text-4xl font-semibold text-text">Scan QR Mesin</h1>
+                <p class="mt-2 text-text-muted">Arahkan kamera ke QR Code yang terdapat pada mesin.</p>
+            </div>
+
+            <div id="reader" class="mx-auto mt-8 aspect-square w-full overflow-hidden rounded-card bg-neutral-900 shadow-popover"></div>
+
+            <div class="mt-6 grid gap-3">
+                <button id="startScanner" type="button" class="btn btn-primary btn-lg min-h-12 w-full">Aktifkan Kamera</button>
+                <p id="scannerStatus" class="text-center text-sm text-text-muted" role="status" aria-live="polite"></p>
+            </div>
         </div>
-
-        <div class="mt-10 text-center">
-
-            <button
-                id="startScanner"
-                class="rounded-xl bg-blue-600 px-8 py-4 text-white font-semibold">
-
-                📷 Aktifkan Kamera
-
-            </button>
-
-        </div>
-
     </div>
 
-</div>
+    <script>
+        document.getElementById('startScanner').addEventListener('click', function () {
+            const button = this;
+            const status = document.getElementById('scannerStatus');
+            const scanner = new Html5Qrcode('reader');
 
-<script>
-document.getElementById('startScanner').addEventListener('click', function () {
+            button.disabled = true;
+            status.textContent = 'Membuka kamera…';
 
-    const scanner = new Html5Qrcode("reader");
-
-    scanner.start(
-        {
-            facingMode: "environment"
-        },
-        {
-            fps: 10,
-            qrbox: 250
-        },
-        function(decodedText){
-
-            scanner.stop();
-
-            window.location.href = "/m/" + decodedText;
-
-        },
-        function(error){
-
-            // abaikan error scanning
-
-        }
-    );
-
-});
-</script>
-
+            scanner.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: 250 },
+                function (decodedText) {
+                    scanner.stop();
+                    window.location.href = '/m/' + decodedText;
+                },
+                function () {
+                    // ignore per-frame scan misses
+                }
+            ).then(function () {
+                status.textContent = 'Kamera aktif. Arahkan ke QR Code mesin.';
+            }).catch(function () {
+                // Camera refused or unavailable: say so and let the user try again.
+                button.disabled = false;
+                status.textContent = 'Kamera tidak bisa dibuka. Izinkan akses kamera di browser, lalu coba lagi.';
+                status.className = 'text-center text-sm font-medium text-danger';
+            });
+        });
+    </script>
 @endsection

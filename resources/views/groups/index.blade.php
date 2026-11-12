@@ -1,126 +1,81 @@
 @extends('layouts.app')
 
+@section('title', 'Group Master')
+
 @section('content')
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">Group Master</h1>
-            <p class="text-sm text-slate-500">Manage machine group master data</p>
-        </div>
+    @php
+        $fullWidth = true;
+        $canManage = ! auth()->user()->isSupervisor();
+        $actions = fn ($group, $mobile = false) => ['view' => route('groups.show', $group->id), 'mobile' => $mobile]
+            + ($canManage ? ['edit' => route('groups.edit', ['group' => $group->id, 'page' => request('page')]), 'delete' => route('groups.destroy', $group->id), 'confirm' => 'Delete group?'] : []);
+    @endphp
 
-        @unless (auth()->user()->isSupervisor())
-        <a href="{{ route('groups.create') }}" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-            Add Group
-        </a>
-        @endunless
-    </div>
+    <div class="space-y-5">
+        <x-ui.page-header title="Group Master" description="Manage machine group master data">
+            @if ($canManage)
+                <x-slot:actions>
+                    <x-ui.button href="{{ route('groups.create') }}">Add Group</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
 
-    @if (session('success'))
-        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {{ session('success') }}
-        </div>
-    @endif
+        @if (session('success'))
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
+        @endif
+        @if (session('error'))
+            <x-ui.alert tone="danger">{{ session('error') }}</x-ui.alert>
+        @endif
 
-    @if (session('error'))
-        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    <form method="GET" class="mb-4 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search group name..."
-            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-64">
-
-        <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-            Filter
-        </button>
-
-        <a href="{{ route('groups.index') }}" class="rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">
-            Reset
-        </a>
-    </form>
-
-    {{-- ============ DESKTOP: Table (md and up) ============ --}}
-    <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-        <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Group Name</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Number of Machines</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 bg-white" data-infinite-list="groups">
-                @forelse ($groups as $group)
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $group->name }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $group->machines_count }}</td>
-                        <td class="px-4 py-3">
-                            <div class="flex flex-wrap gap-2">
-                                <a href="{{ route('groups.show', $group->id) }}" class="rounded-lg bg-slate-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700">
-                                    View
-                                </a>
-                                @unless (auth()->user()->isSupervisor())
-                                <a href="{{ route('groups.edit', ['group' => $group->id, 'page' => request('page')]) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
-                                    Edit
-                                </a>
-                                <form method="POST" action="{{ route('groups.destroy', $group->id) }}" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700"
-                                        onclick="return confirm('Delete group?')">
-                                        Delete
-                                    </button>
-                                </form>
-                                @endunless
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="3" class="px-4 py-8 text-center text-sm text-slate-500">No groups found</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        </div>
-    </div>
-
-    {{-- ============ MOBILE: Card List (below md) ============ --}}
-    <div class="space-y-3 md:hidden" data-infinite-list="groups">
-        @forelse ($groups as $group)
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                        <div class="truncate text-sm font-semibold text-slate-800">{{ $group->name }}</div>
-                        <div class="text-xs text-slate-500">{{ $group->machines_count }} machine(s)</div>
-                    </div>
-                </div>
-                <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                    <a href="{{ route('groups.show', $group->id) }}" class="flex-1 rounded-lg bg-slate-600 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-slate-700">
-                        View
-                    </a>
-                    @unless (auth()->user()->isSupervisor())
-                    <a href="{{ route('groups.edit', ['group' => $group->id, 'page' => request('page')]) }}" class="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-medium text-white transition hover:bg-amber-600">
-                        Edit
-                    </a>
-                    <form method="POST" action="{{ route('groups.destroy', $group->id) }}" class="flex-1">
-                        @csrf
-                        @method('DELETE')
-                        <button class="w-full rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-rose-700"
-                            onclick="return confirm('Delete group?')">
-                            Delete
-                        </button>
-                    </form>
-                    @endunless
-                </div>
+        <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+            <div class="grid gap-1.5 sm:w-72">
+                <label for="gr-search" class="text-xs font-medium text-text-muted">Search</label>
+                <input id="gr-search" type="text" name="search" value="{{ request('search') }}" placeholder="Group name" class="input lg:min-h-9">
             </div>
-        @empty
-            <p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No groups found</p>
-        @endforelse
-    </div>
+            <div class="flex gap-2 sm:ml-auto">
+                <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                <x-ui.button variant="ghost" href="{{ route('groups.index') }}" class="lg:min-h-9">Reset</x-ui.button>
+            </div>
+        </form>
 
-    <div class="mt-4">
+        @if ($groups->isEmpty())
+            <x-ui.empty-state title="No groups found" :description="request('search') ? 'Try another name, or reset the search.' : ($canManage ? 'Add a group, then assign machines to it.' : null)" />
+        @endif
+
+        {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+        <div @class(['card hidden overflow-hidden', 'md:block' => $groups->isNotEmpty()])>
+            <div class="relative overflow-x-auto">
+                <table class="data-table min-w-full">
+                    <thead>
+                        <tr>
+                            <th scope="col">Group Name</th>
+                            <th scope="col" class="text-right">Number of Machines</th>
+                            <th scope="col"><span class="sr-only">Action</span></th>
+                        </tr>
+                    </thead>
+                    <tbody data-infinite-list="groups">
+                        @foreach ($groups as $group)
+                            <tr>
+                                <td class="font-semibold text-text">{{ $group->name }}</td>
+                                <td class="text-right tabular-nums">{{ $group->machines_count }}</td>
+                                <td>@include('partials.master.row-actions', $actions($group))</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- Phone cards (below md). Second list with the same key. --}}
+        <div class="space-y-3 md:hidden" data-infinite-list="groups">
+            @foreach ($groups as $group)
+                <article class="card min-w-0 p-4">
+                    <h2 class="break-words text-base font-semibold text-text">{{ $group->name }}</h2>
+                    <p class="text-sm text-text-muted">{{ $group->machines_count }} machine(s)</p>
+                    <div class="mt-3 border-t border-border pt-3">@include('partials.master.row-actions', $actions($group, true))</div>
+                </article>
+            @endforeach
+        </div>
+
         <x-infinite-scroll :paginator="$groups" key="groups" />
     </div>
 @endsection

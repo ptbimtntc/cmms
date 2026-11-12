@@ -1,34 +1,26 @@
 @extends('layouts.app')
 
+@section('title', 'Add Sparepart')
+
+{{-- Placeholder form with no action or field names, kept as it was (not linked from any page). --}}
 @section('content')
-<div class="mx-auto max-w-4xl">
-    <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5">
-            <h1 class="text-2xl font-semibold text-slate-800">Add Sparepart</h1>
-            <p class="mt-1 text-sm text-slate-500">Create a new sparepart entry for maintenance inventory.</p>
-        </div>
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-2xl';
+    @endphp
 
-        <form class="space-y-5 p-6">
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">SAP Number</label>
-                <input type="text" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none" placeholder="SAP-0001">
-            </div>
+    <div class="space-y-5">
+        <x-ui.button variant="ghost" href="{{ route('spareparts.index') }}" class="-ml-2">Kembali ke Sparepart Master</x-ui.button>
+        <x-ui.page-header title="Add Sparepart" description="Create a new sparepart entry for maintenance inventory." />
 
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Description</label>
-                <input type="text" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none" placeholder="Bearing / Seal / Motor Part">
-            </div>
-
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Location</label>
-                <input type="text" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none" placeholder="Warehouse A / B / C">
-            </div>
-
-            <div class="flex flex-wrap gap-3 pt-2">
-                <button class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700">Save</button>
-                <a href="{{ route('spareparts.index') }}" class="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100">Cancel</a>
+        <form class="card space-y-5 p-5 sm:p-6">
+            <x-ui.field label="SAP Number" for="spc-sap"><input id="spc-sap" type="text" class="input" placeholder="SAP-0001"></x-ui.field>
+            <x-ui.field label="Description" for="spc-desc"><input id="spc-desc" type="text" class="input" placeholder="Bearing / Seal / Motor Part"></x-ui.field>
+            <x-ui.field label="Location" for="spc-loc"><input id="spc-loc" type="text" class="input" placeholder="Warehouse A / B / C"></x-ui.field>
+            <div class="flex flex-col-reverse gap-2 border-t border-border pt-5 sm:flex-row sm:justify-end">
+                <x-ui.button variant="ghost" href="{{ route('spareparts.index') }}">Cancel</x-ui.button>
+                <x-ui.button type="submit">Save</x-ui.button>
             </div>
         </form>
     </div>
-</div>
 @endsection

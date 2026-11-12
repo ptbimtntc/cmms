@@ -1,31 +1,20 @@
 @extends('layouts.app')
 
+@section('title', 'Edit User')
+
 @section('content')
-<div class="mx-auto max-w-4xl">
-    <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-3xl';
+        $isSelf = auth()->id() === $user->id;
+    @endphp
 
-        <div class="border-b border-slate-200 px-6 py-5">
-            <h1 class="text-2xl font-semibold text-slate-800">
-                Edit User
-            </h1>
+    <x-ui.form-page title="Edit User" description="Update user account, role, or password."
+        :action="route('users.update', $user)" method="PUT" :back="route('users.index')" back-label="Kembali ke User Management" submit="Update User"
+        enctype="multipart/form-data" novalidate>
+        <input type="hidden" name="return_page" value="{{ request('page') }}">
 
-            <p class="mt-1 text-sm text-slate-500">
-                Update user account, role, or password.
-            </p>
-        </div>
-
-        <form
-            action="{{ route('users.update', $user) }}"
-            method="POST"
-            enctype="multipart/form-data"
-            class="space-y-5 p-6"
-            novalidate
-        >
-            @csrf
-            @method('PUT')
-            <input type="hidden" name="return_page" value="{{ request('page') }}">
-
-            <div
+            <div class="grid gap-1.5"
                 x-data="{
                     cropOpen: false,
                     img: null,
@@ -148,363 +137,137 @@
                     },
                 }"
             >
-                <label class="mb-2 block text-sm font-medium text-slate-700">
-                    Profile Photo
-                </label>
+            <span class="form-label mb-0" id="avatar-label">Profile Photo</span>
+            <div class="flex items-center gap-4">
+                <img x-show="previewUrl" :src="previewUrl" alt="{{ $user->name }}" class="h-16 w-16 shrink-0 rounded-full object-cover">
+                <div x-show="! previewUrl" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-semibold text-primary-hover">{{ $user->initials() }}</div>
+                <div class="min-w-0">
+                    <input type="file" name="avatar" accept="image/*" x-ref="avatarInput" @change="onFileChosen($event)" aria-labelledby="avatar-label" aria-describedby="avatar-hint"
+                        class="block w-full text-sm text-text-muted file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-semibold file:text-text hover:file:bg-surface-muted lg:file:min-h-9">
+                    <p id="avatar-hint" class="form-hint mt-1">JPG or PNG, max 2MB. Leave blank to keep current photo.</p>
+                    @if ($user->avatar_path)
+                        <label class="mt-1 inline-flex min-h-11 items-center gap-2 text-sm text-text-muted lg:min-h-9">
+                            <input type="checkbox" name="remove_avatar" value="1" class="h-4 w-4 rounded border-border-strong text-primary">
+                            Remove current photo
+                        </label>
+                    @endif
+                </div>
+            </div>
+            @error('avatar')
+                <p class="form-error">{{ $message }}</p>
+            @enderror
 
-                <div class="flex items-center gap-4">
-                    <img
-                        x-show="previewUrl"
-                        :src="previewUrl"
-                        alt="{{ $user->name }}"
-                        class="h-16 w-16 rounded-full object-cover"
-                    >
-                    <div
-                        x-show="! previewUrl"
-                        class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600"
-                    >
-                        {{ $user->initials() }}
-                    </div>
-
+            {{-- Crop / position the photo --}}
+            <div x-show="cropOpen" x-cloak style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+                <div class="w-full max-w-md space-y-4 rounded-card border border-border bg-surface p-5 shadow-popover sm:p-6" @click.outside="cancelCrop()">
                     <div>
-                        <input
-                            type="file"
-                            name="avatar"
-                            accept="image/*"
-                            x-ref="avatarInput"
-                            @change="onFileChosen($event)"
-                            class="block text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-                        >
-
-                        <p class="mt-1 text-xs text-slate-500">
-                            JPG or PNG, max 2MB. Leave blank to keep current photo.
-                        </p>
-
-                        @if ($user->avatar_path)
-                            <label class="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                                <input type="checkbox" name="remove_avatar" value="1">
-                                Remove current photo
-                            </label>
-                        @endif
+                        <h2 id="crop-title" class="text-lg font-semibold text-text">Adjust Photo</h2>
+                        <p class="text-sm text-text-muted">Drag to reposition, use the slider to zoom.</p>
                     </div>
-                </div>
-
-                @error('avatar')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-
-                {{-- Modal crop/posisi foto --}}
-                <div
-                    x-show="cropOpen"
-                    x-cloak
-                    style="display: none;"
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                >
-                    <div class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-lg" @click.outside="cancelCrop()">
-                        <div>
-                            <h2 class="text-lg font-semibold text-slate-800">Adjust Photo</h2>
-                            <p class="text-sm text-slate-500">Drag to reposition, use the slider to zoom.</p>
+                    <div class="flex justify-center">
+                        <div class="relative h-72 w-72 max-w-full touch-none select-none overflow-hidden rounded-full border-4 border-border bg-surface-muted"
+                            :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
+                            x-on:mousedown="startDrag($event)"
+                            x-on:mousemove.window="onDrag($event)"
+                            x-on:mouseup.window="endDrag()"
+                            x-on:touchstart="startDrag($event)"
+                            x-on:touchmove="onDrag($event)"
+                            x-on:touchend="endDrag()">
+                            <canvas x-ref="canvas" width="288" height="288" class="h-72 w-72"></canvas>
                         </div>
-
-                        <div class="flex justify-center">
-                            <div
-                                class="relative h-72 w-72 touch-none select-none overflow-hidden rounded-full border-4 border-slate-200 bg-slate-100"
-                                :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
-                                x-on:mousedown="startDrag($event)"
-                                x-on:mousemove.window="onDrag($event)"
-                                x-on:mouseup.window="endDrag()"
-                                x-on:touchstart="startDrag($event)"
-                                x-on:touchmove="onDrag($event)"
-                                x-on:touchend="endDrag()"
-                            >
-                                <canvas x-ref="canvas" width="288" height="288" class="h-72 w-72"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-3 px-4">
-                            <span class="text-sm text-slate-400">&minus;</span>
-                            <input
-                                type="range"
-                                x-model.number="scale"
-                                :min="minScale"
-                                :max="maxScale"
-                                step="0.001"
-                                x-on:input="onZoom()"
-                                class="w-full accent-blue-600"
-                            >
-                            <span class="text-sm text-slate-400">+</span>
-                        </div>
-
-                        <div class="flex justify-end gap-2">
-                            <button type="button" @click="cancelCrop()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                                Cancel
-                            </button>
-                            <button type="button" @click="applyCrop()" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                                Save Photo
-                            </button>
-                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 px-4">
+                        <span class="text-sm text-text-muted" aria-hidden="true">&minus;</span>
+                        <input type="range" x-model.number="scale" :min="minScale" :max="maxScale" step="0.001" x-on:input="onZoom()" aria-label="Zoom" class="w-full accent-[var(--color-primary)]">
+                        <span class="text-sm text-text-muted" aria-hidden="true">+</span>
+                    </div>
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" @click="cancelCrop()" class="btn btn-ghost min-h-11">Cancel</button>
+                        <button type="button" @click="applyCrop()" class="btn btn-primary min-h-11">Save Photo</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">
-                    Name
-                </label>
+        <div class="grid gap-5 md:grid-cols-2">
+            <x-ui.field label="Name" for="ue-name" error="name">
+                <input id="ue-name" type="text" name="name" value="{{ old('name', $user->name) }}" required @class(['input', 'is-invalid' => $errors->has('name')])>
+            </x-ui.field>
+            <x-ui.field label="Email" for="ue-email" error="email">
+                <input id="ue-email" type="email" name="email" value="{{ old('email', $user->email) }}" required @class(['input', 'is-invalid' => $errors->has('email')])>
+            </x-ui.field>
+        </div>
 
-                <input
-                    type="text"
-                    name="name"
-                    value="{{ old('name', $user->name) }}"
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none"
-                    required
-                >
+        <x-ui.field label="New Password" for="ue-password" error="password" hint="Leave blank if you don't want to change the password.">
+            <input id="ue-password" type="password" name="password" placeholder="Leave blank to keep current password" autocomplete="new-password" @class(['input', 'is-invalid' => $errors->has('password')])>
+        </x-ui.field>
 
-                @error('name')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">
-                    Email
-                </label>
-
-                <input
-                    type="email"
-                    name="email"
-                    value="{{ old('email', $user->email) }}"
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none"
-                    required
-                >
-
-                @error('email')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">
-                    New Password
-                </label>
-
-                <input
-                    type="password"
-                    name="password"
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none"
-                    placeholder="Leave blank to keep current password"
-                >
-
-                <p class="mt-1 text-xs text-slate-500">
-                    Leave blank if you don't want to change the password.
-                </p>
-
-                @error('password')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">
-                    Role
-                </label>
-
-                @if (auth()->id() === $user->id)
-
-                    <input
-                        type="text"
-                        value="{{ $user->role }}"
-                        class="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-medium text-slate-500"
-                        disabled
-                    >
-
-                    <input
-                        type="hidden"
-                        name="role"
-                        value="{{ $user->role }}"
-                    >
-
-                    <p class="mt-1 text-xs text-slate-500">
-                        You cannot change your own role.
-                    </p>
-
-                @else
-
-                    <select
-                        id="role"
-                        name="role"
-                        onchange="toggleAreaField(this.value)"
-                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none"
-                        required
-                    >
-                        @foreach ($roles as $role)
-                            <option
-                                value="{{ $role }}"
-                                @selected(old('role', $user->role) === $role)
-                            >
-                                {{ $role }}
-                            </option>
-                        @endforeach
-                    </select>
-
-                @endif
-
-                @error('role')
-                    <p class="mt-1 text-xs text-red-600">
-                        {{ $message }}
-                    </p>
-                @enderror
-            </div>
-
-            {{-- Area — only meaningful for KOORDINATOR/PIC; ADMIN implicitly
-                 accesses every area, GUEST has no area, SUPERVISOR uses
-                 the multi-select below. Options come from
-                 the Area master list (see Area Management), never
-                 hardcoded. --}}
-            <div id="areaField">
-                <label
-                    for="area_id"
-                    class="mb-2 block text-sm font-medium text-slate-700"
-                >
-                    Area
-                </label>
-
-                <select
-                    id="area_id"
-                    name="area_id"
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none"
-                >
-                    <option value="">Select Area</option>
-
-                    @foreach ($areas as $area)
-                        <option
-                            value="{{ $area->id }}"
-                            @selected((string) old('area_id', $user->area_id) === (string) $area->id)
-                        >
-                            {{ $area->name }}
-                        </option>
+        @if ($isSelf)
+            <x-ui.field label="Role" for="ue-role-ro" error="role" hint="You cannot change your own role.">
+                <input id="ue-role-ro" type="text" value="{{ $user->role }}" class="input" disabled>
+                <input type="hidden" name="role" value="{{ $user->role }}">
+            </x-ui.field>
+        @else
+            <x-ui.field label="Role" for="role" error="role">
+                <select id="role" name="role" onchange="toggleAreaField(this.value)" required @class(['select', 'is-invalid' => $errors->has('role')])>
+                    @foreach ($roles as $role)
+                        <option value="{{ $role }}" @selected(old('role', $user->role) === $role)>{{ $role }}</option>
                     @endforeach
                 </select>
+            </x-ui.field>
+        @endif
 
-                @error('area_id')
-                    <p class="mt-1 text-xs text-red-600">
-                        {{ $message }}
-                    </p>
-                @enderror
+        {{-- Area: only meaningful for KOORDINATOR/PIC; ADMIN sees every area, GUEST has none,
+             SUPERVISOR uses the multi-select below. Options come from the Area master list. --}}
+        <x-ui.field label="Area" for="area_id" error="area_id" id="areaField">
+            <select id="area_id" name="area_id" @class(['select', 'is-invalid' => $errors->has('area_id')])>
+                <option value="">Select Area</option>
+                @foreach ($areas as $area)
+                    <option value="{{ $area->id }}" @selected((string) old('area_id', $user->area_id) === (string) $area->id)>{{ $area->name }}</option>
+                @endforeach
+            </select>
+        </x-ui.field>
+
+        {{-- Areas: SUPERVISOR only. None checked = all areas, otherwise limited to the checked areas. --}}
+        <fieldset id="supervisorAreasField" style="display: none" class="grid gap-1.5">
+            <legend class="form-label mb-1.5">Areas <span class="font-normal text-text-muted">(leave empty for all areas)</span></legend>
+            <div class="flex flex-wrap gap-x-5 gap-y-1 rounded-control border border-border bg-surface-sunken px-3 py-1">
+                @foreach ($areas as $area)
+                    <label class="inline-flex min-h-11 items-center gap-2 text-sm text-text">
+                        <input type="checkbox" name="area_ids[]" value="{{ $area->id }}" class="h-4 w-4 rounded border-border-strong text-primary"
+                            @checked(in_array($area->id, array_map('intval', (array) old('area_ids', $user->areas->pluck('id')->all()))))>
+                        {{ $area->name }}
+                    </label>
+                @endforeach
             </div>
+            @error('area_ids.*')
+                <p class="form-error">{{ $message }}</p>
+            @enderror
+        </fieldset>
 
-            {{-- Areas — SUPERVISOR only: none checked = all areas, otherwise
-                 limited to the checked areas. --}}
-            <div id="supervisorAreasField" style="display: none">
-                <label class="mb-2 block text-sm font-medium text-slate-700">
-                    Areas <span class="font-normal text-slate-500">(leave empty for all areas)</span>
-                </label>
+        @if ($isSelf)
+            <x-ui.field label="Status" for="ue-active-ro" error="is_active" hint="You cannot deactivate your own account.">
+                <input id="ue-active-ro" type="text" value="Active" class="input" disabled>
+                <input type="hidden" name="is_active" value="1">
+            </x-ui.field>
+        @else
+            <x-ui.field label="Status" for="is_active" error="is_active">
+                <select id="is_active" name="is_active" required @class(['select', 'is-invalid' => $errors->has('is_active')])>
+                    <option value="1" @selected(old('is_active', $user->is_active) == true)>Active</option>
+                    <option value="0" @selected(old('is_active', $user->is_active) == false)>Inactive</option>
+                </select>
+            </x-ui.field>
+        @endif
+    </x-ui.form-page>
 
-                <div class="flex flex-wrap gap-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    @foreach ($areas as $area)
-                        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                            <input
-                                type="checkbox"
-                                name="area_ids[]"
-                                value="{{ $area->id }}"
-                                @checked(in_array($area->id, array_map('intval', (array) old('area_ids', $user->areas->pluck('id')->all()))))
-                            >
-                            {{ $area->name }}
-                        </label>
-                    @endforeach
-                </div>
-
-                @error('area_ids.*')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <script>
-                function toggleAreaField(role) {
-                    const field = document.getElementById('areaField');
-                    const needsArea = role === 'KOORDINATOR' || role === 'PIC';
-                    field.style.display = needsArea ? '' : 'none';
-                    document.getElementById('area_id').required = needsArea;
-                    document.getElementById('supervisorAreasField').style.display = role === 'SUPERVISOR' ? '' : 'none';
-                }
-                toggleAreaField(document.getElementById('role')?.value ?? '{{ $user->role }}');
-            </script>
-
-            <div>
-                <label
-                    for="is_active"
-                    class="mb-2 block text-sm font-medium text-slate-700"
-                >
-                    Status
-                </label>
-
-                @if (auth()->id() === $user->id)
-
-                    <input
-                        type="text"
-                        value="Active"
-                        class="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-medium text-slate-500"
-                        disabled
-                    >
-
-                    <input
-                        type="hidden"
-                        name="is_active"
-                        value="1"
-                    >
-
-                    <p class="mt-1 text-xs text-slate-500">
-                        You cannot deactivate your own account.
-                    </p>
-
-                @else
-
-                    <select
-                        id="is_active"
-                        name="is_active"
-                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none"
-                        required
-                    >
-                        <option
-                            value="1"
-                            @selected(old('is_active', $user->is_active) == true)
-                        >
-                            Active
-                        </option>
-
-                        <option
-                            value="0"
-                            @selected(old('is_active', $user->is_active) == false)
-                        >
-                            Inactive
-                        </option>
-                    </select>
-
-                @endif
-
-                @error('is_active')
-                    <p class="mt-1 text-xs text-red-600">
-                        {{ $message }}
-                    </p>
-                @enderror
-            </div>
-
-            <div class="flex gap-3 pt-2">
-                <button
-                    type="submit"
-                    class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                    Update User
-                </button>
-
-                <a
-                    href="{{ route('users.index') }}"
-                    class="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                >
-                    Cancel
-                </a>
-            </div>
-        </form>
-    </div>
-</div>
+    <script>
+        function toggleAreaField(role) {
+            const field = document.getElementById('areaField');
+            const needsArea = role === 'KOORDINATOR' || role === 'PIC';
+            field.style.display = needsArea ? '' : 'none';
+            document.getElementById('area_id').required = needsArea;
+            document.getElementById('supervisorAreasField').style.display = role === 'SUPERVISOR' ? '' : 'none';
+        }
+        toggleAreaField(document.getElementById('role')?.value ?? '{{ $user->role }}');
+    </script>
 @endsection

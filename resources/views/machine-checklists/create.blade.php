@@ -1,165 +1,65 @@
 @extends('layouts.app')
 
-@section('content')
+@section('title', 'Add Machine Checklist')
 
+@section('content')
     @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-3xl';
         $selectedType = old('machine_type', request('machine_type'));
         $selectedSection = old('section', request('section'));
         $selectedMaintenance = old('maintenance_type', request('maintenance_type', 'check'));
     @endphp
 
-    <div class="container mx-auto px-4 py-6 sm:px-6 max-w-3xl">
+    <div class="space-y-5">
+        <x-ui.button variant="ghost" href="{{ route('machine-checklists.index') }}" class="-ml-2">Kembali ke Machine Checklist</x-ui.button>
+        <x-ui.page-header title="Add Machine Checklist" description="Add one checklist item without importing a file" />
 
-        <div class="bg-white rounded-lg shadow">
+        @include('partials.master.form-messages')
 
-            <div class="border-b px-6 py-4">
-                <h1 class="text-2xl font-bold text-gray-800">
-                    Add Machine Checklist
-                </h1>
+        <form action="{{ route('machine-checklists.store') }}" method="POST" class="card space-y-5 p-5 sm:p-6">
+            @csrf
+            <x-ui.field label="Machine Type" for="machine_type">
+                <select id="machine_type" name="machine_type" class="select" required>
+                    <option value="">Select machine type</option>
+                    @foreach ($machines as $machine)
+                        <option value="{{ $machine->machine_type }}" @selected($selectedType == $machine->machine_type)>{{ $machine->machine_type }}</option>
+                    @endforeach
+                </select>
+            </x-ui.field>
 
-                <p class="text-gray-500 text-sm">
-                    Add one checklist item without importing a file
-                </p>
+            <x-ui.field label="Section" for="section" hint="Pick an existing section or type a new one.">
+                <input type="text" id="section" name="section" list="sectionOptions" value="{{ $selectedSection }}" autocomplete="off" class="input" required>
+                <datalist id="sectionOptions"></datalist>
+            </x-ui.field>
+
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <x-ui.field label="Section Order" for="section_order">
+                    <input type="number" id="section_order" name="section_order" value="{{ old('section_order', 1) }}" class="input" min="1" required>
+                </x-ui.field>
+                <x-ui.field label="Item Order" for="item_order">
+                    <input type="number" id="item_order" name="item_order" value="{{ old('item_order', 1) }}" class="input" min="1" required>
+                </x-ui.field>
             </div>
 
-            <div class="p-6">
+            <x-ui.field label="Checklist Item" for="checklist_item">
+                <input type="text" id="checklist_item" name="checklist_item" value="{{ old('checklist_item') }}" class="input" required @if ($selectedType && $selectedSection) autofocus @endif>
+            </x-ui.field>
 
-                @if (session('success'))
-                    <div class="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded mb-4">
-                        {{ session('success') }}
-                    </div>
-                @endif
+            <x-ui.field label="Maintenance Type" for="maintenance_type">
+                <select id="maintenance_type" name="maintenance_type" class="select" required>
+                    @foreach ($maintenanceTypes as $type)
+                        <option value="{{ $type }}" @selected($selectedMaintenance == $type)>{{ \Illuminate\Support\Str::title($type) }}</option>
+                    @endforeach
+                </select>
+            </x-ui.field>
 
-                @if (session('error'))
-                    <div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
-                        {{ session('error') }}
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
-                        <ul class="list-disc ml-5">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <form action="{{ route('machine-checklists.store') }}" method="POST">
-
-                    @csrf
-
-                    <!-- Machine Type -->
-                    <div class="mb-5">
-                        <label for="machine_type" class="block font-medium mb-2">
-                            Machine Type
-                        </label>
-
-                        <select id="machine_type" name="machine_type" class="border rounded w-full px-3 py-2" required>
-                            <option value="">Select machine type</option>
-                            @foreach ($machines as $machine)
-                                <option value="{{ $machine->machine_type }}"
-                                    {{ $selectedType == $machine->machine_type ? 'selected' : '' }}>
-                                    {{ $machine->machine_type }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Section -->
-                    <div class="mb-5">
-                        <label for="section" class="block font-medium mb-2">
-                            Section
-                        </label>
-
-                        <input type="text" id="section" name="section" list="sectionOptions"
-                            value="{{ $selectedSection }}" autocomplete="off"
-                            class="border rounded w-full px-3 py-2" required>
-                        <datalist id="sectionOptions"></datalist>
-
-                        <p class="text-gray-500 text-xs mt-1">
-                            Pick an existing section or type a new one.
-                        </p>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
-
-                        <!-- Section Order -->
-                        <div>
-                            <label for="section_order" class="block font-medium mb-2">
-                                Section Order
-                            </label>
-
-                            <input type="number" id="section_order" name="section_order"
-                                value="{{ old('section_order', 1) }}"
-                                class="border rounded w-full px-3 py-2" min="1" required>
-                        </div>
-
-                        <!-- Item Order -->
-                        <div>
-                            <label for="item_order" class="block font-medium mb-2">
-                                Item Order
-                            </label>
-
-                            <input type="number" id="item_order" name="item_order"
-                                value="{{ old('item_order', 1) }}"
-                                class="border rounded w-full px-3 py-2" min="1" required>
-                        </div>
-
-                    </div>
-
-                    <!-- Checklist Item -->
-                    <div class="mb-5">
-                        <label for="checklist_item" class="block font-medium mb-2">
-                            Checklist Item
-                        </label>
-
-                        <input type="text" id="checklist_item" name="checklist_item"
-                            value="{{ old('checklist_item') }}"
-                            class="border rounded w-full px-3 py-2" required
-                            {{ $selectedType && $selectedSection ? 'autofocus' : '' }}>
-                    </div>
-
-                    <!-- Maintenance Type -->
-                    <div class="mb-6">
-                        <label for="maintenance_type" class="block font-medium mb-2">
-                            Maintenance Type
-                        </label>
-
-                        <select id="maintenance_type" name="maintenance_type" class="border rounded w-full px-3 py-2" required>
-                            @foreach ($maintenanceTypes as $type)
-                                <option value="{{ $type }}" {{ $selectedMaintenance == $type ? 'selected' : '' }}>
-                                    {{ \Illuminate\Support\Str::title($type) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-
-                        <a href="{{ route('machine-checklists.index') }}"
-                            class="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded text-center">
-                            Cancel
-                        </a>
-
-                        <button type="submit" name="add_another" value="1"
-                            class="border border-blue-600 text-blue-700 hover:bg-blue-50 px-5 py-2 rounded">
-                            Save &amp; Add Another
-                        </button>
-
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-                            Save
-                        </button>
-
-                    </div>
-
-                </form>
-
+            <div class="flex flex-col-reverse gap-2 border-t border-border pt-5 sm:flex-row sm:justify-end">
+                <x-ui.button variant="ghost" href="{{ route('machine-checklists.index') }}">Cancel</x-ui.button>
+                <x-ui.button type="submit" variant="outline" name="add_another" value="1">Save &amp; Add Another</x-ui.button>
+                <x-ui.button type="submit">Save</x-ui.button>
             </div>
-
-        </div>
-
+        </form>
     </div>
 
     <script>

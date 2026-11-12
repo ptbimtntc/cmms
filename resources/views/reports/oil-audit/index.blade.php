@@ -1,372 +1,240 @@
 @extends('layouts.app')
 
+@section('title', 'Oil Audit Report')
+
 @section('content')
+    @php
+        $fullWidth = true;
+        $label = 'text-xs font-medium text-text-muted';
+        $historyUrl = fn ($machineNumber) => route('oil-audits.history', [$machineNumber, 'from' => 'report', 'return' => request()->getQueryString() ?? '']);
+        $maxProblemTotal = (int) $problemFrequency->max('total');
+        $maxRepeat = (int) $repeatFindingMachines->max('events');
+        // Fixed colour per finding slot (validated categorical palette, same order as OilAudit::FINDING_OPTIONS).
+        $findingPalette = ['Kapstan 1' => '#2a78d6', 'Kapstan 2' => '#eb6834', 'Kapstan 3' => '#1baf7a', 'Kapstan 4' => '#eda100', 'Mainshaft' => '#e87ba4', 'Innershaft' => '#008300'];
+        $findingColor = fn ($name) => $findingPalette[$name] ?? ($name === 'Lainnya' ? '#8a94a6' : '#c3cad5');
+        $findingChart = $findingFrequency->map(fn ($row) => ['finding' => $row->finding, 'total' => $row->total, 'percent' => $row->percent, 'color' => $findingColor($row->finding)])->values();
+    @endphp
 
-    <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-slate-800">Oil Audit Report</h1>
-        <p class="text-sm text-slate-500">Every machine in Oil Audit scope, one row each, with its latest audit.</p>
-    </div>
+    <div class="space-y-5">
+        <x-ui.page-header title="Oil Audit Report" description="Every machine in Oil Audit scope, one row each, with its latest audit." />
 
-    {{-- ============ Filters ============ --}}
-    <form method="GET" class="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input type="text" name="search" value="{{ $search }}" placeholder="Search Machine Number / Type / Description..."
-            title="Search Machine Number / Type / Description"
-            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-64">
-
-        <select name="machine_type" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Machine Types</option>
-            @foreach ($machineTypes as $type)
-                <option value="{{ $type }}" {{ $selectedMachineType === $type ? 'selected' : '' }}>{{ $type }}</option>
-            @endforeach
-        </select>
-
-        <x-checkbox-dropdown
-            name="condition"
-            label="Condition"
-            :options="$conditions"
-            :selected="$selectedConditions"
-        />
-
-        <select name="year" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Years (latest audit)</option>
-            @foreach ($years as $y)
-                <option value="{{ $y }}" {{ $selectedYear == $y ? 'selected' : '' }}>{{ $y }}</option>
-            @endforeach
-        </select>
-
-        <x-checkbox-dropdown
-            name="month"
-            label="Month"
-            :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
-            :selected="$selectedMonths"
-        />
-
-        <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-            Filter
-        </button>
-        <a href="{{ route('reports.oil-audit') }}"
-            class="rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">
-            Reset
-        </a>
-    </form>
-
-    {{-- ============ Summary (machine-centric) ============ --}}
-    <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Total Machines in Oil Audit Scope</div>
-            <div class="mt-1 text-xl font-bold text-slate-800">{{ $summary['total_machines'] }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Machines Never Audited</div>
-            <div class="mt-1 text-xl font-bold text-slate-500">{{ $summary['never_audited'] }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Machines With Latest Finding</div>
-            <div class="mt-1 text-xl font-bold text-rose-600">{{ $summary['with_latest_finding'] }}</div>
-        </div>
-    </div>
-
-    {{-- ============ Oil Audit Analysis (confirmed via follow-up, scoped by the report filters) ============ --}}
-    <h2 class="mb-3 text-lg font-semibold text-slate-800">Oil Audit Analysis</h2>
-
-    {{-- Distribusi Finding — persentase tiap finding (Kapstan 1/2/3/4, Mainshaft, dst) dari seluruh temuan follow-up. --}}
-    <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="mb-4 flex items-start justify-between gap-3">
-            <div>
-                <h2 class="text-sm font-semibold text-slate-800">Distribusi Finding</h2>
-                <p class="mt-0.5 text-xs text-slate-500">
-                    Persentase tiap bagian yang paling sering menjadi temuan follow-up
-                </p>
+        {{-- Filters: plain GET; the multi-selects sit last so their open lists never cover a control. --}}
+        <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div class="grid gap-1.5 sm:w-64">
+                <label for="ro-search" class="{{ $label }}">Search</label>
+                <input id="ro-search" type="text" name="search" value="{{ $search }}" placeholder="Machine Number / Type / Description" class="input lg:min-h-9">
             </div>
-            <span class="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                {{ $findingFrequency->sum('total') }} temuan
-            </span>
-        </div>
+            <div class="grid gap-1.5 sm:w-44">
+                <label for="ro-type" class="{{ $label }}">Machine Type</label>
+                <select id="ro-type" name="machine_type" class="select lg:min-h-9">
+                    <option value="">All Machine Types</option>
+                    @foreach ($machineTypes as $type)
+                        <option value="{{ $type }}" @selected($selectedMachineType === $type)>{{ $type }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5 sm:w-52">
+                <label for="ro-year" class="{{ $label }}">Year</label>
+                <select id="ro-year" name="year" class="select lg:min-h-9">
+                    <option value="">All Years (latest audit)</option>
+                    @foreach ($years as $y)
+                        <option value="{{ $y }}" @selected($selectedYear == $y)>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5">
+                <span class="{{ $label }}">Condition</span>
+                <x-checkbox-dropdown name="condition" label="Condition" :options="$conditions" :selected="$selectedConditions" />
+            </div>
+            <div class="grid gap-1.5">
+                <span class="{{ $label }}">Month</span>
+                <x-checkbox-dropdown name="month" label="Month"
+                    :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
+                    :selected="$selectedMonths" />
+            </div>
+            <div class="flex gap-2 sm:ml-auto">
+                <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                <x-ui.button variant="ghost" href="{{ route('reports.oil-audit') }}" class="lg:min-h-9">Reset</x-ui.button>
+            </div>
+        </form>
 
-        @if ($findingFrequency->isEmpty())
-            <p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
-                Belum ada finding follow-up pada scope filter ini.
-            </p>
-        @else
-            <div class="mx-auto flex max-w-2xl flex-col items-center gap-6 sm:flex-row sm:items-center">
-                <div class="h-56 w-56 shrink-0">
-                    <canvas id="findingDistributionChart"></canvas>
+        @include('reports.partials.stats', ['cols' => 'grid-cols-1 sm:grid-cols-3', 'items' => [
+            ['label' => 'Total Machines in Oil Audit Scope', 'value' => $summary['total_machines']],
+            ['label' => 'Machines Never Audited', 'value' => $summary['never_audited']],
+            ['label' => 'Machines With Latest Finding', 'value' => $summary['with_latest_finding'], 'tone' => $summary['with_latest_finding'] > 0 ? 'danger' : null],
+        ]])
+
+        {{-- Oil Audit Analysis: confirmed via follow-up, scoped by the report filters. --}}
+        <section aria-labelledby="ro-analysis" class="space-y-4">
+            <h2 id="ro-analysis" class="font-signage text-2xl font-semibold text-text">Oil Audit Analysis</h2>
+
+            {{-- Distribusi Finding: share of each part (Kapstan 1-4, Mainshaft, ...) among all follow-up findings.
+                 Each finding keeps one colour wherever it ranks, from a colour-blind-checked palette in fixed order;
+                 "Lainnya" and legacy rows without a finding are grey. The legend always names the slice and its share. --}}
+            <section class="card p-5" aria-labelledby="ro-dist">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 id="ro-dist" class="font-semibold text-text">Distribusi Finding</h3>
+                        <p class="mt-0.5 text-xs text-text-muted">Bagian mana yang paling sering menjadi temuan follow-up?</p>
+                    </div>
+                    <x-ui.badge tone="primary" class="shrink-0">{{ $findingFrequency->sum('total') }} temuan</x-ui.badge>
                 </div>
 
-                <ul class="w-full min-w-0 space-y-2">
-                    @foreach ($findingFrequency as $index => $row)
-                        <li class="flex items-center justify-between gap-3 text-sm">
-                            <span class="flex min-w-0 items-center gap-2">
-                                <span class="finding-legend-dot inline-block h-2.5 w-2.5 shrink-0 rounded-full" data-index="{{ $index }}"></span>
-                                <span class="truncate font-medium text-slate-700">{{ $row->finding }}</span>
-                            </span>
-                            <span class="shrink-0 font-semibold text-slate-800">
-                                {{ $row->percent }}% <span class="font-normal text-slate-400">({{ $row->total }})</span>
-                            </span>
-                        </li>
-                    @endforeach
-                </ul>
+                @if ($findingFrequency->isEmpty())
+                    <p class="rounded-control border border-dashed border-border-strong py-8 text-center text-sm text-text-muted">Belum ada finding follow-up pada scope filter ini.</p>
+                @else
+                    <div class="mx-auto flex max-w-3xl flex-col items-center gap-6 sm:flex-row">
+                        <div class="h-56 w-56 shrink-0">
+                            <canvas id="findingDistributionChart" role="img" aria-label="Distribusi finding follow-up"></canvas>
+                        </div>
+                        <ul class="w-full min-w-0 max-w-sm space-y-2">
+                            @foreach ($findingFrequency as $row)
+                                <li class="flex items-center justify-between gap-3 text-sm">
+                                    <span class="flex min-w-0 items-center gap-2">
+                                        <span class="h-3 w-3 shrink-0 rounded-full" style="background: {{ $findingColor($row->finding) }}" aria-hidden="true"></span>
+                                        <span class="break-words text-text">{{ $row->finding }}</span>
+                                    </span>
+                                    <span class="shrink-0 font-semibold tabular-nums text-text">{{ $row->percent }}% <span class="font-normal text-text-muted">({{ $row->total }})</span></span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+            </section>
+
+            <div class="grid gap-4 lg:grid-cols-2">
+                <section class="card p-5" aria-labelledby="ro-problem">
+                    <div class="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 id="ro-problem" class="font-semibold text-text">Problem &amp; Finding Paling Sering Muncul</h3>
+                            <p class="mt-0.5 text-xs text-text-muted">Top 10 kombinasi problem + finding dari hasil follow-up</p>
+                        </div>
+                        <x-ui.badge tone="primary" class="shrink-0">{{ $problemFrequency->sum('total') }} temuan</x-ui.badge>
+                    </div>
+                    @if ($problemFrequency->isEmpty())
+                        <p class="text-sm text-text-muted">Belum ada problem follow-up pada scope filter ini.</p>
+                    @else
+                        @include('reports.partials.rank-bars', ['numbered' => true, 'rows' => $problemFrequency->map(fn ($row) => [
+                            'label' => $row->problem.': '.$row->finding,
+                            'value' => $row->total,
+                            'percent' => $maxProblemTotal > 0 ? $row->total / $maxProblemTotal * 100 : 0,
+                        ])->all()])
+                    @endif
+                </section>
+
+                <section class="card p-5" aria-labelledby="ro-repeat">
+                    <div class="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 id="ro-repeat" class="font-semibold text-text">Mesin dengan Temuan Berulang</h3>
+                            <p class="mt-0.5 text-xs text-text-muted">Top 10 mesin dengan &ge; {{ $repeatFindingMin }} follow-up pada audit berbeda</p>
+                        </div>
+                        <x-ui.badge tone="warning" class="shrink-0">&ge; {{ $repeatFindingThreshold }}&times; = berulang</x-ui.badge>
+                    </div>
+                    @if ($repeatFindingMachines->isEmpty())
+                        <p class="text-sm text-text-muted">Belum ada mesin dengan temuan berulang pada scope filter ini.</p>
+                    @else
+                        @include('reports.partials.rank-bars', ['numbered' => true, 'rows' => $repeatFindingMachines->map(fn ($row) => [
+                            'label' => $row->machine_number,
+                            'value' => $row->events.'×',
+                            'percent' => $maxRepeat > 0 ? $row->events / $maxRepeat * 100 : 0,
+                            'href' => $historyUrl($row->machine_number),
+                            'badge' => $row->events >= $repeatFindingThreshold ? 'Berulang' : null,
+                        ])->all()])
+                    @endif
+                </section>
             </div>
+        </section>
+
+        @if ($machines->isEmpty())
+            <x-ui.empty-state title="No machines found." description="Change the filters, or reset them to see every machine in scope." />
+        @else
+            {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+            <div class="card hidden overflow-hidden md:block">
+                <div class="relative overflow-x-auto">
+                    <table class="data-table min-w-full">
+                        <thead>
+                            <tr>
+                                <th scope="col">Machine Number</th>
+                                <th scope="col">Machine Type</th>
+                                <th scope="col">Area</th>
+                                <th scope="col">Latest Audit Condition</th>
+                                <th scope="col">Latest Audit Date</th>
+                                <th scope="col">PIC</th>
+                                <th scope="col">Follow-up Status</th>
+                                <th scope="col" class="sticky right-0 bg-surface-sunken"><span class="sr-only">Action</span></th>
+                            </tr>
+                        </thead>
+                        <tbody data-infinite-list="machines">
+                            @foreach ($machines as $machine)
+                                @php($audit = $machine->latestOilAudit)
+                                <tr>
+                                    <td class="whitespace-nowrap font-semibold text-text">{{ $machine->machine_number }}</td>
+                                    <td>{{ $machine->machine_type }}</td>
+                                    <td>{{ $machine->area }}</td>
+                                    <td>@include('reports.oil-audit.partials.condition', ['audit' => $audit])</td>
+                                    <td class="whitespace-nowrap">{{ $audit ? $audit->audited_at->format('d-m-Y') : '-' }}</td>
+                                    <td>{{ $audit->audited_by_name ?? '-' }}</td>
+                                    <td>@include('reports.oil-audit.partials.follow-up', ['audit' => $audit])</td>
+                                    <td class="sticky right-0 bg-surface text-right shadow-[-10px_0_10px_-10px_rgb(15_23_42/0.25)]">
+                                        <x-ui.button size="sm" variant="outline" href="{{ $historyUrl($machine->machine_number) }}">View</x-ui.button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Phone cards (below md). Second list with the same key. --}}
+            <div class="space-y-3 md:hidden" data-infinite-list="machines">
+                @foreach ($machines as $machine)
+                    @php($audit = $machine->latestOilAudit)
+                    <article class="card min-w-0 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h2 class="break-words text-base font-semibold text-text">{{ $machine->machine_number }}</h2>
+                                <p class="text-sm text-text-muted">{{ $machine->machine_type }} · {{ $machine->area }}</p>
+                            </div>
+                            @include('reports.oil-audit.partials.condition', ['audit' => $audit])
+                        </div>
+                        <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
+                            <div><dt class="text-xs text-text-muted">Latest Audit Date</dt><dd class="font-medium text-text">{{ $audit ? $audit->audited_at->format('d-m-Y') : '-' }}</dd></div>
+                            <div><dt class="text-xs text-text-muted">PIC</dt><dd class="font-medium text-text">{{ $audit->audited_by_name ?? '-' }}</dd></div>
+                            <div class="col-span-2"><dt class="text-xs text-text-muted">Follow-up Status</dt><dd class="mt-0.5">@include('reports.oil-audit.partials.follow-up', ['audit' => $audit])</dd></div>
+                        </dl>
+                        <x-ui.button variant="outline" class="mt-3 w-full" href="{{ $historyUrl($machine->machine_number) }}">View</x-ui.button>
+                    </article>
+                @endforeach
+            </div>
+
+            <x-infinite-scroll :paginator="$machines" key="machines" />
         @endif
     </div>
 
-    <div class="mb-6 grid gap-4 lg:grid-cols-2">
-        {{-- Problem & Finding Paling Sering Muncul --}}
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div class="mb-4 flex items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-sm font-semibold text-slate-800">Problem &amp; Finding Paling Sering Muncul</h2>
-                    <p class="mt-0.5 text-xs text-slate-500">
-                        Top 10 kombinasi problem + finding dari hasil follow-up
-                    </p>
-                </div>
-                <span class="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                    {{ $problemFrequency->sum('total') }} temuan
-                </span>
-            </div>
-
-            @if ($problemFrequency->isEmpty())
-                <p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
-                    Belum ada problem follow-up pada scope filter ini.
-                </p>
-            @else
-                @php
-                    $maxProblemTotal = (int) $problemFrequency->max('total');
-                @endphp
-                <ol class="space-y-3">
-                    @foreach ($problemFrequency as $index => $row)
-                        <li>
-                            <div class="mb-1 flex items-center justify-between gap-3 text-sm">
-                                <span class="flex min-w-0 items-center gap-2">
-                                    <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500">{{ $index + 1 }}</span>
-                                    <span class="truncate font-medium text-slate-700">{{ $row->problem }} <span class="text-slate-400">&mdash;</span> {{ $row->finding }}</span>
-                                </span>
-                                <span class="shrink-0 font-semibold text-slate-800">{{ $row->total }}</span>
-                            </div>
-                            <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                                <div class="h-full rounded-full bg-sky-500"
-                                    style="width: {{ $maxProblemTotal > 0 ? round($row->total / $maxProblemTotal * 100, 1) : 0 }}%"></div>
-                            </div>
-                        </li>
-                    @endforeach
-                </ol>
-            @endif
-        </div>
-
-        {{-- Mesin dengan Temuan Berulang --}}
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div class="mb-4 flex items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-sm font-semibold text-slate-800">Mesin dengan Temuan Berulang</h2>
-                    <p class="mt-0.5 text-xs text-slate-500">
-                        Top 10 mesin dengan &ge; {{ $repeatFindingMin }} follow-up pada audit berbeda
-                    </p>
-                </div>
-                <span class="shrink-0 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700">
-                    &ge; {{ $repeatFindingThreshold }}&times; = berulang
-                </span>
-            </div>
-
-            @if ($repeatFindingMachines->isEmpty())
-                <p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
-                    Belum ada mesin dengan temuan berulang pada scope filter ini.
-                </p>
-            @else
-                <ol class="space-y-2">
-                    @foreach ($repeatFindingMachines as $index => $row)
-                        <li>
-                            <a href="{{ route('oil-audits.history', [$row->machine_number, 'from' => 'report', 'return' => request()->getQueryString() ?? '']) }}"
-                                class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5 transition hover:border-sky-200 hover:bg-sky-50/50">
-                                <span class="flex min-w-0 items-center gap-2">
-                                    <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500">{{ $index + 1 }}</span>
-                                    <span class="truncate font-mono text-sm font-semibold text-slate-800">{{ $row->machine_number }}</span>
-                                    @if ($row->events >= $repeatFindingThreshold)
-                                        <span class="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">Berulang</span>
-                                    @endif
-                                </span>
-                                <span class="shrink-0 text-sm font-semibold text-slate-800">{{ $row->events }}&times;</span>
-                            </a>
-                        </li>
-                    @endforeach
-                </ol>
-            @endif
-        </div>
-    </div>
-
-    {{-- ============ Table ============ --}}
-    @if ($machines->isEmpty())
-        <div class="rounded-2xl border border-dashed border-slate-300 bg-white py-12 text-center text-slate-500">
-            No machines found.
-        </div>
-    @else
-        <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Number</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Type</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Area</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Latest Audit Condition</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Latest Audit Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">PIC</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Follow-up Status</th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white" data-infinite-list="machines">
-                        @foreach ($machines as $machine)
-                            @php
-                                $audit = $machine->latestOilAudit;
-                                $colors = $audit?->conditionColor();
-                            @endphp
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 font-medium text-slate-800">{{ $machine->machine_number }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $machine->machine_type }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $machine->area }}</td>
-                                <td class="px-4 py-3">
-                                    @if ($audit)
-                                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $colors['badge'] }}">
-                                            {{ $audit->conditionLabel() }}
-                                        </span>
-                                    @else
-                                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400">
-                                            Belum Audit
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-slate-600">{{ $audit ? $audit->audited_at->format('d-m-Y') : '-' }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $audit->audited_by_name ?? '-' }}</td>
-                                <td class="px-4 py-3">
-                                    @if (! $audit || ! $audit->needsFollowUp())
-                                        <span class="text-slate-400">-</span>
-                                    @elseif ($audit->followUp)
-                                        <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">Completed</span>
-                                    @else
-                                        <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Open</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <a href="{{ route('oil-audits.history', [$machine->machine_number, 'from' => 'report', 'return' => request()->getQueryString() ?? '']) }}"
-                                        class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {{-- ============ Mobile cards ============ --}}
-        <div class="space-y-3 md:hidden" data-infinite-list="machines">
-            @foreach ($machines as $machine)
-                @php
-                    $audit = $machine->latestOilAudit;
-                    $colors = $audit?->conditionColor();
-                @endphp
-                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div class="mb-2 flex items-start justify-between gap-2">
-                        <div>
-                            <div class="text-sm font-semibold text-slate-800">{{ $machine->machine_number }}</div>
-                            <div class="text-xs text-slate-500">{{ $machine->machine_type }} • {{ $machine->area }}</div>
-                        </div>
-                        @if ($audit)
-                            <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold {{ $colors['badge'] }}">
-                                {{ $audit->conditionLabel() }}
-                            </span>
-                        @else
-                            <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-400">
-                                Belum Audit
-                            </span>
-                        @endif
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
-                        <div>
-                            <div class="text-slate-400">Latest Audit Date</div>
-                            <div class="font-medium text-slate-700">{{ $audit ? $audit->audited_at->format('d-m-Y') : '-' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-slate-400">PIC</div>
-                            <div class="font-medium text-slate-700">{{ $audit->audited_by_name ?? '-' }}</div>
-                        </div>
-                        <div class="col-span-2">
-                            <div class="text-slate-400">Follow-up Status</div>
-                            <div class="mt-0.5">
-                                @if (! $audit || ! $audit->needsFollowUp())
-                                    <span class="text-slate-400">-</span>
-                                @elseif ($audit->followUp)
-                                    <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">Completed</span>
-                                @else
-                                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Open</span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-3 border-t border-slate-100 pt-3 text-right">
-                        <a href="{{ route('oil-audits.history', [$machine->machine_number, 'from' => 'report', 'return' => request()->getQueryString() ?? '']) }}"
-                            class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
-                            View
-                        </a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-
-        <div class="mt-4">
-            <x-infinite-scroll :paginator="$machines" key="machines" />
-        </div>
-    @endif
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const findings = @json($findingFrequency);
-
-            // Fixed palette, one color per finding slot — Kapstan 1/2/3/4,
-            // Mainshaft, Innershaft, Lainnya, then the legacy "(tanpa
-            // detail)" placeholder, in whatever order they came back sorted
-            // by count. Indexed the same way for both the pie slices and
-            // the legend dots so they always match.
-            const palette = ['#2563eb', '#0284c7', '#7c3aed', '#db2777', '#f59e0b', '#10b981', '#64748b', '#94a3b8'];
-            const colors = findings.map((_, i) => palette[i % palette.length]);
-
-            document.querySelectorAll('.finding-legend-dot').forEach((dot) => {
-                dot.style.backgroundColor = colors[parseInt(dot.dataset.index, 10)];
-            });
-
-            const canvas = document.getElementById('findingDistributionChart');
-            if (canvas && findings.length > 0) {
-                new Chart(canvas, {
+    @if ($findingFrequency->isNotEmpty())
+        @include('reports.partials.chart-theme')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const findings = @json($findingChart);
+                new Chart(document.getElementById('findingDistributionChart'), {
                     type: 'pie',
                     data: {
                         labels: findings.map((f) => f.finding),
                         datasets: [{
                             data: findings.map((f) => f.total),
-                            backgroundColor: colors,
-                            borderWidth: 1,
-                            borderColor: '#ffffff',
+                            backgroundColor: findings.map((f) => f.color),
+                            borderWidth: 2,
+                            borderColor: window.reportChartTheme.surface,
                         }],
                     },
                     options: {
                         plugins: {
                             legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: (ctx) => {
-                                        const row = findings[ctx.dataIndex];
-                                        return row.finding + ': ' + row.percent + '% (' + row.total + ')';
-                                    },
-                                },
-                            },
+                            tooltip: { callbacks: { label: (ctx) => findings[ctx.dataIndex].finding + ': ' + findings[ctx.dataIndex].percent + '% (' + findings[ctx.dataIndex].total + ')' } },
                         },
                     },
                 });
-            }
-        });
-    </script>
-
+            });
+        </script>
+    @endif
 @endsection

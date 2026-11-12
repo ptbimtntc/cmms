@@ -1,307 +1,129 @@
 @extends('layouts.app')
 
+@section('title', 'Measurement Master')
+
 @section('content')
-    <div class="p-6 bg-gray-50">
+    @php
+        $fullWidth = true;
+        $label = 'text-xs font-medium text-text-muted';
+        $canManage = ! auth()->user()->isSupervisor();
+        $actions = fn ($m, $mobile = false) => ['edit' => route('machine-measurements.edit', ['machine_measurement' => $m->id, 'page' => request('page')]), 'delete' => route('machine-measurements.destroy', $m->id), 'confirm' => 'Delete this measurement?', 'mobile' => $mobile];
+        $firstNo = method_exists($measurements, 'firstItem') ? ($measurements->firstItem() ?? 1) : 1;
+    @endphp
 
-        {{-- HEADER --}}
-        <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+    <div class="space-y-5">
+        <x-ui.page-header title="Measurement Master" description="Master measurement item berdasarkan tipe mesin">
+            @if ($canManage)
+                <x-slot:actions>
+                    <x-ui.button href="{{ route('machine-measurements.create') }}">Add Measurement</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
 
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">
-                    Measurement Master
-                </h1>
-                <p class="text-sm text-gray-500">
-                    Master measurement item berdasarkan tipe mesin
-                </p>
-            </div>
+        @if ($canManage)
+            @include('partials.master.import-form', ['action' => route('machine-measurements.import'), 'accept' => '.csv', 'id' => 'fileInput'])
+        @endif
 
-            <div class="flex flex-col md:flex-row md:items-center gap-3">
-
-                <!-- ADD MANUAL BUTTON -->
-                @unless (auth()->user()->isSupervisor())
-                <a href="{{ route('machine-measurements.create') }}"
-                    class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded shadow text-center">
-                    + Add Measurement
-                </a>
-                @endunless
-
-                <!-- IMPORT FORM -->
-                @unless (auth()->user()->isSupervisor())
-                <form action="{{ route('machine-measurements.import') }}" method="POST" enctype="multipart/form-data"
-                    class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded shadow border">
-
-                    @csrf
-
-                    <!-- FILE WRAPPER -->
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-
-                    <!-- Hidden Input -->
-                    <input type="file" id="fileInput" name="file" accept=".csv" class="hidden"
-                        onchange="updateFileName(this)">
-
-                        <!-- Custom Button -->
-                        <label for="fileInput"
-                            class="cursor-pointer bg-gray-200 hover:bg-gray-300 text-sm px-3 py-2 rounded border">
-                            Choose File
-                        </label>
-
-                        <!-- File Name Display -->
-                        <span id="fileName" class="text-sm text-gray-600 truncate max-w-[200px]">
-                            No file chosen
-                        </span>
-
-                    </div>
-
-                    <!-- IMPORT BUTTON -->
-                    <button class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded w-full sm:w-auto">
-                        Import
-                    </button>
-
-                </form>
-                @endunless
-
-            </div>
-
-        </div>
-
-        {{-- SUCCESS MESSAGE --}}
         @if (session('success'))
-            <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-4">
-                {{ session('success') }}
-            </div>
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
         @endif
-
-        {{-- IMPORT RESULT --}}
+        @if ($errors->has('file'))
+            <x-ui.alert tone="danger">{{ $errors->first('file') }}</x-ui.alert>
+        @endif
         @if (session('machine_measurements_import_result'))
-            @php($importResult = session('machine_measurements_import_result'))
-            <div class="mb-4 flex flex-wrap gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-                <span>Import result:</span>
-                <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
-                <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
-                <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
-            </div>
+            @include('partials.master.import-result', ['result' => session('machine_measurements_import_result')])
         @endif
 
-        {{-- FILTER --}}
-        <div class="bg-white p-4 rounded-lg shadow mb-4">
-
-            <form method="GET" class="flex flex-col md:flex-row md:items-center gap-3">
-
-                {{-- FILTER MACHINE TYPE --}}
-                <select name="machine_type" class="border p-2 rounded w-full md:w-64" onchange="this.form.submit()">
-
+        {{-- Filters submit on change. --}}
+        <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div class="grid gap-1.5 sm:w-56">
+                <label for="mm-type" class="{{ $label }}">Machine Type</label>
+                <select id="mm-type" name="machine_type" class="select lg:min-h-9" onchange="this.form.submit()">
                     <option value="">All Machine Type</option>
-
                     @foreach ($machines->unique('machine_type') as $machine)
-                        <option value="{{ $machine->machine_type }}"
-                            {{ request('machine_type') == $machine->machine_type ? 'selected' : '' }}>
-                            {{ $machine->machine_type }}
-                        </option>
+                        <option value="{{ $machine->machine_type }}" @selected(request('machine_type') == $machine->machine_type)>{{ $machine->machine_type }}</option>
                     @endforeach
-
                 </select>
-
-                {{-- FILTER MEASUREMENT --}}
-                <select name="measurement" class="border p-2 rounded w-full md:w-64" onchange="this.form.submit()">
-
+            </div>
+            <div class="grid gap-1.5 sm:w-56">
+                <label for="mm-measurement" class="{{ $label }}">Measurement</label>
+                <select id="mm-measurement" name="measurement" class="select lg:min-h-9" onchange="this.form.submit()">
                     <option value="">All Measurements</option>
-
                     @foreach ($measurements->pluck('measurement_item')->unique() as $measurement)
-                        <option value="{{ $measurement }}" {{ request('measurement') == $measurement ? 'selected' : '' }}>
-                            {{ $measurement }}
-                        </option>
+                        <option value="{{ $measurement }}" @selected(request('measurement') == $measurement)>{{ $measurement }}</option>
                     @endforeach
-
                 </select>
-
-                {{-- SORT --}}
-                <select name="sort" class="border p-2 rounded w-full md:w-64" onchange="this.form.submit()">
-
+            </div>
+            <div class="grid gap-1.5 sm:w-52">
+                <label for="mm-sort" class="{{ $label }}">Sort</label>
+                <select id="mm-sort" name="sort" class="select lg:min-h-9" onchange="this.form.submit()">
                     <option value="">Default Sort</option>
-
-                    <option value="machine_type_asc" {{ request('sort') == 'machine_type_asc' ? 'selected' : '' }}>
-                        Machine Type ↑
-                    </option>
-
-                    <option value="machine_type_desc" {{ request('sort') == 'machine_type_desc' ? 'selected' : '' }}>
-                        Machine Type ↓
-                    </option>
-
-                    <option value="measurement_asc" {{ request('sort') == 'measurement_asc' ? 'selected' : '' }}>
-                        Measurement A-Z
-                    </option>
-
-                    <option value="measurement_desc" {{ request('sort') == 'measurement_desc' ? 'selected' : '' }}>
-                        Measurement Z-A
-                    </option>
-
+                    <option value="machine_type_asc" @selected(request('sort') == 'machine_type_asc')>Machine Type ↑</option>
+                    <option value="machine_type_desc" @selected(request('sort') == 'machine_type_desc')>Machine Type ↓</option>
+                    <option value="measurement_asc" @selected(request('sort') == 'measurement_asc')>Measurement A-Z</option>
+                    <option value="measurement_desc" @selected(request('sort') == 'measurement_desc')>Measurement Z-A</option>
                 </select>
+            </div>
+            @if (request()->hasAny(['machine_type', 'measurement', 'sort']))
+                <x-ui.button variant="ghost" href="{{ route('machine-measurements.index') }}" class="sm:ml-auto lg:min-h-9">Reset Filter</x-ui.button>
+            @endif
+        </form>
 
-                {{-- RESET FILTER --}}
-                @if (request()->hasAny(['machine_type', 'measurement', 'sort']))
-                    <a href="{{ route('machine-measurements.index') }}" class="text-sm text-red-500 hover:underline ml-2">
-                        Reset Filter
-                    </a>
-                @endif
+        @if ($measurements->isEmpty())
+            <x-ui.empty-state title="No data found" :description="$canManage ? 'Add a measurement item or import a CSV file above.' : null" />
+        @endif
 
-            </form>
-
-        </div>
-
-
-        {{-- ============ DESKTOP: Table (md and up) ============ --}}
-        <div class="hidden bg-white rounded-lg shadow overflow-x-auto md:block">
-
-            <table class="w-full">
-
-                <thead class="bg-gray-100">
-
-                    <tr>
-                        <th class="p-3 text-left">No</th>
-                        <th class="p-3 text-left">Machine Type</th>
-                        <th class="p-3 text-left">Measurement Item</th>
-                        <th class="p-3 text-left">Unit</th>
-                        <th class="p-3 text-left">Standard</th>
-                        <th class="p-3 text-center">Action</th>
-                    </tr>
-
-                </thead>
-
-                <tbody data-infinite-list="measurements">
-
-                    @forelse($measurements as $measurement)
-                        <tr class="border-t">
-
-                            <td class="p-3">
-                                {{ $loop->iteration }}
-                            </td>
-
-                            <td class="p-3">
-                                {{ $measurement->machine_type }}
-                            </td>
-
-                            <td class="p-3">
-                                {{ $measurement->measurement_item }}
-                            </td>
-
-                            <td class="p-3">
-                                {{ $measurement->unit }}
-                            </td>
-
-                            <td class="p-3">
-                                {{ $measurement->standard }}
-                            </td>
-
-                            <td class="p-3 text-center">
-
-                                <div class="flex justify-center gap-2">
-
-                                    @unless (auth()->user()->isSupervisor())
-                                    <a href="{{ route('machine-measurements.edit', ['machine_measurement' => $measurement->id, 'page' => request('page')]) }}"
-                                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">
-                                        Edit
-                                    </a>
-
-                                    <form action="{{ route('machine-measurements.destroy', $measurement->id) }}"
-                                        method="POST" onsubmit="return confirm('Delete this measurement?')">
-
-                                        @csrf
-                                        @method('DELETE')
-
-                                        <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
-                                            Delete
-                                        </button>
-
-                                    </form>
-                                    @endunless
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    @empty
-
+        {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+        <div @class(['card hidden overflow-hidden', 'md:block' => $measurements->isNotEmpty()])>
+            <div class="relative overflow-x-auto">
+                <table class="data-table min-w-full">
+                    <thead>
                         <tr>
-                            <td colspan="6" class="text-center p-5 text-gray-500">
-                                No data found
-                            </td>
+                            <th scope="col" class="text-right">No</th>
+                            <th scope="col">Machine Type</th>
+                            <th scope="col">Measurement Item</th>
+                            <th scope="col">Unit</th>
+                            <th scope="col">Standard</th>
+                            @if ($canManage)
+                                <th scope="col"><span class="sr-only">Action</span></th>
+                            @endif
                         </tr>
-                    @endforelse
-
-                </tbody>
-
-            </table>
-
+                    </thead>
+                    <tbody data-infinite-list="measurements">
+                        @foreach ($measurements as $measurement)
+                            <tr>
+                                <td class="text-right tabular-nums text-text-muted">{{ $firstNo + $loop->index }}</td>
+                                <td class="whitespace-nowrap font-semibold text-text">{{ $measurement->machine_type }}</td>
+                                <td class="text-text">{{ $measurement->measurement_item }}</td>
+                                <td>{{ $measurement->unit }}</td>
+                                <td>{{ $measurement->standard }}</td>
+                                @if ($canManage)
+                                    <td>@include('partials.master.row-actions', $actions($measurement))</td>
+                                @endif
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        {{-- ============ MOBILE: Card List (below md) ============ --}}
+        {{-- Phone cards (below md). Second list with the same key. --}}
         <div class="space-y-3 md:hidden" data-infinite-list="measurements">
-            @forelse($measurements as $measurement)
-                <div class="rounded-lg border bg-white p-4 shadow-sm">
-                    <div class="text-sm font-semibold text-gray-800">{{ $measurement->machine_type }}</div>
-                    <div class="text-xs text-gray-500">{{ $measurement->measurement_item }}</div>
-                    <div class="mt-2 grid grid-cols-2 gap-y-2 border-t pt-2 text-xs">
-                        <div>
-                            <div class="text-gray-400">Unit</div>
-                            <div class="font-medium text-gray-700">{{ $measurement->unit }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-400">Standard</div>
-                            <div class="font-medium text-gray-700">{{ $measurement->standard }}</div>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex gap-2 border-t pt-3">
-                        @unless (auth()->user()->isSupervisor())
-                        <a href="{{ route('machine-measurements.edit', ['machine_measurement' => $measurement->id, 'page' => request('page')]) }}"
-                            class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
-                            Edit
-                        </a>
-                        <form action="{{ route('machine-measurements.destroy', $measurement->id) }}"
-                            method="POST" onsubmit="return confirm('Delete this measurement?')" class="flex-1">
-                            @csrf
-                            @method('DELETE')
-                            <button class="w-full rounded bg-red-500 px-3 py-2 text-xs font-medium text-white hover:bg-red-600">
-                                Delete
-                            </button>
-                        </form>
-                        @endunless
-                    </div>
-                </div>
-            @empty
-                <div class="rounded-lg border bg-white p-6 text-center text-sm text-gray-500">
-                    No data found
-                </div>
-            @endforelse
+            @foreach ($measurements as $measurement)
+                <article class="card min-w-0 p-4">
+                    <h2 class="text-base font-semibold text-text">{{ $measurement->machine_type }}</h2>
+                    <p class="break-words text-sm text-text-muted">{{ $measurement->measurement_item }}</p>
+                    <dl class="mt-3 grid grid-cols-2 gap-x-4 border-t border-border pt-3 text-sm">
+                        <div><dt class="text-xs text-text-muted">Unit</dt><dd class="font-medium text-text">{{ $measurement->unit ?: '-' }}</dd></div>
+                        <div><dt class="text-xs text-text-muted">Standard</dt><dd class="font-medium text-text">{{ $measurement->standard ?: '-' }}</dd></div>
+                    </dl>
+                    @if ($canManage)
+                        <div class="mt-3 border-t border-border pt-3">@include('partials.master.row-actions', $actions($measurement, true))</div>
+                    @endif
+                </article>
+            @endforeach
         </div>
 
-        <div class="mt-4">
-            <x-infinite-scroll :paginator="$measurements" key="measurements" />
-        </div>
-
+        <x-infinite-scroll :paginator="$measurements" key="measurements" />
     </div>
-
-    <script>
-        function validateFile(input) {
-            const file = input.files[0];
-
-            if (!file) return;
-
-            const allowed = ['csv'];
-            const ext = file.name.split('.').pop().toLowerCase();
-
-            if (!allowed.includes(ext)) {
-                alert("File harus .CSV saja!");
-                input.value = ""; // reset file
-            }
-        }
-    </script>
-
-    <script>
-        function updateFileName(input) {
-            const fileName = input.files[0] ? input.files[0].name : 'No file chosen';
-            document.getElementById('fileName').textContent = fileName;
-        }
-    </script>
 @endsection

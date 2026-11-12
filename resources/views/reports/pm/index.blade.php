@@ -1,265 +1,188 @@
 @extends('layouts.app')
 
+@section('title', 'PM Report')
+
 @section('content')
+    @php
+        $fullWidth = true;
+        $label = 'text-xs font-medium text-text-muted';
+        $fmt = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '-';
+        $detailUrl = fn ($pm) => route('machine-history.detail', ['machineNumber' => $pm->machine_number, 'pmSchedule' => $pm->id, 'from' => 'report-pm', 'return_url' => request()->fullUrl()]);
+    @endphp
 
-    <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-slate-800">PM Report</h1>
-        <p class="text-sm text-slate-500">Detail, filter, and drill-down for every PM Schedule record.</p>
-    </div>
+    <div class="space-y-5">
+        <x-ui.page-header title="PM Report" description="Detail, filter, and drill-down for every PM Schedule record." />
 
-    {{-- ============ Filters ============ --}}
-    <form method="GET" class="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <input type="text" name="search" value="{{ $search }}" placeholder="Search Machine Number / Order Number..."
-            title="Search Machine Number or Order Number"
-            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-64">
+        {{-- Filters: plain GET; the multi-selects sit last so their open lists never cover a control. --}}
+        <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div class="grid gap-1.5 sm:w-64">
+                <label for="rp-search" class="{{ $label }}">Search</label>
+                <input id="rp-search" type="text" name="search" value="{{ $search }}" placeholder="Machine Number / Order Number" class="input lg:min-h-9">
+            </div>
+            @if ($isAdmin)
+                <div class="grid gap-1.5 sm:w-36">
+                    <label for="rp-area" class="{{ $label }}">Area</label>
+                    <select id="rp-area" name="area" class="select lg:min-h-9">
+                        <option value="">All Areas</option>
+                        @foreach ($areas as $a)
+                            <option value="{{ $a }}" @selected($selectedArea === $a)>{{ $a }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+            <div class="grid gap-1.5 sm:w-32">
+                <label for="rp-year" class="{{ $label }}">Year</label>
+                <select id="rp-year" name="year" class="select lg:min-h-9">
+                    <option value="">All Years</option>
+                    @foreach ($years as $y)
+                        <option value="{{ $y }}" @selected($selectedYear == $y)>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5 sm:w-44">
+                <label for="rp-type" class="{{ $label }}">Machine Type</label>
+                <select id="rp-type" name="machine_type" class="select lg:min-h-9">
+                    <option value="">All Machine Type</option>
+                    @foreach ($machineTypes as $type)
+                        <option value="{{ $type }}" @selected($selectedMachineType === $type)>{{ $type }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5 sm:w-40">
+                <label for="rp-machine" class="{{ $label }}">Machine</label>
+                <select id="rp-machine" name="machine" class="select lg:min-h-9">
+                    <option value="">All Machines</option>
+                    @foreach ($machines as $m)
+                        <option value="{{ $m }}" @selected($selectedMachine === $m)>{{ $m }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5 sm:w-44">
+                <label for="rp-pic" class="{{ $label }}">PIC</label>
+                <select id="rp-pic" name="pic" class="select lg:min-h-9">
+                    <option value="">All PIC</option>
+                    @foreach ($pics as $p)
+                        <option value="{{ $p }}" @selected($selectedPic === $p)>{{ \Illuminate\Support\Str::title(strtolower($p)) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5">
+                <span class="{{ $label }}">Month</span>
+                <x-checkbox-dropdown name="month" label="Month" :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()" :selected="$selectedMonths" />
+            </div>
+            <div class="grid gap-1.5">
+                <span class="{{ $label }}">Status</span>
+                <x-checkbox-dropdown name="status" label="Status"
+                    :options="collect($statuses)->mapWithKeys(fn ($s) => [$s => str_replace('_', ' ', $s)])->all()"
+                    :selected="$selectedStatuses" />
+            </div>
+            <div class="flex gap-2 sm:ml-auto">
+                <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                <x-ui.button variant="ghost" href="{{ route('reports.pm') }}" class="lg:min-h-9">Reset</x-ui.button>
+            </div>
+        </form>
 
-        @if ($isAdmin)
-            <select name="area" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="">All Areas</option>
-                @foreach ($areas as $a)
-                    <option value="{{ $a }}" {{ $selectedArea === $a ? 'selected' : '' }}>{{ $a }}</option>
+        {{-- Trend charts: did each month reach the 96% target? --}}
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <section class="card p-5" aria-labelledby="rp-completion-title">
+                <h2 id="rp-completion-title" class="font-semibold text-text">Completion Trend {{ $trendYear }}</h2>
+                <p class="text-xs text-text-muted">Did each month reach the 96% target? Jan to Dec.</p>
+                <div class="mt-3 h-56">
+                    <canvas id="pmCompletionTrendChart" role="img" aria-label="Completion percent per month, {{ $trendYear }}"></canvas>
+                </div>
+            </section>
+            <section class="card p-5" aria-labelledby="rp-closing-title">
+                <h2 id="rp-closing-title" class="font-semibold text-text">Closing Trend {{ $trendYear }}</h2>
+                <p class="text-xs text-text-muted">How many scheduled PMs were closed each month? Jan to Dec.</p>
+                <div class="mt-3 h-56">
+                    <canvas id="pmClosingTrendChart" role="img" aria-label="Closing percent per month, {{ $trendYear }}"></canvas>
+                </div>
+            </section>
+        </div>
+
+        @include('reports.partials.stats', ['cols' => 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-7', 'items' => [
+            ['label' => 'Total Schedule', 'value' => $summary['total']],
+            ['label' => 'Finish', 'value' => $summary['finished']],
+            ['label' => 'Finish On Time', 'value' => $summary['finished_on_time']],
+            ['label' => 'Open', 'value' => $summary['open']],
+            ['label' => 'Missed', 'value' => $summary['missed'], 'tone' => $summary['missed'] > 0 ? 'danger' : null],
+            ['label' => 'Completion %', 'value' => $summary['completion_percent'].'%'],
+            ['label' => 'Closing %', 'value' => $summary['closing_percent'].'%'],
+        ]])
+
+        @if ($schedules->isEmpty())
+            <x-ui.empty-state title="No PM data found." description="Change the filters, or reset them to see every PM Schedule record." />
+        @else
+            {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+            <div class="card hidden overflow-hidden md:block">
+                <div class="relative overflow-x-auto">
+                    <table class="data-table min-w-full">
+                        <thead>
+                            <tr>
+                                <th scope="col">Plan Date</th>
+                                <th scope="col">Action Date</th>
+                                <th scope="col">Area</th>
+                                <th scope="col">Machine Number</th>
+                                <th scope="col">Machine Type</th>
+                                <th scope="col">Order Number</th>
+                                <th scope="col">PIC</th>
+                                <th scope="col">Due Date</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="sticky right-0 bg-surface-sunken"><span class="sr-only">Action</span></th>
+                            </tr>
+                        </thead>
+                        <tbody data-infinite-list="schedules">
+                            @foreach ($schedules as $pm)
+                                <tr>
+                                    <td class="whitespace-nowrap">{{ $fmt($pm->plan_date) }}</td>
+                                    <td class="whitespace-nowrap">{{ $fmt($pm->actual_date) }}</td>
+                                    <td>{{ $pm->area }}</td>
+                                    <td class="whitespace-nowrap font-semibold text-text">{{ $pm->machine_number }}</td>
+                                    <td>{{ $pm->machine_type }}</td>
+                                    <td class="whitespace-nowrap">{{ $pm->order_number ?: '-' }}</td>
+                                    <td>{{ $pm->pic ? \Illuminate\Support\Str::title(strtolower($pm->pic)) : '-' }}</td>
+                                    <td class="whitespace-nowrap">{{ $fmt($pm->due_date) }}</td>
+                                    <td>@include('pm-schedules.partials.status-badge', ['status' => $pm->status])</td>
+                                    <td class="sticky right-0 bg-surface text-right shadow-[-10px_0_10px_-10px_rgb(15_23_42/0.25)]">
+                                        <x-ui.button size="sm" variant="outline" href="{{ $detailUrl($pm) }}">View</x-ui.button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Phone cards (below md). Second list with the same key. --}}
+            <div class="space-y-3 md:hidden" data-infinite-list="schedules">
+                @foreach ($schedules as $pm)
+                    <article class="card min-w-0 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h2 class="break-words text-base font-semibold text-text">{{ $pm->machine_number }}</h2>
+                                <p class="text-sm text-text-muted">{{ $pm->machine_type }} · {{ $pm->area }}</p>
+                            </div>
+                            @include('pm-schedules.partials.status-badge', ['status' => $pm->status])
+                        </div>
+                        <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
+                            <div><dt class="text-xs text-text-muted">Order Number</dt><dd class="break-words font-medium text-text">{{ $pm->order_number ?: '-' }}</dd></div>
+                            <div><dt class="text-xs text-text-muted">PIC</dt><dd class="font-medium text-text">{{ $pm->pic ? \Illuminate\Support\Str::title(strtolower($pm->pic)) : '-' }}</dd></div>
+                            <div><dt class="text-xs text-text-muted">Plan Date</dt><dd class="font-medium text-text">{{ $fmt($pm->plan_date) }}</dd></div>
+                            <div><dt class="text-xs text-text-muted">Due Date</dt><dd class="font-medium text-text">{{ $fmt($pm->due_date) }}</dd></div>
+                            <div><dt class="text-xs text-text-muted">Action Date</dt><dd class="font-medium text-text">{{ $fmt($pm->actual_date) }}</dd></div>
+                        </dl>
+                        <x-ui.button variant="outline" class="mt-3 w-full" href="{{ $detailUrl($pm) }}">View</x-ui.button>
+                    </article>
                 @endforeach
-            </select>
+            </div>
+
+            <x-infinite-scroll :paginator="$schedules" key="schedules" />
         @endif
 
-        <select name="year" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Years</option>
-            @foreach ($years as $y)
-                <option value="{{ $y }}" {{ $selectedYear == $y ? 'selected' : '' }}>{{ $y }}</option>
-            @endforeach
-        </select>
-
-        <x-checkbox-dropdown
-            name="month"
-            label="Month"
-            :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
-            :selected="$selectedMonths"
-        />
-
-        <select name="machine_type" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Machine Type</option>
-            @foreach ($machineTypes as $type)
-                <option value="{{ $type }}" {{ $selectedMachineType === $type ? 'selected' : '' }}>{{ $type }}</option>
-            @endforeach
-        </select>
-
-        <select name="machine" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All Machines</option>
-            @foreach ($machines as $m)
-                <option value="{{ $m }}" {{ $selectedMachine === $m ? 'selected' : '' }}>{{ $m }}</option>
-            @endforeach
-        </select>
-
-        <select name="pic" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <option value="">All PIC</option>
-            @foreach ($pics as $p)
-                <option value="{{ $p }}" {{ $selectedPic === $p ? 'selected' : '' }}>
-                    {{ \Illuminate\Support\Str::title(strtolower($p)) }}</option>
-            @endforeach
-        </select>
-
-        <x-checkbox-dropdown
-            name="status"
-            label="Status"
-            :options="collect($statuses)->mapWithKeys(fn ($s) => [$s => str_replace('_', ' ', $s)])->all()"
-            :selected="$selectedStatuses"
-        />
-
-        <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-            Filter
-        </button>
-        <a href="{{ route('reports.pm') }}"
-            class="rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">
-            Reset
-        </a>
-    </form>
-
-    {{-- ============ Trend Charts ============ --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="mb-3 text-sm font-semibold text-slate-700">Completion Trend — {{ $trendYear }}
-                <span class="font-normal text-slate-400">(Jan–Dec)</span>
-            </div>
-            <div class="h-56">
-                <canvas id="pmCompletionTrendChart"></canvas>
-            </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="mb-3 text-sm font-semibold text-slate-700">Closing Trend — {{ $trendYear }}
-                <span class="font-normal text-slate-400">(Jan–Dec)</span>
-            </div>
-            <div class="h-56">
-                <canvas id="pmClosingTrendChart"></canvas>
-            </div>
-        </div>
+        @include('reports.partials.forecast-note', ['title' => 'Forecasting / Predictive Maintenance', 'text' => 'Predicted problems, spareparts, and confidence per machine will appear here once available. Not implemented yet.'])
     </div>
 
-    {{-- ============ Summary ============ --}}
-    <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Total Schedule</div>
-            <div class="mt-1 text-xl font-bold text-slate-800">{{ $summary['total'] }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Finish</div>
-            <div class="mt-1 text-xl font-bold text-violet-600">{{ $summary['finished'] }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Finish On Time</div>
-            <div class="mt-1 text-xl font-bold text-emerald-600">{{ $summary['finished_on_time'] }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Open</div>
-            <div class="mt-1 text-xl font-bold text-amber-600">{{ $summary['open'] }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Missed</div>
-            <div class="mt-1 text-xl font-bold text-rose-600">{{ $summary['missed'] }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Completion %</div>
-            <div class="mt-1 text-xl font-bold text-blue-600">{{ $summary['completion_percent'] }}%</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Closing %</div>
-            <div class="mt-1 text-xl font-bold text-sky-600">{{ $summary['closing_percent'] }}%</div>
-        </div>
-    </div>
-
-    {{-- ============ Table ============ --}}
-    @if ($schedules->isEmpty())
-        <div class="rounded-2xl border border-dashed border-slate-300 bg-white py-12 text-center text-slate-500">
-            No PM data found.
-        </div>
-    @else
-        <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Plan Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Area</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Number</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Machine Type</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Order Number</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">PIC</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white" data-infinite-list="schedules">
-                        @foreach ($schedules as $pm)
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-slate-600">{{ $pm->plan_date ? \Carbon\Carbon::parse($pm->plan_date)->format('d-m-Y') : '-' }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $pm->actual_date ? \Carbon\Carbon::parse($pm->actual_date)->format('d-m-Y') : '-' }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $pm->area }}</td>
-                                <td class="px-4 py-3 font-medium text-slate-800">{{ $pm->machine_number }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $pm->machine_type }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $pm->order_number ?: '-' }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $pm->pic ? \Illuminate\Support\Str::title(strtolower($pm->pic)) : '-' }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $pm->due_date ? \Carbon\Carbon::parse($pm->due_date)->format('d-m-Y') : '-' }}</td>
-                                <td class="px-4 py-3">
-                                    @php
-                                        $statusColor = match ($pm->status) {
-                                            'OPEN' => 'bg-amber-100 text-amber-700',
-                                            'IN_PROGRESS' => 'bg-slate-200 text-slate-700',
-                                            'FINISHED' => 'bg-violet-100 text-violet-700',
-                                            'FINISHED_ON_TIME' => 'bg-emerald-100 text-emerald-700',
-                                            'MISSED' => 'bg-rose-100 text-rose-700',
-                                            default => 'bg-slate-100 text-slate-700',
-                                        };
-                                    @endphp
-                                    <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $statusColor }}">
-                                        {{ str_replace('_', ' ', $pm->status) }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <a href="{{ route('machine-history.detail', ['machineNumber' => $pm->machine_number, 'pmSchedule' => $pm->id, 'from' => 'report-pm', 'return_url' => request()->fullUrl()]) }}"
-                                        class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {{-- ============ Mobile cards ============ --}}
-        <div class="space-y-3 md:hidden" data-infinite-list="schedules">
-            @foreach ($schedules as $pm)
-                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div class="mb-2 flex items-start justify-between gap-2">
-                        <div>
-                            <div class="text-sm font-semibold text-slate-800">{{ $pm->machine_number }}</div>
-                            <div class="text-xs text-slate-500">{{ $pm->machine_type }} • {{ $pm->area }}</div>
-                        </div>
-                        @php
-                            $statusColor = match ($pm->status) {
-                                'OPEN' => 'bg-amber-100 text-amber-700',
-                                'IN_PROGRESS' => 'bg-slate-200 text-slate-700',
-                                'FINISHED' => 'bg-violet-100 text-violet-700',
-                                'FINISHED_ON_TIME' => 'bg-emerald-100 text-emerald-700',
-                                'MISSED' => 'bg-rose-100 text-rose-700',
-                                default => 'bg-slate-100 text-slate-700',
-                            };
-                        @endphp
-                        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold {{ $statusColor }}">
-                            {{ str_replace('_', ' ', $pm->status) }}
-                        </span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-y-2 border-t border-slate-100 pt-3 text-xs">
-                        <div>
-                            <div class="text-slate-400">Order Number</div>
-                            <div class="font-medium text-slate-700">{{ $pm->order_number ?: '-' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-slate-400">PIC</div>
-                            <div class="font-medium text-slate-700">{{ $pm->pic ? \Illuminate\Support\Str::title(strtolower($pm->pic)) : '-' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-slate-400">Plan Date</div>
-                            <div class="font-medium text-slate-700">{{ $pm->plan_date ? \Carbon\Carbon::parse($pm->plan_date)->format('d-m-Y') : '-' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-slate-400">Due Date</div>
-                            <div class="font-medium text-slate-700">{{ $pm->due_date ? \Carbon\Carbon::parse($pm->due_date)->format('d-m-Y') : '-' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-slate-400">Action Date</div>
-                            <div class="font-medium text-slate-700">{{ $pm->actual_date ? \Carbon\Carbon::parse($pm->actual_date)->format('d-m-Y') : '-' }}</div>
-                        </div>
-                    </div>
-
-                    <div class="mt-3 border-t border-slate-100 pt-3 text-right">
-                        <a href="{{ route('machine-history.detail', ['machineNumber' => $pm->machine_number, 'pmSchedule' => $pm->id, 'from' => 'report-pm', 'return_url' => request()->fullUrl()]) }}"
-                            class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700">
-                            View
-                        </a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-
-        <div class="mt-4">
-            <x-infinite-scroll :paginator="$schedules" key="schedules" />
-        </div>
-    @endif
-
-    {{-- ============ Forecasting (placeholder — foundation only) ============ --}}
-    <div class="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Forecasting / Predictive Maintenance</h2>
-        <p class="mt-1 text-sm text-slate-400">
-            Predicted problems, spareparts, and confidence per machine will appear here once available. Not implemented yet.
-        </p>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    @include('reports.partials.chart-theme')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const trend = @json($trend);
@@ -267,14 +190,16 @@
             const percentScale = {
                 beginAtZero: true,
                 max: 100,
+                border: { display: false },
                 ticks: {
                     callback: (v) => v + '%',
                 },
             };
+            const monthScale = { grid: { display: false } };
 
             const tooltipLabel = (ctx) => ctx.raw === null ? 'No data' : ctx.raw + '%';
 
-            // Fixed 96% target reference line, drawn on top of the bars —
+            // Fixed 96% target reference line, drawn on top of the bars:
             // same idea as the dashed target line on the Dashboard's trend
             // chart, just orange here per request and pinned to 96 rather
             // than a per-user target.
@@ -295,7 +220,7 @@
 
                     ctx.setLineDash([]);
                     ctx.fillStyle = '#f97316';
-                    ctx.font = 'bold 10px sans-serif';
+                    ctx.font = '600 11px ' + Chart.defaults.font.family;
                     ctx.textAlign = 'left';
                     ctx.fillText('Target 96%', chartArea.left + 4, y - 5);
                     ctx.restore();
@@ -309,12 +234,13 @@
                     datasets: [{
                         label: 'Completion %',
                         data: trend.map((t) => t.has_data ? t.completion_percent : null),
-                        backgroundColor: '#2563eb',
+                        backgroundColor: window.reportChartTheme.bar,
                         borderRadius: 4,
+                        maxBarThickness: 28,
                     }],
                 },
                 options: {
-                    scales: { y: percentScale },
+                    scales: { x: monthScale, y: percentScale },
                     plugins: {
                         legend: { display: false },
                         tooltip: { callbacks: { label: tooltipLabel } },
@@ -330,12 +256,13 @@
                     datasets: [{
                         label: 'Closing %',
                         data: trend.map((t) => t.has_data ? t.closing_percent : null),
-                        backgroundColor: '#0284c7',
+                        backgroundColor: window.reportChartTheme.bar,
                         borderRadius: 4,
+                        maxBarThickness: 28,
                     }],
                 },
                 options: {
-                    scales: { y: percentScale },
+                    scales: { x: monthScale, y: percentScale },
                     plugins: {
                         legend: { display: false },
                         tooltip: { callbacks: { label: tooltipLabel } },

@@ -1,114 +1,36 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Machine Problem')
+
 @section('content')
-    <div class="p-6 bg-gray-50">
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-2xl';
+    @endphp
 
-        <div class="mb-6">
+    <div class="space-y-5">
+        @include('partials.master.form-messages')
 
-            <h1 class="text-2xl font-bold text-gray-800">
-                Edit Machine Problem
-            </h1>
-
-            <p class="text-sm text-gray-500">
-                Update big problem master
-            </p>
-
-        </div>
-
-        @if (session('error'))
-            <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-                {{ session('error') }}
-            </div>
-        @endif
-
-        @if ($errors->any())
-            <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-                <ul class="list-disc ml-5">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
+        <x-ui.form-page title="Edit Machine Problem" description="Update big problem master"
+            :action="route('machine-problems.update', $machineProblem->id)" method="PUT" :back="route('machine-problems.index')" back-label="Kembali ke Big Problem Master" submit="Update">
+            <x-ui.field label="Machine Type" for="mpe-type">
+                <select id="mpe-type" name="machine_type" class="select">
+                    @foreach ($machines as $machine)
+                        <option value="{{ $machine->machine_type }}" @selected($machineProblem->machine_type == $machine->machine_type)>{{ $machine->machine_type }}</option>
                     @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <div class="bg-white rounded-lg shadow p-6 max-w-3xl">
-
-            <form action="{{ route('machine-problems.update', $machineProblem->id) }}" method="POST">
-
-                @csrf
-                @method('PUT')
-
-                {{-- MACHINE TYPE --}}
-                <div class="mb-4">
-
-                    <label class="block mb-2">
-                        Machine Type
-                    </label>
-
-                    <select name="machine_type" class="w-full border p-3 rounded">
-
-                        @foreach ($machines as $machine)
-                            <option value="{{ $machine->machine_type }}"
-                                {{ $machineProblem->machine_type == $machine->machine_type ? 'selected' : '' }}>
-
-                                {{ $machine->machine_type }}
-
-                            </option>
-                        @endforeach
-
-                    </select>
-
-                </div>
-
-                {{-- CATEGORY --}}
-                <div class="mb-4">
-
-                    <label for="category" class="block mb-2">
-                        Category
-                    </label>
-
-                    <input type="text" id="category" name="category" list="categoryOptions" autocomplete="off"
-                        value="{{ old('category', $machineProblem->category) }}"
-                        class="w-full border p-3 rounded" required>
-                    <datalist id="categoryOptions">
-                        @foreach ($categories as $category)
-                            <option value="{{ $category }}"></option>
-                        @endforeach
-                    </datalist>
-
-                </div>
-
-                {{-- PROBLEM --}}
-                <div class="mb-6">
-
-                    <label class="block mb-2">
-                        Big Problem
-                    </label>
-
-                    <input type="text" name="problem" value="{{ old('problem', $machineProblem->problem) }}"
-                        class="w-full border p-3 rounded">
-
-                </div>
-
-                <div class="flex gap-3">
-
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-
-                        Update
-
-                    </button>
-
-                    <a href="{{ route('machine-problems.index') }}" class="bg-gray-300 hover:bg-gray-400 px-5 py-2 rounded">
-
-                        Cancel
-
-                    </a>
-
-                </div>
-
-            </form>
-
-        </div>
-
+                </select>
+            </x-ui.field>
+            <x-ui.field label="Category" for="category">
+                <input type="text" id="category" name="category" list="categoryOptions" autocomplete="off" value="{{ old('category', $machineProblem->category) }}" class="input" required>
+                <datalist id="categoryOptions">
+                    @foreach ($categories as $category)
+                        <option value="{{ $category }}"></option>
+                    @endforeach
+                </datalist>
+            </x-ui.field>
+            <x-ui.field label="Big Problem" for="mpe-problem">
+                <input id="mpe-problem" type="text" name="problem" value="{{ old('problem', $machineProblem->problem) }}" class="input">
+            </x-ui.field>
+        </x-ui.form-page>
     </div>
 @endsection

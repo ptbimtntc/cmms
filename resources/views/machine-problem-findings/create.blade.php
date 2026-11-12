@@ -1,106 +1,43 @@
 @extends('layouts.app')
 
-@section('content')
+@section('title', 'Add Machine Problem Finding')
 
+@section('content')
     @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-3xl';
         $selectedCategory = old('category', request('category'));
     @endphp
 
-    <div class="container mx-auto px-4 py-6 sm:px-6 max-w-3xl">
+    <div class="space-y-5">
+        <x-ui.button variant="ghost" href="{{ route('machine-problem-findings.index') }}" class="-ml-2">Kembali ke Problem Findings</x-ui.button>
+        <x-ui.page-header title="Add Machine Problem Finding" description="Add one finding without importing a file" />
 
-        <div class="bg-white rounded-lg shadow">
+        @include('partials.master.form-messages')
+        @if ($categories->isEmpty())
+            <x-ui.alert tone="warning">
+                No category exists yet. Add one in <a href="{{ route('machine-problems.create') }}" class="font-semibold underline">Problem Category</a> first.
+            </x-ui.alert>
+        @endif
 
-            <div class="border-b px-6 py-4">
-                <h1 class="text-2xl font-bold text-gray-800">
-                    Add Machine Problem Finding
-                </h1>
-
-                <p class="text-gray-500 text-sm">
-                    Add one finding without importing a file
-                </p>
+        <form action="{{ route('machine-problem-findings.store') }}" method="POST" class="card space-y-5 p-5 sm:p-6">
+            @csrf
+            <x-ui.field label="Category" for="category">
+                <select id="category" name="category" class="select" required>
+                    <option value="">Select category</option>
+                    @foreach ($categories as $category)
+                        <option value="{{ $category }}" @selected($selectedCategory == $category)>{{ $category }}</option>
+                    @endforeach
+                </select>
+            </x-ui.field>
+            <x-ui.field label="Finding" for="finding">
+                <input type="text" id="finding" name="finding" value="{{ old('finding') }}" class="input" required @if ($selectedCategory) autofocus @endif>
+            </x-ui.field>
+            <div class="flex flex-col-reverse gap-2 border-t border-border pt-5 sm:flex-row sm:justify-end">
+                <x-ui.button variant="ghost" href="{{ route('machine-problem-findings.index') }}">Cancel</x-ui.button>
+                <x-ui.button type="submit" variant="outline" name="add_another" value="1">Save &amp; Add Another</x-ui.button>
+                <x-ui.button type="submit">Save</x-ui.button>
             </div>
-
-            <div class="p-6">
-
-                @if (session('success'))
-                    <div class="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded mb-4">
-                        {{ session('success') }}
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
-                        <ul class="list-disc ml-5">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                @if ($categories->isEmpty())
-                    <div class="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded mb-4 text-sm">
-                        No category exists yet. Add one in
-                        <a href="{{ route('machine-problems.create') }}" class="font-medium underline">Problem Category</a>
-                        first.
-                    </div>
-                @endif
-
-                <form action="{{ route('machine-problem-findings.store') }}" method="POST">
-
-                    @csrf
-
-                    <!-- Category -->
-                    <div class="mb-5">
-                        <label for="category" class="block font-medium mb-2">
-                            Category
-                        </label>
-
-                        <select id="category" name="category" class="border rounded w-full px-3 py-2" required>
-                            <option value="">Select category</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category }}" {{ $selectedCategory == $category ? 'selected' : '' }}>
-                                    {{ $category }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Finding -->
-                    <div class="mb-6">
-                        <label for="finding" class="block font-medium mb-2">
-                            Finding
-                        </label>
-
-                        <input type="text" id="finding" name="finding" value="{{ old('finding') }}"
-                            class="border rounded w-full px-3 py-2" required
-                            {{ $selectedCategory ? 'autofocus' : '' }}>
-                    </div>
-
-                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-
-                        <a href="{{ route('machine-problem-findings.index') }}"
-                            class="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded text-center">
-                            Cancel
-                        </a>
-
-                        <button type="submit" name="add_another" value="1"
-                            class="border border-blue-600 text-blue-700 hover:bg-blue-50 px-5 py-2 rounded">
-                            Save &amp; Add Another
-                        </button>
-
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-                            Save
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
+        </form>
     </div>
-
 @endsection

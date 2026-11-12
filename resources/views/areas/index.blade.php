@@ -1,67 +1,52 @@
 @extends('layouts.app')
 
+@section('title', 'Area Management')
+
 @section('content')
-    <div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-slate-800">Area Management</h1>
-            <p class="text-sm text-slate-500">
-                Master data for operational areas. Adding an area here makes it
-                immediately available in User Management, Machines, PM Schedules,
-                the Dashboard, and the PM Status Board — no code change needed.
-            </p>
-        </div>
+    @php($fullWidth = true)
 
-        <a href="{{ route('areas.create') }}" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-            Add Area
-        </a>
-    </div>
+    <div class="space-y-5">
+        <x-ui.page-header title="Area Management" description="Master data for operational areas. Adding an area here makes it immediately available in User Management, Machines, PM Schedules, the Dashboard, and the PM Status Board, with no code change needed.">
+            <x-slot:actions>
+                <x-ui.button href="{{ route('areas.create') }}">Add Area</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
-    @if (session('success'))
-        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {{ session('success') }}
-        </div>
-    @endif
+        @if (session('success'))
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
+        @endif
 
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-                <thead class="bg-slate-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Slug</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Users</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Groups</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
-                    @forelse ($areas as $area)
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $area->name }}</td>
-                            <td class="px-4 py-3 text-sm text-slate-500">{{ $area->slug }}</td>
-                            <td class="px-4 py-3 text-sm text-slate-700">{{ $area->users_count }}</td>
-                            <td class="px-4 py-3 text-sm text-slate-700">{{ $area->groups_count }}</td>
-                            <td class="px-4 py-3">
-                                @if ($area->is_active)
-                                    <span class="inline-flex rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">Active</span>
-                                @else
-                                    <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">Inactive</span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3">
-                                <a href="{{ route('areas.edit', $area) }}" class="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600">
-                                    Edit
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No areas found</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+        @if ($areas->isEmpty())
+            <x-ui.empty-state title="No areas found" description="Add the first operational area to start assigning users and machines." />
+        @else
+            <div class="card overflow-hidden">
+                <div class="relative overflow-x-auto">
+                    <table class="data-table min-w-full">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Slug</th>
+                                <th scope="col" class="text-right">Users</th>
+                                <th scope="col" class="text-right">Groups</th>
+                                <th scope="col">Status</th>
+                                <th scope="col"><span class="sr-only">Action</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($areas as $area)
+                                <tr>
+                                    <td class="font-semibold text-text">{{ $area->name }}</td>
+                                    <td class="text-text-muted">{{ $area->slug }}</td>
+                                    <td class="text-right tabular-nums">{{ $area->users_count }}</td>
+                                    <td class="text-right tabular-nums">{{ $area->groups_count }}</td>
+                                    <td><x-ui.badge :tone="$area->is_active ? 'success' : 'neutral'">{{ $area->is_active ? 'Active' : 'Inactive' }}</x-ui.badge></td>
+                                    <td>@include('partials.master.row-actions', ['edit' => route('areas.edit', $area)])</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
     </div>
 @endsection

@@ -1,156 +1,56 @@
 @extends('layouts.app')
 
+@section('title', 'Add Measurement Master')
+
 @section('content')
-    <div class="p-6 bg-gray-50">
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-4xl';
+    @endphp
 
-        {{-- HEADER --}}
-        <div class="mb-6">
+    <x-ui.form-page title="Add Measurement Master" description="Tambahkan measurement berdasarkan tipe mesin"
+        :action="route('machine-measurements.store')" :back="route('machine-measurements.index')" back-label="Kembali ke Measurement Master">
+        <x-ui.field label="Machine Type" for="mmc-type" error="machine_type">
+            <select id="mmc-type" name="machine_type" @class(['select', 'is-invalid' => $errors->has('machine_type')])>
+                <option value="">Select Machine Type</option>
+                @foreach ($machines as $machine)
+                    <option value="{{ $machine->machine_type }}">{{ $machine->machine_type }}</option>
+                @endforeach
+            </select>
+        </x-ui.field>
 
-            <h1 class="text-2xl font-bold text-gray-800">
-                Add Measurement Master
-            </h1>
-
-            <p class="text-sm text-gray-500">
-                Tambahkan measurement berdasarkan tipe mesin
-            </p>
-
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6 max-w-4xl">
-
-            <form action="{{ route('machine-measurements.store') }}" method="POST">
-
-                @csrf
-
-                {{-- MACHINE TYPE --}}
-                <div class="mb-4">
-
-                    <label class="block mb-2">
-                        Machine Type
-                    </label>
-
-                    <select name="machine_type" class="w-full border p-3 rounded">
-
-                        <option value="">
-                            Select Machine Type
-                        </option>
-
-                        @foreach ($machines as $machine)
-                            <option value="{{ $machine->machine_type }}">
-                                {{ $machine->machine_type }}
-                            </option>
-                        @endforeach
-
-                    </select>
-
-                    @error('machine_type')
-                        <p class="text-red-500 text-sm mt-1">
-                            {{ $message }}
-                        </p>
-                    @enderror
-
+        <fieldset class="grid gap-2">
+            <legend class="form-label mb-1.5">Measurement Items</legend>
+            <div class="hidden gap-3 px-0.5 text-xs font-medium text-text-muted md:grid md:grid-cols-[1fr_1fr_1fr_auto]" aria-hidden="true">
+                <span>Measurement Item</span><span>Unit</span><span>Standard</span><span class="w-20"></span>
+            </div>
+            <div id="measurement-wrapper" class="space-y-3">
+                <div class="measurement-row grid gap-2 rounded-control border border-border p-3 md:grid-cols-[1fr_1fr_1fr_auto] md:gap-3 md:border-0 md:p-0">
+                    <input type="text" name="measurements[]" placeholder="Measurement Item" aria-label="Measurement Item" class="input">
+                    <input type="text" name="units[]" placeholder="Unit (mm, °C, bar, mm/s)" aria-label="Unit" class="input">
+                    <input type="text" name="standards[]" placeholder="Standard" aria-label="Standard" class="input">
+                    <button type="button" onclick="removeMeasurement(this)" class="btn btn-ghost min-h-11 w-20 text-danger hover:bg-danger-light hover:text-danger-hover">Remove</button>
                 </div>
-
-                {{-- ITEMS --}}
-                <div>
-
-                    <label class="block mb-2">
-                        Measurement Items
-                    </label>
-
-                    <div id="measurement-wrapper">
-
-                        <div class="grid md:grid-cols-[1fr_1fr_1fr_auto] gap-3 mb-3 measurement-row">
-
-                            <input type="text" name="measurements[]" placeholder="Measurement Item"
-                                class="border p-3 rounded">
-
-                            <input type="text" name="units[]" placeholder="Unit (mm, °C, bar, mm/s)"
-                                class="border p-3 rounded">
-
-                            <input type="text" name="standards[]" placeholder="Standard"
-                                class="border p-3 rounded">
-
-                            <button type="button" onclick="removeMeasurement(this)"
-                                class="text-red-500 hover:text-red-700 px-2">
-                                Remove
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                    <button type="button" onclick="addMeasurement()"
-                        class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">
-
-                        + Add More
-
-                    </button>
-
-                </div>
-
-                {{-- BUTTON --}}
-                <div class="mt-6 flex gap-3">
-
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-
-                        Save
-
-                    </button>
-
-                    <a href="{{ route('machine-measurements.index') }}"
-                        class="bg-gray-300 hover:bg-gray-400 px-5 py-2 rounded">
-
-                        Cancel
-
-                    </a>
-
-                </div>
-
-            </form>
-
-        </div>
-
-    </div>
+            </div>
+            <x-ui.button variant="outline" size="sm" class="justify-self-start" onclick="addMeasurement()">Add More</x-ui.button>
+        </fieldset>
+    </x-ui.form-page>
 
     <script>
         function addMeasurement() {
-
-            let wrapper = document.getElementById('measurement-wrapper');
-
-            let html = `
-        <div class="grid md:grid-cols-[1fr_1fr_1fr_auto] gap-3 mb-3 measurement-row">
-
-            <input type="text"
-                name="measurements[]"
-                placeholder="Measurement Item"
-                class="border p-3 rounded">
-
-            <input type="text"
-                name="units[]"
-                placeholder="Unit (mm, °C, bar, mm/s)"
-                class="border p-3 rounded">
-
-            <input type="text"
-                name="standards[]"
-                placeholder="Standard"
-                class="border p-3 rounded">
-
-            <button type="button" onclick="removeMeasurement(this)"
-                class="text-red-500 hover:text-red-700 px-2">
-                Remove
-            </button>
-
-        </div>
-    `;
-
+            const wrapper = document.getElementById('measurement-wrapper');
+            const html = `
+                <div class="measurement-row grid gap-2 rounded-control border border-border p-3 md:grid-cols-[1fr_1fr_1fr_auto] md:gap-3 md:border-0 md:p-0">
+                    <input type="text" name="measurements[]" placeholder="Measurement Item" aria-label="Measurement Item" class="input">
+                    <input type="text" name="units[]" placeholder="Unit (mm, °C, bar, mm/s)" aria-label="Unit" class="input">
+                    <input type="text" name="standards[]" placeholder="Standard" aria-label="Standard" class="input">
+                    <button type="button" onclick="removeMeasurement(this)" class="btn btn-ghost min-h-11 w-20 text-danger hover:bg-danger-light hover:text-danger-hover">Remove</button>
+                </div>`;
             wrapper.insertAdjacentHTML('beforeend', html);
         }
 
         function removeMeasurement(button) {
-
-            let wrapper = document.getElementById('measurement-wrapper');
-
+            const wrapper = document.getElementById('measurement-wrapper');
             if (wrapper.querySelectorAll('.measurement-row').length > 1) {
                 button.closest('.measurement-row').remove();
             }

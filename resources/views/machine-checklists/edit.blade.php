@@ -1,176 +1,48 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Machine Checklist')
+
 @section('content')
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-3xl';
+    @endphp
 
-    <div class="container mx-auto px-6 py-6 max-w-3xl">
+    <div class="space-y-5">
+        @include('partials.master.form-messages')
 
-        <div class="bg-white rounded-lg shadow">
+        <x-ui.form-page title="Edit Machine Checklist" description="Update checklist information"
+            :action="route('machine-checklists.update', $machineChecklist->id)" method="PUT" :back="route('machine-checklists.index')" back-label="Kembali ke Machine Checklist" submit="Update">
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
 
-            <div class="border-b px-6 py-4">
-                <h1 class="text-2xl font-bold text-gray-800">
-                    Edit Machine Checklist
-                </h1>
-
-                <p class="text-gray-500 text-sm">
-                    Update checklist information
-                </p>
+            <x-ui.field label="Machine Type" for="mce-type">
+                <select id="mce-type" name="machine_type" class="select" required>
+                    @foreach ($machines as $machine)
+                        <option value="{{ $machine->machine_type }}" @selected(old('machine_type', $machineChecklist->machine_type) == $machine->machine_type)>{{ $machine->machine_type }}</option>
+                    @endforeach
+                </select>
+            </x-ui.field>
+            <x-ui.field label="Section" for="mce-section">
+                <input id="mce-section" type="text" name="section" value="{{ old('section', $machineChecklist->section) }}" class="input" required>
+            </x-ui.field>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <x-ui.field label="Section Order" for="mce-section-order">
+                    <input id="mce-section-order" type="number" name="section_order" value="{{ old('section_order', $machineChecklist->section_order) }}" class="input" min="1" required>
+                </x-ui.field>
+                <x-ui.field label="Item Order" for="mce-item-order">
+                    <input id="mce-item-order" type="number" name="item_order" value="{{ old('item_order', $machineChecklist->item_order) }}" class="input" min="1" required>
+                </x-ui.field>
             </div>
-
-            <div class="p-6">
-
-                @if (session('error'))
-                    <div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
-                        {{ session('error') }}
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
-
-                        <ul class="list-disc ml-5">
-
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-
-                        </ul>
-
-                    </div>
-                @endif
-
-                <form action="{{ route('machine-checklists.update', $machineChecklist->id) }}" method="POST">
-
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="return_page" value="{{ request('page') }}">
-
-                    <!-- Machine Type -->
-                    <div class="mb-5">
-
-                        <label class="block font-medium mb-2">
-                            Machine Type
-                        </label>
-
-                        <select name="machine_type" class="border rounded w-full px-3 py-2" required>
-
-                            @foreach ($machines as $machine)
-                                <option value="{{ $machine->machine_type }}"
-                                    {{ old('machine_type', $machineChecklist->machine_type) == $machine->machine_type ? 'selected' : '' }}>
-
-                                    {{ $machine->machine_type }}
-
-                                </option>
-                            @endforeach
-
-                        </select>
-
-                    </div>
-
-                    <!-- Section -->
-                    <div class="mb-5">
-
-                        <label class="block font-medium mb-2">
-                            Section
-                        </label>
-
-                        <input type="text" name="section" value="{{ old('section', $machineChecklist->section) }}"
-                            class="border rounded w-full px-3 py-2" required>
-
-                    </div>
-
-                    <!-- Section Order -->
-                    <div class="mb-5">
-
-                        <label class="block font-medium mb-2">
-                            Section Order
-                        </label>
-
-                        <input type="number" name="section_order"
-                            value="{{ old('section_order', $machineChecklist->section_order) }}"
-                            class="border rounded w-full px-3 py-2" min="1" required>
-
-                    </div>
-
-                    <!-- Checklist Item -->
-                    <div class="mb-5">
-
-                        <label class="block font-medium mb-2">
-                            Checklist Item
-                        </label>
-
-                        <input type="text" name="checklist_item"
-                            value="{{ old('checklist_item', $machineChecklist->checklist_item) }}"
-                            class="border rounded w-full px-3 py-2" required>
-
-                    </div>
-
-                    {{-- Maintenance Type --}}
-                    <div class="mt-4">
-
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Maintenance Type
-                        </label>
-
-                        <select name="maintenance_type" class="w-full border rounded-lg px-3 py-2" required>
-
-                            <option value="check" {{ $machineChecklist->maintenance_type == 'check' ? 'selected' : '' }}>
-                                Check
-                            </option>
-
-                            <option value="clean" {{ $machineChecklist->maintenance_type == 'clean' ? 'selected' : '' }}>
-                                Clean
-                            </option>
-
-                            <option value="lubrication"
-                                {{ $machineChecklist->maintenance_type == 'lubrication' ? 'selected' : '' }}>
-                                Lubrication
-                            </option>
-
-                            <option value="replace"
-                                {{ $machineChecklist->maintenance_type == 'replace' ? 'selected' : '' }}>
-                                Replace
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <!-- Item Order -->
-                    <div class="mb-6">
-
-                        <label class="block font-medium mb-2">
-                            Item Order
-                        </label>
-
-                        <input type="number" name="item_order"
-                            value="{{ old('item_order', $machineChecklist->item_order) }}"
-                            class="border rounded w-full px-3 py-2" min="1" required>
-
-                    </div>
-
-                    <div class="flex justify-end gap-3">
-
-                        <a href="{{ route('machine-checklists.index') }}"
-                            class="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded">
-
-                            Cancel
-
-                        </a>
-
-                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-
-                            Update
-
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
+            <x-ui.field label="Checklist Item" for="mce-item">
+                <input id="mce-item" type="text" name="checklist_item" value="{{ old('checklist_item', $machineChecklist->checklist_item) }}" class="input" required>
+            </x-ui.field>
+            <x-ui.field label="Maintenance Type" for="mce-mtype">
+                <select id="mce-mtype" name="maintenance_type" class="select" required>
+                    @foreach (['check' => 'Check', 'clean' => 'Clean', 'lubrication' => 'Lubrication', 'replace' => 'Replace'] as $value => $text)
+                        <option value="{{ $value }}" @selected($machineChecklist->maintenance_type == $value)>{{ $text }}</option>
+                    @endforeach
+                </select>
+            </x-ui.field>
+        </x-ui.form-page>
     </div>
-
 @endsection

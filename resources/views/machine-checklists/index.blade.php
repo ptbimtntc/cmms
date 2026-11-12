@@ -1,379 +1,152 @@
 @extends('layouts.app')
 
+@section('title', 'Machine Checklist Master')
+
 @section('content')
-    <div class="container mx-auto px-6 py-6">
+    @php
+        $fullWidth = true;
+        $label = 'text-xs font-medium text-text-muted';
+        $canManage = ! auth()->user()->isSupervisor();
+        $hasFilters = collect(request()->only(['search', 'machine_type', 'section', 'maintenance_type']))->filter()->isNotEmpty();
+        $actions = fn ($c, $mobile = false) => ['edit' => route('machine-checklists.edit', ['machine_checklist' => $c->id, 'page' => request('page')]), 'delete' => route('machine-checklists.destroy', $c->id), 'confirm' => 'Delete this checklist?', 'mobile' => $mobile];
+        $mtype = fn ($t) => \Illuminate\Support\Str::title(strtolower($t));
+    @endphp
+
+    <div class="space-y-5">
+        <x-ui.page-header title="Machine Checklist Master" description="Manage Machine Checklist Master Data">
+            @if ($canManage)
+                <x-slot:actions>
+                    <x-ui.button href="{{ route('machine-checklists.create') }}">Add Checklist</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
+
+        @if ($canManage)
+            @include('partials.master.import-form', ['action' => route('machine-checklists.import'), 'id' => 'fileInput'])
+        @endif
 
         @if (session('success'))
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                {{ session('success') }}
-            </div>
+            <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
         @endif
-
         @if (session('error'))
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {{ session('error') }}
-            </div>
+            <x-ui.alert tone="danger">{{ session('error') }}</x-ui.alert>
         @endif
-
-        @if (session('machine_checklists_import_result'))
-            @php($importResult = session('machine_checklists_import_result'))
-            <div class="mb-4 flex flex-wrap gap-3 rounded bg-gray-50 p-3 text-sm text-gray-700">
-                <span>Import result:</span>
-                <span class="font-semibold text-emerald-700">{{ $importResult['imported'] }} imported</span>
-                <span class="font-semibold text-amber-700">{{ $importResult['duplicate'] }} duplicate</span>
-                <span class="font-semibold text-rose-700">{{ $importResult['skipped'] }} skipped/invalid</span>
-            </div>
-        @endif
-
-        <div class="flex justify-between items-center mb-6">
-
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">
-                    Machine Checklist Master
-                </h1>
-
-                <p class="text-gray-500">
-                    Manage Machine Checklist Master Data
-                </p>
-
-            </div>
-
-            <!-- ACTIONS -->
-            <div class="flex flex-col md:flex-row md:items-center gap-3">
-
-                @unless (auth()->user()->isSupervisor())
-                <a href="{{ route('machine-checklists.create') }}"
-                    class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-                    Add Checklist
-                </a>
-                @endunless
-
-                <!-- IMPORT FORM -->
-                @unless (auth()->user()->isSupervisor())
-                <form action="{{ route('machine-checklists.import') }}" method="POST" enctype="multipart/form-data"
-                    class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded shadow border">
-
-                    @csrf
-
-                    <!-- FILE WRAPPER -->
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-
-                        <!-- Hidden Input -->
-                        <input type="file" id="fileInput" name="file" accept=".csv,.xlsx,.xls" class="hidden"
-                            onchange="updateFileName(this)">
-
-                        <!-- Custom Button -->
-                        <label for="fileInput"
-                            class="cursor-pointer bg-gray-200 hover:bg-gray-300 text-sm px-3 py-2 rounded border">
-
-                            Choose File
-
-                        </label>
-
-                        <!-- File Name Display -->
-                        <span id="fileName" class="text-sm text-gray-600 truncate max-w-50">
-
-                            No file chosen
-
-                        </span>
-
-                    </div>
-
-                    <!-- IMPORT BUTTON -->
-                    <button class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded w-full sm:w-auto">
-
-                        Import
-
-                    </button>
-
-                </form>
-                @endunless
-
-
-            </div>
-
-
-        </div>
         @if ($errors->has('file'))
-            <div class="bg-red-100 text-red-700 p-3 rounded mb-3">
-                {{ $errors->first('file') }}
-            </div>
+            <x-ui.alert tone="danger">{{ $errors->first('file') }}</x-ui.alert>
+        @endif
+        @if (session('machine_checklists_import_result'))
+            @include('partials.master.import-result', ['result' => session('machine_checklists_import_result')])
         @endif
 
-        <!-- FILTER -->
-        <form method="GET" class="bg-white rounded-lg shadow p-4 mb-5 flex flex-wrap gap-3">
-
-            <!-- SORT -->
-            <select name="sort" class="border rounded px-3 py-2">
-
-                <option value="">Default Sort</option>
-
-                <option value="machine_type_asc" {{ request('sort') == 'machine_type_asc' ? 'selected' : '' }}>
-                    Machine Type ↑
-                </option>
-
-                <option value="machine_type_desc" {{ request('sort') == 'machine_type_desc' ? 'selected' : '' }}>
-                    Machine Type ↓
-                </option>
-
-                <option value="section_order_asc" {{ request('sort') == 'section_order_asc' ? 'selected' : '' }}>
-                    Checklist Order ↑
-                </option>
-
-                <option value="section_order_desc" {{ request('sort') == 'section_order_desc' ? 'selected' : '' }}>
-                    Checklist Order ↓
-                </option>
-
-                <option value="item_asc" {{ request('sort') == 'item_asc' ? 'selected' : '' }}>
-                    Checklist Item ↑
-                </option>
-
-                <option value="item_desc" {{ request('sort') == 'item_desc' ? 'selected' : '' }}>
-                    Checklist Item ↓
-                </option>
-
-            </select>
-
-            <!-- SEARCH -->
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search checklist..."
-                class="border rounded px-3 py-2 w-72">
-
-            <!-- MACHINE -->
-            <select name="machine_type" id="machineTypeFilter" class="border rounded px-3 py-2">
-
-                <option value="">All Machine Type</option>
-
-                @foreach ($machineTypes as $machine)
-                    <option value="{{ $machine }}" {{ request('machine_type') == $machine ? 'selected' : '' }}>
-
-                        {{ $machine }}
-
-                    </option>
-                @endforeach
-
-            </select>
-
-            <!-- SECTION -->
-            <select name="section" id="sectionFilter" class="border rounded px-3 py-2">
-
-                <option value="">All Section</option>
-
-                @foreach ($sections as $section)
-                    <option value="{{ $section }}" {{ request('section') == $section ? 'selected' : '' }}>
-
-                        {{ $section }}
-
-                    </option>
-                @endforeach
-
-            </select>
-
-            <!-- MAINTENANCE TYPE -->
-            <select name="maintenance_type" class="border rounded px-3 py-2">
-
-                <option value="">All Maintenance Type</option>
-
-                @foreach ($maintenanceTypes as $type)
-                    <option value="{{ $type }}" {{ request('maintenance_type') == $type ? 'selected' : '' }}>
-
-                        {{ \Illuminate\Support\Str::title($type) }}
-
-                    </option>
-                @endforeach
-
-            </select>
-
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded">
-
-                Filter
-
-            </button>
-
-            <a href="{{ route('machine-checklists.index') }}"
-                class="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded">
-
-                Reset
-
-            </a>
-
+        <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div class="grid gap-1.5 sm:w-64">
+                <label for="mc-search" class="{{ $label }}">Search</label>
+                <input id="mc-search" type="text" name="search" value="{{ request('search') }}" placeholder="Checklist item" class="input lg:min-h-9">
+            </div>
+            <div class="grid gap-1.5 sm:w-44">
+                <label for="machineTypeFilter" class="{{ $label }}">Machine Type</label>
+                <select name="machine_type" id="machineTypeFilter" class="select lg:min-h-9">
+                    <option value="">All Machine Type</option>
+                    @foreach ($machineTypes as $machine)
+                        <option value="{{ $machine }}" @selected(request('machine_type') == $machine)>{{ $machine }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5 sm:w-44">
+                <label for="sectionFilter" class="{{ $label }}">Section</label>
+                <select name="section" id="sectionFilter" class="select lg:min-h-9">
+                    <option value="">All Section</option>
+                    @foreach ($sections as $section)
+                        <option value="{{ $section }}" @selected(request('section') == $section)>{{ $section }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5 sm:w-48">
+                <label for="mc-mtype" class="{{ $label }}">Maintenance Type</label>
+                <select id="mc-mtype" name="maintenance_type" class="select lg:min-h-9">
+                    <option value="">All Maintenance Type</option>
+                    @foreach ($maintenanceTypes as $type)
+                        <option value="{{ $type }}" @selected(request('maintenance_type') == $type)>{{ \Illuminate\Support\Str::title($type) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid gap-1.5 sm:w-48">
+                <label for="mc-sort" class="{{ $label }}">Sort</label>
+                <select id="mc-sort" name="sort" class="select lg:min-h-9">
+                    <option value="">Default Sort</option>
+                    <option value="machine_type_asc" @selected(request('sort') == 'machine_type_asc')>Machine Type ↑</option>
+                    <option value="machine_type_desc" @selected(request('sort') == 'machine_type_desc')>Machine Type ↓</option>
+                    <option value="section_order_asc" @selected(request('sort') == 'section_order_asc')>Checklist Order ↑</option>
+                    <option value="section_order_desc" @selected(request('sort') == 'section_order_desc')>Checklist Order ↓</option>
+                    <option value="item_asc" @selected(request('sort') == 'item_asc')>Checklist Item ↑</option>
+                    <option value="item_desc" @selected(request('sort') == 'item_desc')>Checklist Item ↓</option>
+                </select>
+            </div>
+            <div class="flex gap-2 sm:ml-auto">
+                <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                <x-ui.button variant="ghost" href="{{ route('machine-checklists.index') }}" class="lg:min-h-9">Reset</x-ui.button>
+            </div>
         </form>
 
-        <!-- TABLE -->
+        @if ($checklists->isEmpty())
+            <x-ui.empty-state title="No checklist found." :description="$hasFilters ? 'Change the filters, or reset them to see every checklist item.' : ($canManage ? 'Add a checklist item or import a file above.' : null)" />
+        @endif
 
-        {{-- ============ DESKTOP: Table (md and up) ============ --}}
-        <div class="hidden bg-white rounded-lg shadow overflow-x-auto md:block">
-
-            <table class="min-w-full text-sm">
-
-                <thead class="bg-gray-100">
-
-                    <tr>
-
-                        <th class="px-4 py-3 text-left">
-                            Machine Type
-                        </th>
-
-                        <th class="px-4 py-3 text-left">
-                            Section
-                        </th>
-
-                        <th class="px-4 py-3 text-center">
-                            Section Order
-                        </th>
-
-                        <th class="px-4 py-3 text-left">
-                            Checklist Item
-                        </th>
-
-                        <th class="px-4 py-3 text-left">
-                            Maintenance Type
-                        </th>
-
-                        <th class="px-4 py-3 text-center">
-                            Item Order
-                        </th>
-
-                        <th class="px-4 py-3 text-center">
-                            Action
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody data-infinite-list="checklists">
-
-                    @forelse($checklists as $checklist)
-                        <tr class="border-t hover:bg-gray-50">
-
-                            <td class="px-4 py-3">
-                                {{ $checklist->machine_type }}
-                            </td>
-
-                            <td class="px-4 py-3">
-                                {{ $checklist->section }}
-                            </td>
-
-                            <td class="px-4 py-3 text-center">
-                                {{ $checklist->section_order }}
-                            </td>
-
-                            <td class="px-4 py-3">
-                                {{ $checklist->checklist_item }}
-                            </td>
-
-                            <td class="px-4 py-3">
-                                {{ \Illuminate\Support\Str::title(strtolower($checklist->maintenance_type)) }}
-                            </td>
-
-                            <td class="px-4 py-3 text-center">
-                                {{ $checklist->item_order }}
-                            </td>
-
-                            <td class="px-4 py-3">
-
-                                <div class="flex justify-center gap-2">
-
-                                    @unless (auth()->user()->isSupervisor())
-                                    <a href="{{ route('machine-checklists.edit', ['machine_checklist' => $checklist->id, 'page' => request('page')]) }}"
-                                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs">
-
-                                        Edit
-
-                                    </a>
-
-                                    <form action="{{ route('machine-checklists.destroy', $checklist->id) }}" method="POST"
-                                        onsubmit="return confirm('Delete this checklist?')">
-
-                                        @csrf
-                                        @method('DELETE')
-
-                                        <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
-
-                                            Delete
-
-                                        </button>
-
-                                    </form>
-                                    @endunless
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    @empty
-
+        {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+        <div @class(['card hidden overflow-hidden', 'md:block' => $checklists->isNotEmpty()])>
+            <div class="relative overflow-x-auto">
+                <table class="data-table min-w-full">
+                    <thead>
                         <tr>
-
-                            <td colspan="6" class="text-center text-gray-500 py-8">
-
-                                No checklist found.
-
-                            </td>
-
+                            <th scope="col">Machine Type</th>
+                            <th scope="col">Section</th>
+                            <th scope="col" class="text-right">Section Order</th>
+                            <th scope="col">Checklist Item</th>
+                            <th scope="col">Maintenance Type</th>
+                            <th scope="col" class="text-right">Item Order</th>
+                            @if ($canManage)
+                                <th scope="col"><span class="sr-only">Action</span></th>
+                            @endif
                         </tr>
-                    @endforelse
-
-                </tbody>
-
-            </table>
-
+                    </thead>
+                    <tbody data-infinite-list="checklists">
+                        @foreach ($checklists as $checklist)
+                            <tr>
+                                <td class="whitespace-nowrap font-semibold text-text">{{ $checklist->machine_type }}</td>
+                                <td>{{ $checklist->section }}</td>
+                                <td class="text-right tabular-nums">{{ $checklist->section_order }}</td>
+                                <td class="min-w-56 text-text">{{ $checklist->checklist_item }}</td>
+                                <td>{{ $mtype($checklist->maintenance_type) }}</td>
+                                <td class="text-right tabular-nums">{{ $checklist->item_order }}</td>
+                                @if ($canManage)
+                                    <td>@include('partials.master.row-actions', $actions($checklist))</td>
+                                @endif
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        {{-- ============ MOBILE: Card List (below md) ============ --}}
+        {{-- Phone cards (below md). Second list with the same key. --}}
         <div class="space-y-3 md:hidden" data-infinite-list="checklists">
-            @forelse($checklists as $checklist)
-                <div class="rounded-lg border bg-white p-4 shadow-sm">
-                    <div class="text-sm font-semibold text-gray-800">{{ $checklist->machine_type }}</div>
-                    <div class="text-xs text-gray-500">{{ $checklist->section }} • {{ \Illuminate\Support\Str::title(strtolower($checklist->maintenance_type)) }}</div>
-                    <div class="mt-2 border-t pt-2 text-xs">
-                        <div class="text-gray-400">Checklist Item</div>
-                        <div class="font-medium text-gray-700">{{ $checklist->checklist_item }}</div>
-                    </div>
-                    <div class="mt-2 grid grid-cols-2 gap-y-2 text-xs">
-                        <div>
-                            <div class="text-gray-400">Section Order</div>
-                            <div class="font-medium text-gray-700">{{ $checklist->section_order }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-400">Item Order</div>
-                            <div class="font-medium text-gray-700">{{ $checklist->item_order }}</div>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex gap-2 border-t pt-3">
-                        @unless (auth()->user()->isSupervisor())
-                        <a href="{{ route('machine-checklists.edit', ['machine_checklist' => $checklist->id, 'page' => request('page')]) }}"
-                            class="flex-1 rounded bg-yellow-500 px-3 py-2 text-center text-xs font-medium text-white hover:bg-yellow-600">
-                            Edit
-                        </a>
-                        <form action="{{ route('machine-checklists.destroy', $checklist->id) }}" method="POST"
-                            onsubmit="return confirm('Delete this checklist?')" class="flex-1">
-                            @csrf
-                            @method('DELETE')
-                            <button class="w-full rounded bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700">
-                                Delete
-                            </button>
-                        </form>
-                        @endunless
-                    </div>
-                </div>
-            @empty
-                <div class="rounded-lg border bg-white p-6 text-center text-sm text-gray-500">
-                    No checklist found.
-                </div>
-            @endforelse
+            @foreach ($checklists as $checklist)
+                <article class="card min-w-0 p-4">
+                    <h2 class="text-base font-semibold text-text">{{ $checklist->machine_type }}</h2>
+                    <p class="text-sm text-text-muted">{{ $checklist->section }} · {{ $mtype($checklist->maintenance_type) }}</p>
+                    <p class="mt-3 break-words border-t border-border pt-3 text-sm font-medium text-text">{{ $checklist->checklist_item }}</p>
+                    <dl class="mt-2 grid grid-cols-2 gap-x-4 text-sm">
+                        <div><dt class="text-xs text-text-muted">Section Order</dt><dd class="font-medium tabular-nums text-text">{{ $checklist->section_order }}</dd></div>
+                        <div><dt class="text-xs text-text-muted">Item Order</dt><dd class="font-medium tabular-nums text-text">{{ $checklist->item_order }}</dd></div>
+                    </dl>
+                    @if ($canManage)
+                        <div class="mt-3 border-t border-border pt-3">@include('partials.master.row-actions', $actions($checklist, true))</div>
+                    @endif
+                </article>
+            @endforeach
         </div>
 
-        <!-- PAGINATION -->
-
-        <div class="mt-5">
-
-            <x-infinite-scroll :paginator="$checklists" key="checklists" />
-
-        </div>
-
+        <x-infinite-scroll :paginator="$checklists" key="checklists" />
     </div>
 
     <script>
@@ -398,15 +171,5 @@
                 sectionSelect.value = sections.includes(current) ? current : '';
             });
         })();
-
-        function updateFileName(input) {
-
-            const fileName = input.files.length ?
-                input.files[0].name :
-                "No file chosen";
-
-            document.getElementById("fileName").innerText = fileName;
-
-        }
     </script>
 @endsection

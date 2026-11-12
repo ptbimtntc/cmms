@@ -1,110 +1,39 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Measurement')
+
 @section('content')
-    <div class="p-6 bg-gray-50">
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-2xl';
+    @endphp
 
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">
-                Edit Measurement
-            </h1>
-
-            <p class="text-sm text-gray-500">
-                Update measurement item
-            </p>
-        </div>
-
+    <div class="space-y-5">
         @if (session('error'))
-            <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-                {{ session('error') }}
-            </div>
+            <x-ui.alert tone="danger">{{ session('error') }}</x-ui.alert>
         @endif
 
-        <div class="bg-white rounded-lg shadow p-6 max-w-3xl">
-
-            <form action="{{ route('machine-measurements.update', $machineMeasurement->id) }}" method="POST">
-
-                @csrf
-                @method('PUT')
-                <input type="hidden" name="return_page" value="{{ request('page') }}">
-
-                {{-- MACHINE TYPE --}}
-                <div class="mb-4">
-
-                    <label class="block mb-2">
-                        Machine Type
-                    </label>
-
-                    <select name="machine_type" class="w-full border p-3 rounded">
-
-                        @foreach ($machines as $machine)
-                            <option value="{{ $machine->machine_type }}"
-                                {{ $machineMeasurement->machine_type == $machine->machine_type ? 'selected' : '' }}>
-
-                                {{ $machine->machine_type }}
-
-                            </option>
-                        @endforeach
-
-                    </select>
-
-                </div>
-
-                {{-- MEASUREMENT ITEM --}}
-                <div class="mb-4">
-
-                    <label class="block mb-2">
-                        Measurement Item
-                    </label>
-
-                    <input type="text" name="measurement_item"
-                        value="{{ old('measurement_item', $machineMeasurement->measurement_item) }}"
-                        class="w-full border p-3 rounded">
-
-                </div>
-
-                {{-- UNIT --}}
-                <div class="mb-4">
-
-                    <label class="block mb-2">
-                        Unit
-                    </label>
-
-                    <input type="text" name="unit" value="{{ old('unit', $machineMeasurement->unit) }}"
-                        class="w-full border p-3 rounded">
-
-                </div>
-
-                {{-- STANDARD --}}
-                <div class="mb-6">
-
-                    <label class="block mb-2">
-                        Standard
-                    </label>
-
-                    <input type="text" name="standard" value="{{ old('standard', $machineMeasurement->standard) }}"
-                        class="w-full border p-3 rounded">
-
-                </div>
-
-                <div class="flex gap-3">
-
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-                        Update
-                    </button>
-
-                    <a href="{{ route('machine-measurements.index') }}"
-                        class="bg-gray-300 hover:bg-gray-400 px-5 py-2 rounded">
-
-                        Cancel
-
-                    </a>
-
-                </div>
-
-
-            </form>
-
-        </div>
-
+        <x-ui.form-page title="Edit Measurement" description="Update measurement item"
+            :action="route('machine-measurements.update', $machineMeasurement->id)" method="PUT" :back="route('machine-measurements.index')" back-label="Kembali ke Measurement Master" submit="Update">
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
+            <x-ui.field label="Machine Type" for="mme-type" error="machine_type">
+                <select id="mme-type" name="machine_type" class="select">
+                    @foreach ($machines as $machine)
+                        <option value="{{ $machine->machine_type }}" @selected($machineMeasurement->machine_type == $machine->machine_type)>{{ $machine->machine_type }}</option>
+                    @endforeach
+                </select>
+            </x-ui.field>
+            <x-ui.field label="Measurement Item" for="mme-item" error="measurement_item">
+                <input id="mme-item" type="text" name="measurement_item" value="{{ old('measurement_item', $machineMeasurement->measurement_item) }}" class="input">
+            </x-ui.field>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <x-ui.field label="Unit" for="mme-unit" error="unit">
+                    <input id="mme-unit" type="text" name="unit" value="{{ old('unit', $machineMeasurement->unit) }}" class="input">
+                </x-ui.field>
+                <x-ui.field label="Standard" for="mme-standard" error="standard">
+                    <input id="mme-standard" type="text" name="standard" value="{{ old('standard', $machineMeasurement->standard) }}" class="input">
+                </x-ui.field>
+            </div>
+        </x-ui.form-page>
     </div>
 @endsection

@@ -1,101 +1,80 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Group')
+
 @section('content')
-<div class="mx-auto max-w-3xl">
-    <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5">
-            <h1 class="text-2xl font-semibold text-slate-800">Edit Group</h1>
-            <p class="mt-1 text-sm text-slate-500">Update group details and manage which machines belong to this group.</p>
-        </div>
+    @php
+        $fullWidth = true;
+        $contentMaxWidth = 'max-w-3xl';
+        $checked = old('machine_ids', $machines->where('group_id', $group->id)->pluck('id')->all());
+    @endphp
 
-        <form action="{{ route('groups.update', $group) }}" method="POST" class="space-y-5 p-6">
-            @csrf
-            @method('PUT')
-            <input type="hidden" name="return_page" value="{{ request('page') }}">
+    <x-ui.form-page title="Edit Group" description="Update group details and manage which machines belong to this group."
+        :action="route('groups.update', $group)" method="PUT" :back="route('groups.index')" back-label="Kembali ke Group Master" submit="Save Changes">
+        <input type="hidden" name="return_page" value="{{ request('page') }}">
 
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Group Name</label>
-                <input type="text" name="name" value="{{ old('name', $group->name) }}"
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                @error('name')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
+        <x-ui.field label="Group Name" for="ge-name" error="name">
+            <input id="ge-name" type="text" name="name" value="{{ old('name', $group->name) }}" @class(['input', 'is-invalid' => $errors->has('name')])>
+        </x-ui.field>
+        <x-ui.field label="Area" for="ge-area" error="area_id" hint="Used to determine which PIC (by area) may be assigned to this group's greasing schedules.">
+            <select id="ge-area" name="area_id" @class(['select', 'is-invalid' => $errors->has('area_id')])>
+                <option value="">No Area</option>
+                @foreach ($areas as $area)
+                    <option value="{{ $area->id }}" @selected((string) old('area_id', $group->area_id) === (string) $area->id)>{{ $area->name }}</option>
+                @endforeach
+            </select>
+        </x-ui.field>
 
-            <div>
-                <label class="mb-2 block text-sm font-medium text-slate-700">Area</label>
-                <select name="area_id" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-                    <option value="">No Area</option>
-                    @foreach ($areas as $area)
-                        <option value="{{ $area->id }}" @selected((string) old('area_id', $group->area_id) === (string) $area->id)>{{ $area->name }}</option>
-                    @endforeach
-                </select>
-                <p class="mt-1 text-xs text-slate-500">Used to determine which PIC (by area) may be assigned to this group's greasing schedules.</p>
-                @error('area_id')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <div class="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                        <h2 class="text-sm font-semibold text-slate-800">Machines in this Group</h2>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            Number of Machines is calculated automatically from what you check here — it is not a separate field.
-                        </p>
-                    </div>
-                    <span class="shrink-0 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700" id="machineSelectedCount">
-                        {{ $machines->where('group_id', $group->id)->count() }} selected
-                    </span>
+        <fieldset class="rounded-control border border-border bg-surface-sunken p-4 sm:p-5">
+            <legend class="sr-only">Machines in this Group</legend>
+            <div class="mb-3 flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-semibold text-text">Machines in this Group</p>
+                    <p class="mt-0.5 text-xs text-text-muted">Number of Machines is calculated from what you check here; it is not a separate field.</p>
                 </div>
-
-                <input type="text" id="machineSearchInput" placeholder="Search machine number or type..."
-                    class="mb-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none">
-
-                <div class="max-h-72 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2" id="machineList">
-                    @forelse ($machines as $machine)
-                        <label class="machine-row flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:bg-slate-50"
-                            data-search="{{ strtolower($machine->machine_number.' '.$machine->machine_type) }}">
-                            <span class="flex items-center gap-3">
-                                <input type="checkbox" name="machine_ids[]" value="{{ $machine->id }}"
-                                    class="machine-checkbox rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                    {{ in_array($machine->id, old('machine_ids', $machines->where('group_id', $group->id)->pluck('id')->all())) ? 'checked' : '' }}
-                                    onchange="updateMachineSelectedCount()">
-                                <span class="font-medium text-slate-800">{{ $machine->machine_number }}</span>
-                                <span class="text-slate-400">{{ $machine->machine_type }}</span>
-                            </span>
-                            @if ($machine->group_id && $machine->group_id !== $group->id)
-                                <span class="shrink-0 text-xs text-amber-600">currently in: {{ $machine->group->name ?? '-' }}</span>
-                            @endif
-                        </label>
-                    @empty
-                        <p class="p-3 text-sm text-slate-500">No machines found.</p>
-                    @endforelse
-                </div>
-                @error('machine_ids')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
+                <x-ui.badge id="machineSelectedCount" class="shrink-0" aria-live="polite">{{ $machines->where('group_id', $group->id)->count() }} selected</x-ui.badge>
             </div>
 
-            <div class="flex justify-end gap-3 pt-2">
-                <a href="{{ route('groups.index') }}" class="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100">Cancel</a>
-                <button class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700">Save Changes</button>
-            </div>
-        </form>
-    </div>
-</div>
+            <label for="machineSearchInput" class="sr-only">Search machine</label>
+            <input type="text" id="machineSearchInput" placeholder="Search machine number or type" class="input mb-3">
 
-<script>
-    document.getElementById('machineSearchInput').addEventListener('input', function (e) {
-        const term = e.target.value.trim().toLowerCase();
-        document.querySelectorAll('#machineList .machine-row').forEach(function (row) {
-            row.style.display = row.dataset.search.includes(term) ? '' : 'none';
+            <div class="max-h-72 space-y-0.5 overflow-y-auto rounded-control border border-border bg-surface p-1.5" id="machineList">
+                @forelse ($machines as $machine)
+                    <label class="machine-row flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-control px-3 py-1.5 text-sm hover:bg-surface-muted"
+                        data-search="{{ strtolower($machine->machine_number.' '.$machine->machine_type) }}">
+                        <span class="flex min-w-0 items-center gap-3">
+                            <input type="checkbox" name="machine_ids[]" value="{{ $machine->id }}"
+                                class="machine-checkbox h-4 w-4 shrink-0 rounded border-border-strong text-primary focus:ring-primary"
+                                @checked(in_array($machine->id, $checked))
+                                onchange="updateMachineSelectedCount()">
+                            <span class="font-medium text-text">{{ $machine->machine_number }}</span>
+                            <span class="truncate text-text-muted">{{ $machine->machine_type }}</span>
+                        </span>
+                        @if ($machine->group_id && $machine->group_id !== $group->id)
+                            <span class="shrink-0 text-xs text-warning-text">currently in: {{ $machine->group->name ?? '-' }}</span>
+                        @endif
+                    </label>
+                @empty
+                    <p class="p-3 text-sm text-text-muted">No machines found.</p>
+                @endforelse
+            </div>
+            @error('machine_ids')
+                <p class="form-error mt-1">{{ $message }}</p>
+            @enderror
+        </fieldset>
+    </x-ui.form-page>
+
+    <script>
+        document.getElementById('machineSearchInput').addEventListener('input', function (e) {
+            const term = e.target.value.trim().toLowerCase();
+            document.querySelectorAll('#machineList .machine-row').forEach(function (row) {
+                row.style.display = row.dataset.search.includes(term) ? '' : 'none';
+            });
         });
-    });
 
-    function updateMachineSelectedCount() {
-        const count = document.querySelectorAll('.machine-checkbox:checked').length;
-        document.getElementById('machineSelectedCount').textContent = count + ' selected';
-    }
-</script>
+        function updateMachineSelectedCount() {
+            const count = document.querySelectorAll('.machine-checkbox:checked').length;
+            document.getElementById('machineSelectedCount').textContent = count + ' selected';
+        }
+    </script>
 @endsection

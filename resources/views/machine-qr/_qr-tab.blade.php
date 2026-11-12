@@ -4,122 +4,119 @@
     lost when the list is re-filtered. "Select all" asks the server for every
     id matching the current filter (area-scoped), not just the visible page.
 --}}
-@php($input = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500')
 <div x-data="machineQr(@js([
         'idsUrl' => route('machine-qr.ids', request()->only('search', 'area')),
         'countUrl' => route('machine-qr.count'),
         'total' => $machines->total(),
-    ]))" x-init="init()">
-
-    <div class="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
+    ]))" x-init="init()" class="space-y-5">
+    <div class="card flex flex-col gap-3 p-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" @click="selectAllFiltered()" :disabled="busy"
-                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50">
-                Select all filtered ({{ $machines->total() }})
-            </button>
-            <button type="button" @click="clear()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Clear</button>
-            <span class="text-sm text-slate-600"><span class="font-semibold" x-text="selected.length"></span> selected</span>
-            <span x-show="busy" class="text-xs text-slate-500">Loading…</span>
+            <button type="button" @click="selectAllFiltered()" :disabled="busy" class="btn btn-outline btn-sm min-h-11 lg:min-h-9">Select all filtered ({{ $machines->total() }})</button>
+            <button type="button" @click="clear()" class="btn btn-ghost btn-sm min-h-11 lg:min-h-9">Clear</button>
+            <span class="text-sm text-text-muted" aria-live="polite"><span class="font-semibold text-text" x-text="selected.length"></span> selected</span>
+            <span x-show="busy" class="text-xs text-text-muted">Loading…</span>
         </div>
-
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
             <form method="POST" action="{{ route('machine-qr.export') }}" @submit="confirmSelected($event)">
                 @csrf
                 <input type="hidden" name="mode" value="selected">
                 <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
-                <button :disabled="selected.length === 0" class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
-                    Export Selected to Word
-                </button>
+                <button :disabled="selected.length === 0" class="btn btn-primary min-h-11 w-full lg:min-h-9">Export Selected to Word</button>
             </form>
-
             <form method="POST" action="{{ route('machine-qr.export') }}" class="flex gap-2" @submit="confirmArea($event)">
                 @csrf
                 <input type="hidden" name="mode" value="area">
-                <select name="area" x-model="exportArea" @change="loadAreaCount()" required class="{{ $input }}">
+                <label for="mq-export-area" class="sr-only">Export by area</label>
+                <select id="mq-export-area" name="area" x-model="exportArea" @change="loadAreaCount()" required class="select min-w-0 lg:min-h-9">
                     <option value="">Export by Area…</option>
                     @foreach ($areas as $a)
                         <option value="{{ $a }}">{{ $a }}</option>
                     @endforeach
                 </select>
-                <button :disabled="!exportArea || areaCount === 0" class="whitespace-nowrap rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                <button :disabled="!exportArea || areaCount === 0" class="btn btn-outline min-h-11 whitespace-nowrap lg:min-h-9">
                     Export Area<span x-show="exportArea && areaCount !== null" x-text="' (' + areaCount + ')'"></span>
                 </button>
             </form>
         </div>
     </div>
 
-    {{-- Desktop table --}}
-    <div class="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-        <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="w-10 px-4 py-3"><input type="checkbox" :checked="allLoadedSelected" @change="togglePage($event.target.checked)" class="rounded border-slate-300" aria-label="Select all loaded"></th>
-                    @foreach (['Machine Number', 'Machine Name', 'Area', 'QR Code', 'Action'] as $h)
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{{ $h }}</th>
-                    @endforeach
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100" data-infinite-list="machines">
-                @forelse ($machines as $machine)
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3"><input type="checkbox" value="{{ $machine->id }}" :checked="has({{ $machine->id }})" @change="toggle({{ $machine->id }}, $event.target.checked)" class="rounded border-slate-300" aria-label="Select {{ $machine->machine_number }}"></td>
-                        <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ $machine->machine_number }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $machine->machine_type ?? '-' }}</td>
-                        <td class="px-4 py-3 text-sm text-slate-700">{{ $machine->area }}</td>
-                        <td class="px-4 py-3">
-                            <button type="button" @click="preview = {{ $machine->id }}; previewName = @js($machine->machine_number)" class="block">
-                                <img src="{{ route('machine-qr.preview', $machine) }}" loading="lazy" alt="QR {{ $machine->machine_number }}" class="h-16 w-16 rounded border border-slate-200 bg-white">
-                            </button>
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex gap-2">
-                                <button type="button" @click="preview = {{ $machine->id }}; previewName = @js($machine->machine_number)" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">Preview</button>
-                                <a href="{{ route('machine-qr.download', $machine) }}" class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">Download</a>
-                            </div>
-                        </td>
+    @if ($machines->isEmpty())
+        <x-ui.empty-state title="No machines found." />
+    @endif
+
+    {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
+    <div @class(['card hidden overflow-hidden', 'md:block' => $machines->isNotEmpty()])>
+        <div class="relative overflow-x-auto">
+            <table class="data-table min-w-full">
+                <thead>
+                    <tr>
+                        <th scope="col" class="w-10"><input type="checkbox" :checked="allLoadedSelected" @change="togglePage($event.target.checked)" class="h-4 w-4 rounded border-border-strong text-primary" aria-label="Select all loaded"></th>
+                        <th scope="col">Machine Number</th>
+                        <th scope="col">Machine Name</th>
+                        <th scope="col">Area</th>
+                        <th scope="col">QR Code</th>
+                        <th scope="col"><span class="sr-only">Action</span></th>
                     </tr>
-                @empty
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No machines found.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody data-infinite-list="machines">
+                    @foreach ($machines as $machine)
+                        <tr>
+                            <td><input type="checkbox" value="{{ $machine->id }}" :checked="has({{ $machine->id }})" @change="toggle({{ $machine->id }}, $event.target.checked)" class="h-4 w-4 rounded border-border-strong text-primary" aria-label="Select {{ $machine->machine_number }}"></td>
+                            <td class="whitespace-nowrap font-semibold text-text">{{ $machine->machine_number }}</td>
+                            <td>{{ $machine->machine_type ?? '-' }}</td>
+                            <td>{{ $machine->area }}</td>
+                            <td>
+                                <button type="button" @click="preview = {{ $machine->id }}; previewName = @js($machine->machine_number)" class="block rounded-control focus-visible:outline-2 focus-visible:outline-primary" aria-label="Preview QR {{ $machine->machine_number }}">
+                                    <img src="{{ route('machine-qr.preview', $machine) }}" loading="lazy" alt="QR {{ $machine->machine_number }}" class="h-16 w-16 rounded-control border border-border bg-white">
+                                </button>
+                            </td>
+                            <td>
+                                <div class="flex justify-end gap-2">
+                                    <button type="button" @click="preview = {{ $machine->id }}; previewName = @js($machine->machine_number)" class="btn btn-ghost btn-sm min-h-11 lg:min-h-9">Preview</button>
+                                    <x-ui.button size="sm" variant="outline" href="{{ route('machine-qr.download', $machine) }}">Download</x-ui.button>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    {{-- Mobile cards --}}
+    {{-- Phone cards (below md). Second list with the same key. Checkboxes here carry no value on purpose: loadedIds() reads the table's. --}}
     <div class="space-y-3 md:hidden" data-infinite-list="machines">
-        @forelse ($machines as $machine)
-            <div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                <input type="checkbox" :checked="has({{ $machine->id }})" @change="toggle({{ $machine->id }}, $event.target.checked)" class="h-5 w-5 rounded border-slate-300" aria-label="Select {{ $machine->machine_number }}">
-                <button type="button" @click="preview = {{ $machine->id }}; previewName = @js($machine->machine_number)">
-                    <img src="{{ route('machine-qr.preview', $machine) }}" loading="lazy" alt="QR {{ $machine->machine_number }}" class="h-16 w-16 rounded border border-slate-200 bg-white">
+        @foreach ($machines as $machine)
+            <article class="card flex min-w-0 items-center gap-3 p-3">
+                <label class="flex min-h-11 min-w-11 items-center justify-center">
+                    <input type="checkbox" :checked="has({{ $machine->id }})" @change="toggle({{ $machine->id }}, $event.target.checked)" class="h-5 w-5 rounded border-border-strong text-primary" aria-label="Select {{ $machine->machine_number }}">
+                </label>
+                <button type="button" @click="preview = {{ $machine->id }}; previewName = @js($machine->machine_number)" class="shrink-0" aria-label="Preview QR {{ $machine->machine_number }}">
+                    <img src="{{ route('machine-qr.preview', $machine) }}" loading="lazy" alt="QR {{ $machine->machine_number }}" class="h-16 w-16 rounded-control border border-border bg-white">
                 </button>
                 <div class="min-w-0 flex-1">
-                    <div class="truncate text-sm font-semibold text-slate-800">{{ $machine->machine_number }}</div>
-                    <div class="truncate text-xs text-slate-500">{{ $machine->machine_type ?? '-' }} · {{ $machine->area }}</div>
-                    <a href="{{ route('machine-qr.download', $machine) }}" class="mt-1 inline-block text-xs font-medium text-blue-600">Download PNG</a>
+                    <h2 class="truncate font-semibold text-text">{{ $machine->machine_number }}</h2>
+                    <p class="truncate text-sm text-text-muted">{{ $machine->machine_type ?? '-' }} · {{ $machine->area }}</p>
+                    <a href="{{ route('machine-qr.download', $machine) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-2 hover:underline">Download PNG</a>
                 </div>
-            </div>
-        @empty
-            <p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No machines found.</p>
-        @endforelse
+            </article>
+        @endforeach
     </div>
 
-    <div class="mt-4"><x-infinite-scroll :paginator="$machines" key="machines" /></div>
+    <x-infinite-scroll :paginator="$machines" key="machines" />
 
     {{-- Preview modal --}}
-    <div x-show="preview" x-cloak @keydown.escape.window="preview = null" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-        <div @click.outside="preview = null" class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
-            <div class="mb-3 flex items-center justify-between">
-                <h3 class="text-base font-semibold text-slate-800" x-text="previewName"></h3>
-                <button type="button" @click="preview = null" class="text-slate-400 hover:text-slate-600" aria-label="Close">✕</button>
+    <div x-show="preview" x-cloak @keydown.escape.window="preview = null" class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="mq-preview-title">
+        <div @click.outside="preview = null" class="w-full max-w-sm rounded-card border border-border bg-surface p-5 shadow-popover">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <h3 id="mq-preview-title" class="text-lg font-semibold text-text" x-text="previewName"></h3>
+                <button type="button" @click="preview = null" class="btn btn-ghost min-h-11 min-w-11 px-0" aria-label="Close">✕</button>
             </div>
-            <img :src="preview ? '{{ url('machine-qr') }}/' + preview + '/preview' : ''" alt="QR preview" class="mx-auto h-64 w-64 border border-slate-200 bg-white p-4">
-            <p class="mt-2 text-center text-xs text-slate-500">Prints at exactly 2 × 2 cm. Keep a white margin of at least 2 mm around it.</p>
-            <a :href="preview ? '{{ url('machine-qr') }}/' + preview + '/download' : '#'" class="mt-3 block rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700">Download PNG (2 × 2 cm)</a>
+            <img :src="preview ? '{{ url('machine-qr') }}/' + preview + '/preview' : ''" alt="QR preview" class="mx-auto h-64 w-64 rounded-control border border-border bg-white p-4">
+            <p class="mt-2 text-center text-xs text-text-muted">Prints at exactly 2 × 2 cm. Keep a white margin of at least 2 mm around it.</p>
+            <a :href="preview ? '{{ url('machine-qr') }}/' + preview + '/download' : '#'" class="btn btn-primary mt-3 min-h-11 w-full">Download PNG (2 × 2 cm)</a>
         </div>
     </div>
 </div>
-
 <script>
     function machineQr(cfg) {
         const KEY = 'machine-qr-selected';

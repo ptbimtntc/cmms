@@ -49,83 +49,81 @@
 <div class="space-y-6">
 
     {{-- Header --}}
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <a href="{{ route('home') }}" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 transition">
-            &larr; Kembali ke Landing Page
-        </a>
-        <h1 class="mt-3 text-2xl font-semibold text-slate-800">Maintenance Intelligence Center</h1>
-        <p class="mt-1 text-sm text-slate-500">
+    <div class="card p-5 sm:p-6">
+        <a href="{{ route('home') }}" class="btn btn-ghost -ml-2 min-h-11">Kembali ke Landing Page</a>
+        <h1 class="mt-3 font-signage text-2xl font-semibold leading-tight text-text sm:text-3xl">Maintenance Intelligence Center</h1>
+        <p class="mt-1 text-sm text-text-muted">
             Central management for AI-powered maintenance analysis and virtual maintenance monitoring.
             Halaman ini hanya dapat diakses ADMIN dan bukan bagian dari menu utama.
         </p>
         <div class="mt-4 flex flex-wrap gap-2 text-xs">
-            <span class="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">AI Maintenance Intelligence: Planned</span>
-            <span class="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">Virtual Maintenance Environment: Planned</span>
+            <span class="badge badge-neutral">AI Maintenance Intelligence: Planned</span>
+            <span class="badge badge-neutral">Virtual Maintenance Environment: Planned</span>
         </div>
     </div>
 
     {{-- AI Maintenance Intelligence --}}
-    <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-800">AI Maintenance Intelligence</h2>
-        <p class="mt-1 text-sm text-slate-500">
+    <section class="card p-5 sm:p-6">
+        <h2 class="text-lg font-semibold text-text">AI Maintenance Intelligence</h2>
+        <p class="mt-1 text-sm text-text-muted">
             AI Agent adalah fitur tambahan; CMMS tetap berfungsi penuh tanpanya. Baru AI Sparepart Analyst yang sedang dikembangkan.
         </p>
 
         @php $first = $agents[0]; @endphp
-        <div class="mt-5 rounded-2xl border-2 border-blue-200 bg-blue-50/50 p-5">
+        <div class="mt-5 rounded-card border border-primary/30 bg-primary-light p-5">
             <div class="flex flex-wrap items-center gap-2">
-                <h3 class="text-base font-semibold text-slate-800">{{ $first['name'] }}</h3>
-                <span class="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-medium text-white">Prioritas pertama</span>
-                <span class="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ $first['status'] }}</span>
+                <h3 class="text-base font-semibold text-text">{{ $first['name'] }}</h3>
+                <span class="badge badge-primary">Prioritas pertama</span>
+                <span class="badge badge-neutral">{{ $first['status'] }}</span>
             </div>
-            <p class="mt-2 text-sm text-slate-600">Engine forecast statistik dan dashboard sudah tersedia; integrasi Gemini dan backend AI terpisah belum.</p>
-            <a href="{{ route('maintenance-intelligence.sparepart-analyst') }}" class="mt-3 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Buka AI Sparepart Analyst</a>
-            <ul class="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+            <p class="mt-2 text-sm text-text-muted">Engine forecast statistik dan dashboard sudah tersedia; integrasi Gemini dan backend AI terpisah belum.</p>
+            <a href="{{ route('maintenance-intelligence.sparepart-analyst') }}" class="btn btn-primary mt-3 min-h-11">Buka AI Sparepart Analyst</a>
+            <ul class="mt-3 grid gap-2 text-sm text-text-muted sm:grid-cols-2">
                 @foreach ($first['points'] as $point)
-                    <li class="flex gap-2"><span class="text-blue-500">&bull;</span>{{ $point }}</li>
+                    <li class="flex gap-2"><span class="text-primary" aria-hidden="true">&bull;</span>{{ $point }}</li>
                 @endforeach
             </ul>
         </div>
 
         <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach (array_slice($agents, 1) as $agent)
-                <div class="rounded-2xl border border-slate-200 p-4">
-                    <h3 class="text-sm font-semibold text-slate-800">{{ $agent['name'] }}</h3>
-                    <span class="mt-2 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{{ $agent['status'] }}</span>
+                <div class="rounded-control border border-border p-4">
+                    <h3 class="text-sm font-semibold text-text">{{ $agent['name'] }}</h3>
+                    <span class="badge badge-neutral mt-2">{{ $agent['status'] }}</span>
                 </div>
             @endforeach
         </div>
     </section>
 
     {{-- Virtual Maintenance Environment --}}
-    <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-800">Virtual Maintenance Environment</h2>
-        <p class="mt-1 text-sm text-slate-500">
+    <section class="card p-5 sm:p-6">
+        <h2 class="text-lg font-semibold text-text">Virtual Maintenance Environment</h2>
+        <p class="mt-1 text-sm text-text-muted">
             Visualisasi 2D aktivitas maintenance FreeDOMS. Tahap awal tersedia: dunia 2D dan karakter PIC berbasis aktivitas aktual (default OFF). Karakter AI dan komponen lain masih direncanakan.
         </p>
-        <a href="{{ route('maintenance-intelligence.vme') }}" class="mt-3 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Kelola VME</a>
+        <a href="{{ route('maintenance-intelligence.vme') }}" class="btn btn-primary mt-3 min-h-11">Kelola VME</a>
         <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach ($vme as $item)
-                <div class="rounded-2xl border border-slate-200 p-4">
-                    <h3 class="text-sm font-semibold text-slate-800">{{ $item }}</h3>
-                    <span class="mt-2 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">Planned</span>
+                <div class="rounded-control border border-border p-4">
+                    <h3 class="text-sm font-semibold text-text">{{ $item }}</h3>
+                    <span class="badge badge-neutral mt-2">Planned</span>
                 </div>
             @endforeach
         </div>
     </section>
 
     {{-- Development Overview --}}
-    <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-800">Development Overview</h2>
-        <p class="mt-1 text-sm text-slate-500">Urutan milestone pengembangan. Belum ada status progres yang dilacak.</p>
+    <section class="card p-5 sm:p-6">
+        <h2 class="text-lg font-semibold text-text">Development Overview</h2>
+        <p class="mt-1 text-sm text-text-muted">Urutan milestone pengembangan. Belum ada status progres yang dilacak.</p>
         <div class="mt-5 grid gap-6 lg:grid-cols-2">
             @foreach ($roadmaps as $title => $steps)
                 <div>
-                    <h3 class="text-sm font-semibold text-slate-700">{{ $title }}</h3>
+                    <h3 class="text-sm font-semibold text-text">{{ $title }}</h3>
                     <ol class="mt-3 space-y-2">
                         @foreach ($steps as $i => $step)
-                            <li class="flex items-center gap-3 text-sm text-slate-600">
-                                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-medium text-slate-500">{{ $i + 1 }}</span>
+                            <li class="flex items-center gap-3 text-sm text-text-muted">
+                                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold tabular-nums text-text-muted">{{ $i + 1 }}</span>
                                 {{ $step }}
                             </li>
                         @endforeach

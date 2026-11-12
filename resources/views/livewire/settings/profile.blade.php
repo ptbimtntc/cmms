@@ -16,13 +16,14 @@
 
             <div class="flex flex-col gap-2">
                 <div class="flex items-center gap-2">
-                    <input type="file" wire:model="photo" accept="image/*" />
+                    <input type="file" wire:model="photo" accept="image/*" aria-label="{{ __('Profile photo') }}"
+                        class="block w-full text-sm text-text-muted file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-semibold file:text-text hover:file:bg-surface-muted lg:file:min-h-9" />
                 </div>
 
-                <div wire:loading wire:target="photo">{{ __('Uploading...') }}</div>
+                <div wire:loading wire:target="photo" class="text-sm text-text-muted">{{ __('Uploading...') }}</div>
 
                 @error('photo')
-                    <flux:text class="text-red-600">{{ $message }}</flux:text>
+                    <flux:text class="text-danger">{{ $message }}</flux:text>
                 @enderror
 
                 @if (auth()->user()->avatar_path)
@@ -136,7 +137,7 @@
 
                     <div class="flex justify-center">
                         <div
-                            class="relative h-72 w-72 touch-none select-none overflow-hidden rounded-full border-4 border-slate-200 bg-slate-100"
+                            class="relative h-72 w-72 touch-none select-none overflow-hidden rounded-full border-4 border-border bg-surface-muted"
                             :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
                             x-on:mousedown="startDrag($event)"
                             x-on:mousemove.window="onDrag($event)"
@@ -150,7 +151,7 @@
                     </div>
 
                     <div class="flex items-center gap-3 px-4">
-                        <span class="text-sm text-slate-400">−</span>
+                        <span class="text-sm text-text-muted" aria-hidden="true">−</span>
                         <input
                             type="range"
                             x-model.number="scale"
@@ -158,9 +159,9 @@
                             :max="maxScale"
                             step="0.001"
                             x-on:input="onZoom()"
-                            class="w-full accent-blue-600"
+                            class="w-full accent-[var(--color-primary)]"
                         />
-                        <span class="text-sm text-slate-400">+</span>
+                        <span class="text-sm text-text-muted" aria-hidden="true">+</span>
                     </div>
 
                     <div class="flex justify-end gap-2">
