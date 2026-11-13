@@ -22,7 +22,7 @@
                 </p>
 
                 <a href="{{ route('qr.scan') }}"
-                    class="mt-8 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-md bg-amber-500 px-8 text-lg font-semibold text-amber-950 hover:bg-amber-400 active:bg-amber-600 sm:w-auto">
+                    class="mt-8 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-md bg-primary px-8 text-lg font-semibold text-white hover:bg-primary-hover active:bg-primary-active sm:w-auto">
                     <x-landing.icon name="qr" class="h-6 w-6" />
                     Scan Mesin
                 </a>

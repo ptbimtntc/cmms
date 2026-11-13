@@ -46,7 +46,7 @@ class SmallPmRowImport implements ToCollection
                 }
 
                 if ($rowName === '' || $machineNumber === '') {
-                    $this->skip($lineNo, 'kolom row dan machine_number wajib diisi.');
+                    $this->skip($lineNo, 'the row and machine_number columns are required.');
 
                     continue;
                 }

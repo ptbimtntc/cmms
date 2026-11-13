@@ -40,7 +40,7 @@ class AiCharacterService
                 // An analysis that cannot run must not break the map: show it as alerting.
                 Log::warning('VME AI character analysis failed', ['character' => $key, 'error' => $e->getMessage()]);
                 $status = AiAnalysisResult::ALERT;
-                $summary = 'Analisis tidak dapat dijalankan.';
+                $summary = 'The analysis could not be run.';
                 $updated = now();
             }
 

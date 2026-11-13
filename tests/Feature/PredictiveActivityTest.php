@@ -12,7 +12,7 @@ use App\Services\ActiveActivityResolver;
 use App\Services\Vme\JobTypeResolver;
 use Carbon\Carbon;
 
-const PV_PROMPT = 'APAKAH ANDA INGIN MEMULAI ACTION PREDICTIVE?';
+const PV_PROMPT = 'DO YOU WANT TO START ACTION PREDICTIVE?';
 
 function pvPlainPic(): User
 {
@@ -70,7 +70,7 @@ test('the detail page has no prompt but tells an unstarted PIC why the buttons a
     $pic = pvPlainPic();
 
     $this->actingAs($pic)->get(route('predictive.show', $wo))
-        ->assertOk()->assertDontSee(PV_PROMPT)->assertSee('Aktivitas Action Predictive belum dimulai');
+        ->assertOk()->assertDontSee(PV_PROMPT)->assertSee('Action Predictive activity has not started');
 });
 
 test('start records the activity as the PIC current one', function () {
@@ -223,14 +223,14 @@ test('an unstarted PIC sees Claim and Action disabled with a banner, a started P
     pvWo(['order_number' => 'WO-GATE']);
 
     $this->actingAs($pic)->get(route('predictive.index'))
-        ->assertSee('Aktivitas Action Predictive belum dimulai')
-        ->assertSee('Mulai aktivitas Action Predictive dulu')
+        ->assertSee('Action Predictive activity has not started')
+        ->assertSee('Start the Action Predictive activity first')
         ->assertSee('Start Predictive')
         ->assertDontSee('action="'.route('predictive.claim', PredictiveWorkOrderForTest()), false);
 
     $started = pvUser('PIC WWD');
     $this->actingAs($started)->get(route('predictive.index'))
-        ->assertDontSee('Aktivitas Action Predictive belum dimulai')
+        ->assertDontSee('Action Predictive activity has not started')
         ->assertSee(route('predictive.claim', PredictiveWorkOrderForTest()), false);
 });
 

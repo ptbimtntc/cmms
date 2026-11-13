@@ -42,7 +42,7 @@
                         };
                         image.onload = () => {
                             // Guard against a corrupt/non-image file slipping past
-                            // the accept filter with zero intrinsic dimensions —
+                            // the accept filter with zero intrinsic dimensions -
                             // without this, minScale/maxScale become Infinity and
                             // the zoom slider ends up in an invalid, unsubmittable state.
                             if (! image.width || ! image.height) {

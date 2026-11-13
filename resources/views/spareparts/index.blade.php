@@ -15,7 +15,13 @@
     @include('spareparts._tabs')
 
     <div class="space-y-5">
-        <x-ui.page-header title="Sparepart Master" description="Manage sparepart master data" />
+        <x-ui.page-header title="Sparepart Master" description="Manage sparepart master data">
+            @if ($canManage)
+                <x-slot:actions>
+                    <x-ui.button href="{{ route('spareparts.create') }}">Add Sparepart</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
 
         @if ($canManage)
             @include('partials.master.import-form', ['action' => route('spareparts.import'), 'accept' => '.csv', 'id' => 'sparepartFileInput'])
@@ -79,7 +85,7 @@
         </form>
 
         @if ($spareparts->isEmpty())
-            <x-ui.empty-state title="No Data Found" :description="$hasFilters ? 'Change the filters, or reset them to see every sparepart.' : ($canManage ? 'Import a CSV file above to add spareparts.' : null)" />
+            <x-ui.empty-state title="No Data Found" :description="$hasFilters ? 'Change the filters, or reset them to see every sparepart.' : ($canManage ? 'Add a sparepart, or import a CSV file above.' : null)" />
         @endif
 
         {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}

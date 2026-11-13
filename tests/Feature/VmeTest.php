@@ -160,7 +160,7 @@ test('a PM whose PIC name matches two PIC accounts is not attributed to either',
         ->and(vmeFind($snap, $b)['activity'])->toBeNull()
         ->and($snap['sync']['unmapped_count'])->toBeGreaterThan(0);
 
-    $this->actingAs($admin)->get('/maintenance-intelligence/vme')->assertOk()->assertSee('sama');
+    $this->actingAs($admin)->get('/maintenance-intelligence/vme')->assertOk()->assertSee('Duplicate PIC names');
 });
 
 test('a unique name is still mapped', function () {

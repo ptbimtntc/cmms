@@ -4,7 +4,7 @@
             <h2 id="oil-audit-heading" class="text-sm font-semibold text-text">Oil Audit</h2>
             <p class="text-xs text-text-muted">WWD &middot; NDE/NDB machines</p>
         </div>
-        <a href="{{ route('oil-audits.report') }}" class="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:text-primary-hover hover:underline lg:min-h-0">Open Action Audit Oli</a>
+        <a href="{{ route('oil-audits.report') }}" class="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:text-primary-hover hover:underline lg:min-h-0">Open Oil Audit Action</a>
     </div>
 
     {{-- Numbers stay in ink; the coloured dot names the state, the label says it in words. --}}

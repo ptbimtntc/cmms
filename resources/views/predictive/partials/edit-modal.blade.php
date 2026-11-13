@@ -36,7 +36,7 @@
                             <div>
                                 <input id="pe-machine" type="text" :value="edit.machine_number" disabled class="input">
                                 <input type="hidden" name="machine_number" :value="edit.machine_number">
-                                <p class="form-hint mt-1">Terkunci karena WO sudah di-claim atau punya riwayat Action.</p>
+                                <p class="form-hint mt-1">Locked because the WO is already claimed or has Action history.</p>
                             </div>
                         </template>
                         <template x-if="!edit.locked">
@@ -47,16 +47,16 @@
                                 <ul x-show="results.length" x-cloak class="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-control border border-border bg-surface py-1 text-sm shadow-popover">
                                     <template x-for="m in results" :key="m.machine_number">
                                         <li>
-                                            <button type="button" @click="pick(m)" class="flex min-h-11 w-full items-center justify-between gap-3 px-3 text-left hover:bg-primary-light focus-visible:bg-primary-light focus-visible:outline-none">
+                                            <button type="button" @click="pick(m)" class="flex min-h-11 w-full items-center justify-between gap-3 px-3 text-left hover:bg-primary-light focus-visible:bg-primary-light focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary">
                                                 <span class="font-medium text-text" x-text="m.machine_number"></span>
                                                 <span class="truncate text-xs text-text-muted" x-text="(m.machine_type || '-') + ' · ' + m.area"></span>
                                             </button>
                                         </li>
                                     </template>
                                 </ul>
-                                <p x-show="loading" x-cloak class="form-hint mt-1">Mencari mesin…</p>
-                                <p x-show="failed" x-cloak class="form-error mt-1">Pencarian mesin gagal. Coba lagi.</p>
-                                <p class="form-hint mt-1">Area dan Machine Type mengikuti Machine Master.</p>
+                                <p x-show="loading" x-cloak class="form-hint mt-1">Searching machines…</p>
+                                <p x-show="failed" x-cloak class="form-error mt-1">Machine search failed. Try again.</p>
+                                <p class="form-hint mt-1">Area and Machine Type follow Machine Master.</p>
                             </div>
                         </template>
                     </div>
@@ -82,8 +82,8 @@
                 </div>
 
                 <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    <button type="button" @click="edit = null" class="btn btn-ghost min-h-11">Batal</button>
-                    <button type="submit" x-bind:disabled="busy" class="btn btn-primary min-h-11">Simpan perubahan</button>
+                    <button type="button" @click="edit = null" class="btn btn-ghost min-h-11">Cancel</button>
+                    <button type="submit" x-bind:disabled="busy" class="btn btn-primary min-h-11">Save changes</button>
                 </div>
             </form>
         </template>

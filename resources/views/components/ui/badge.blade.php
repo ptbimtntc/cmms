@@ -1,5 +1,5 @@
 {{--
-    Status label only (Selesai, Terlambat, Menunggu). Not for decoration.
+    Status label only (Done, Overdue, Waiting). Not for decoration.
     <x-ui.badge tone="danger">Terlambat</x-ui.badge>
 --}}
 @props([

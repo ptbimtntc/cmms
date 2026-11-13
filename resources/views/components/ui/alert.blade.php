@@ -1,5 +1,5 @@
 {{--
-    <x-ui.alert tone="success">Jadwal tersimpan.</x-ui.alert>
+    <x-ui.alert tone="success">Schedule saved.</x-ui.alert>
     danger uses role=alert so screen readers announce it right away.
 --}}
 @props([

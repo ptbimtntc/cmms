@@ -14,24 +14,24 @@
             <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
         @endif
 
-        <x-ui.form-page title="Edit Row" description="Ubah data row dan pilih mesin yang masuk row ini."
-            :action="route('small-pm-rows.update', $row)" method="PUT" :back="route('small-pm-rows.index')" back-label="Kembali ke Row Small PM" submit="Simpan Perubahan" cancel-label="Batal">
+        <x-ui.form-page title="Edit Row" description="Change the row details and pick the machines that belong to it."
+            :action="route('small-pm-rows.update', $row)" method="PUT" :back="route('small-pm-rows.index')" back-label="Back to Small PM Rows" submit="Save Perubahan" cancel-label="Batal">
             <input type="hidden" name="return_page" value="{{ request('page') }}">
 
             @include('small-pm-rows._fields', ['row' => $row])
 
             <fieldset class="rounded-control border border-border bg-surface-sunken p-4 sm:p-5">
-                <legend class="sr-only">Mesin di row ini</legend>
+                <legend class="sr-only">Machines in this row</legend>
                 <div class="mb-3 flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-sm font-semibold text-text">Mesin di row ini</p>
-                        <p class="mt-0.5 text-xs text-text-muted">Hanya mesin area {{ $row->area->name ?? '-' }} yang belum masuk row lain. Satu mesin hanya bisa di satu row.</p>
+                        <p class="text-sm font-semibold text-text">Machines in this row</p>
+                        <p class="mt-0.5 text-xs text-text-muted">Only {{ $row->area->name ?? '-' }} machines that are not in another row. A machine can belong to one row only.</p>
                     </div>
                     <x-ui.badge id="machineSelectedCount" class="shrink-0" aria-live="polite">{{ count($checked) }} dipilih</x-ui.badge>
                 </div>
 
-                <label for="machineSearchInput" class="sr-only">Cari mesin</label>
-                <input type="text" id="machineSearchInput" placeholder="Cari nomor atau tipe mesin" class="input mb-3">
+                <label for="machineSearchInput" class="sr-only">Search machines</label>
+                <input type="text" id="machineSearchInput" placeholder="Search machine number or type" class="input mb-3">
 
                 <div class="max-h-72 space-y-0.5 overflow-y-auto rounded-control border border-border bg-surface p-1.5" id="machineList">
                     @forelse ($machines as $machine)
@@ -45,7 +45,7 @@
                             <span class="truncate text-text-muted">{{ $machine->machine_type }}</span>
                         </label>
                     @empty
-                        <p class="p-3 text-sm text-text-muted">Tidak ada mesin yang bisa dipilih.</p>
+                        <p class="p-3 text-sm text-text-muted">No machine available to pick.</p>
                     @endforelse
                 </div>
                 @error('machine_ids')

@@ -86,7 +86,7 @@ test('Save Checklist blocked when a measurement actual value is empty', function
     addPmMeasurement($pm, null);
 
     expect(app(PMChecklistSaveService::class)->completionErrors($pm))
-        ->toContain('Measurement (nilai actual belum diisi)');
+        ->toContain('Measurement (actual value is empty)');
 });
 
 test('Save Checklist blocked when a measurement actual value is only whitespace', function () {
@@ -94,7 +94,7 @@ test('Save Checklist blocked when a measurement actual value is only whitespace'
     addPmMeasurement($pm, '   ');
 
     expect(app(PMChecklistSaveService::class)->completionErrors($pm))
-        ->toContain('Measurement (nilai actual belum diisi)');
+        ->toContain('Measurement (actual value is empty)');
 });
 
 test('Save Checklist allowed when every measurement actual value is filled', function () {

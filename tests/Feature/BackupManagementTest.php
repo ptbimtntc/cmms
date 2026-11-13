@@ -71,7 +71,7 @@ describe('page', function () {
         $response->assertSee('Backup Database')
             ->assertSee('Backup Source Code Production')
             ->assertSee('Backup &amp; Data Protection', false)
-            ->assertSee('Belum pernah');
+            ->assertSee('Never');
 
         if (config('app.key')) {
             $response->assertDontSee(config('app.key'));
@@ -88,7 +88,7 @@ describe('page', function () {
         $this->actingAs($admin)->get('/backup')
             ->assertOk()
             ->assertDontSee(route('backup.download', $run))
-            ->assertSee('Tidak ada file backup yang tersedia');
+            ->assertSee('No backup file is available');
     });
 });
 
@@ -171,7 +171,7 @@ describe('database backup', function () {
 
         $response = $this->actingAs($admin)->post('/backup/database')->assertRedirect(route('backup.index'));
 
-        expect(BackupRun::sole()->error_message)->toBe('Gagal membuat backup database. Periksa log server.');
+        expect(BackupRun::sole()->error_message)->toBe('Could not create the database backup. Check the server log.');
         $response->assertSessionHas('error', fn ($message) => ! str_contains($message, 'secret-host'));
     });
 
@@ -354,7 +354,7 @@ describe('reminder', function () {
     test('reminds the admin when no database backup exists yet', function () {
         $admin = User::factory()->admin()->create();
 
-        $this->actingAs($admin)->get('/backup')->assertOk()->assertSee('Pengingat backup');
+        $this->actingAs($admin)->get('/backup')->assertOk()->assertSee('Backup reminder');
     });
 
     test('no reminder while every backup is recent', function () {
@@ -362,7 +362,7 @@ describe('reminder', function () {
         backupRunOn(BackupRun::TYPE_DATABASE, ['finished_at' => now()->subDay()]);
         backupRunOn(BackupRun::TYPE_SOURCE, ['finished_at' => now()->subDay()]);
 
-        $this->actingAs($admin)->get('/backup')->assertOk()->assertDontSee('Pengingat backup');
+        $this->actingAs($admin)->get('/backup')->assertOk()->assertDontSee('Backup reminder');
         expect(app(BackupManager::class)->reminderNeeded())->toBeFalse();
     });
 
@@ -370,7 +370,7 @@ describe('reminder', function () {
         $admin = User::factory()->admin()->create();
 
         // No backup has ever been made, so the reminder would fire everywhere if it were still included elsewhere.
-        $this->actingAs($admin)->get('/dashboard')->assertOk()->assertDontSee('Pengingat backup');
+        $this->actingAs($admin)->get('/dashboard')->assertOk()->assertDontSee('Backup reminder');
     });
 
     test('reminder becomes due once the last successful backup is older than the window', function () {
@@ -380,8 +380,8 @@ describe('reminder', function () {
 
         $this->actingAs($admin)->get('/backup')
             ->assertOk()
-            ->assertSee('Pengingat backup')
-            ->assertSee('sudah lebih dari 7 hari');
+            ->assertSee('Backup reminder')
+            ->assertSee('more than 7 days ago');
 
         expect(app(BackupManager::class)->reminders()[BackupRun::TYPE_DATABASE]['state'])->toBe(BackupManager::REMINDER_DUE);
     });

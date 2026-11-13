@@ -13,7 +13,7 @@
 
             <div>
 
-                <p class="font-signage text-lg font-semibold text-amber-300">Ready to Go Digital?</p>
+                <p class="font-signage text-lg font-semibold text-blue-300">Ready to Go Digital?</p>
 
                 <h2 class="mt-2 font-signage text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
                     Siap Mengubah Cara Tim Maintenance Bekerja?
@@ -30,7 +30,7 @@
             <div class="flex flex-col gap-3">
 
                 <a href="{{ route('qr.scan') }}"
-                    class="inline-flex min-h-14 items-center justify-center gap-3 rounded-md bg-amber-500 px-6 text-lg font-semibold text-amber-950 hover:bg-amber-400 active:bg-amber-600">
+                    class="inline-flex min-h-14 items-center justify-center gap-3 rounded-md bg-white px-6 text-lg font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-100">
                     <x-landing.icon name="qr" class="h-6 w-6" />
                     Scan Mesin
                 </a>

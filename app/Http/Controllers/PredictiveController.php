@@ -131,11 +131,11 @@ class PredictiveController extends Controller
         $machine = Machine::where('machine_number', $data['machine_number'])->first();
 
         if (! $machine) {
-            return back()->withInput()->withErrors(['machine_number' => 'Machine Number tidak ditemukan di Machine Master.']);
+            return back()->withInput()->withErrors(['machine_number' => 'Machine Number not found in Machine Master.']);
         }
 
         if (! $user->isAdmin() && $user->area?->name !== $machine->area) {
-            return back()->withInput()->withErrors(['machine_number' => 'Mesin ini berada di luar area Anda.']);
+            return back()->withInput()->withErrors(['machine_number' => 'This machine is outside your area.']);
         }
 
         $this->service->create($data['category'], $machine, $data, $user);
@@ -165,7 +165,7 @@ class PredictiveController extends Controller
 
             return redirect()
                 ->route('predictive.index', ['tab' => $this->tabFor($category)])
-                ->with('error', 'Import gagal dibaca. Periksa format file (.xlsx, .xls, atau .csv) dan header kolom.');
+                ->with('error', 'The import could not be read. Check the file format (.xlsx, .xls, or .csv) and the column headers.');
         }
 
         return redirect()
@@ -221,17 +221,17 @@ class PredictiveController extends Controller
 
         if ($data['machine_number'] !== $workOrder->machine_number) {
             if ($workOrder->pic_user_id !== null || $workOrder->actions()->exists() || $workOrder->reopens()->exists()) {
-                return back()->withInput()->withErrors(['machine_number' => 'Machine Number tidak bisa diubah karena WO sudah di-claim atau punya riwayat Action.']);
+                return back()->withInput()->withErrors(['machine_number' => 'Machine Number cannot be changed: the WO is already claimed or has Action history.']);
             }
 
             $machine = Machine::where('machine_number', $data['machine_number'])->first();
 
             if (! $machine) {
-                return back()->withInput()->withErrors(['machine_number' => 'Machine Number tidak ditemukan di Machine Master.']);
+                return back()->withInput()->withErrors(['machine_number' => 'Machine Number not found in Machine Master.']);
             }
 
             if (! $user->isAdmin() && $user->area?->name !== $machine->area) {
-                return back()->withInput()->withErrors(['machine_number' => 'Mesin ini berada di luar area Anda.']);
+                return back()->withInput()->withErrors(['machine_number' => 'This machine is outside your area.']);
             }
 
             $changes += [
@@ -271,7 +271,7 @@ class PredictiveController extends Controller
         $validated = $request->validate(['started_at' => ['required', 'date']]);
 
         $user = $request->user();
-        abort_unless($user->isPic(), 403, 'Hanya PIC yang dapat memulai aktivitas Action Predictive.');
+        abort_unless($user->isPic(), 403, 'Only a PIC can start the Action Predictive activity.');
 
         if (! $this->predictiveIsCurrent($user)) {
             $startedAt = Carbon::parse($validated['started_at']);
@@ -307,7 +307,7 @@ class PredictiveController extends Controller
     {
         $user = $request->user();
         $this->authorizeVisible($workOrder, $user);
-        abort_unless($user->isPic(), 403, 'Hanya PIC yang dapat meng-claim WO.');
+        abort_unless($user->isPic(), 403, 'Only a PIC can claim a WO.');
 
         if (! $this->predictiveIsCurrent($user)) {
             return back()->with('error', self::START_FIRST);
@@ -326,10 +326,10 @@ class PredictiveController extends Controller
     {
         $user = $request->user();
         $this->authorizeVisible($workOrder, $user);
-        abort_unless($user->isPic(), 403, 'Hanya PIC yang dapat menyimpan Action.');
+        abort_unless($user->isPic(), 403, 'Only a PIC can save an Action.');
 
         if ($workOrder->isOpen() && ! $workOrder->isClaimedBy($user)) {
-            abort(403, 'Hanya PIC yang meng-claim WO ini yang dapat menyimpan Action.');
+            abort(403, 'Only the PIC who claimed this WO can save an Action.');
         }
 
         if (! $this->predictiveIsCurrent($user)) {
@@ -351,7 +351,7 @@ class PredictiveController extends Controller
     {
         $user = $request->user();
         $this->authorizeVisible($workOrder, $user);
-        abort_unless($user->isAdmin() || $user->isKoordinator(), 403, 'Hanya Admin atau Koordinator yang dapat melakukan Reopen.');
+        abort_unless($user->isAdmin() || $user->isKoordinator(), 403, 'Only an Admin or Koordinator can reopen a WO.');
 
         try {
             $this->service->reopen($workOrder, $user);
@@ -366,8 +366,8 @@ class PredictiveController extends Controller
     private function messages(): array
     {
         return [
-            'order_number.unique' => 'Order Number sudah terdaftar di WO lain.',
-            'due_date.after_or_equal' => 'Due Date tidak boleh lebih awal dari Date.',
+            'order_number.unique' => 'That Order Number is already used by another WO.',
+            'due_date.after_or_equal' => 'The Due Date cannot be earlier than the Date.',
         ];
     }
 
@@ -405,7 +405,7 @@ class PredictiveController extends Controller
             ->all();
     }
 
-    private const START_FIRST = 'Mulai aktivitas Action Predictive dulu sebelum Claim atau Action / Closing.';
+    private const START_FIRST = 'Start the Action Predictive activity before Claim or Action / Closing.';
 
     /** Predictive is this PIC's one current activity (started today and not ended or replaced). */
     private function predictiveIsCurrent(User $user): bool

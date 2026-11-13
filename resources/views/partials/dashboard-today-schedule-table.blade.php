@@ -30,7 +30,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="py-4 text-center text-text-disabled">No data available</td>
+                    <td colspan="5" class="py-4 text-center text-text-muted">No data available</td>
                 </tr>
             @endforelse
         </tbody>

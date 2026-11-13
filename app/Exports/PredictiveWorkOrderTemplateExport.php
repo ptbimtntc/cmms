@@ -17,7 +17,7 @@ class PredictiveWorkOrderTemplateExport implements FromArray, ShouldAutoSize
     {
         return [
             ['Order Number', 'Machine Number', 'Date', 'Problem Description'],
-            ['4100012345', 'WWD-001', '2026-11-10', 'Getaran tinggi pada sisi motor'],
+            ['4100012345', 'WWD-001', '2026-11-10', 'High vibration on the motor side'],
             ['4100012346', 'WWD-002', '2026-11-10', 'Kebocoran angin di sambungan selang'],
         ];
     }

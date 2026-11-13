@@ -50,7 +50,7 @@ class PredictiveOptionImport implements ToCollection, WithHeadingRow
         $missing = array_diff(self::REQUIRED_HEADINGS, $first ? array_keys($first->toArray()) : []);
 
         if ($missing !== []) {
-            $this->fatalError = 'Kolom wajib tidak ditemukan: '.implode(', ', $missing).'. Gunakan header: Category, Area, Problem, Finding.';
+            $this->fatalError = 'Required column not found: '.implode(', ', $missing).'. Use these headers: Category, Area, Problem, Finding.';
 
             return;
         }
@@ -77,7 +77,7 @@ class PredictiveOptionImport implements ToCollection, WithHeadingRow
         $category = $category === 'AIRLEAKED' ? PredictiveWorkOrder::CATEGORY_AIR_LEAKED : $category;
 
         if (! isset(PredictiveWorkOrder::CATEGORIES[$category])) {
-            $this->record($line, $label, 'failed', 'Category harus VIBRATION atau AIR_LEAKED');
+            $this->record($line, $label, 'failed', 'Category must be VIBRATION or AIR_LEAKED');
 
             return;
         }
@@ -97,7 +97,7 @@ class PredictiveOptionImport implements ToCollection, WithHeadingRow
         }
 
         if ($problemName === '' || mb_strlen($problemName) > 255 || mb_strlen($findingName) > 255) {
-            $this->record($line, $label, 'failed', 'Problem wajib diisi, Problem dan Finding maksimal 255 karakter');
+            $this->record($line, $label, 'failed', 'Problem is required; Problem and Finding are at most 255 characters');
 
             return;
         }
@@ -124,7 +124,7 @@ class PredictiveOptionImport implements ToCollection, WithHeadingRow
         if ($created) {
             $this->success++;
         } else {
-            $this->record($line, $label, 'skipped', 'Sudah ada di master, tidak diubah');
+            $this->record($line, $label, 'skipped', 'Already in the master; left unchanged');
         }
     }
 

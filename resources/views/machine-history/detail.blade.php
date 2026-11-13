@@ -40,7 +40,7 @@
 
     <div class="space-y-5">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <x-ui.button variant="ghost" href="{{ $backUrl }}" class="-ml-2">Kembali</x-ui.button>
+            <x-ui.button variant="ghost" href="{{ $backUrl }}" class="-ml-2">Back</x-ui.button>
             <button type="button" onclick="exportPmSchedulePdf(this, '{{ route('pm-schedules.pdf', $pmSchedule->id) }}')" class="btn btn-outline min-h-11">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />

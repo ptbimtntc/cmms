@@ -58,14 +58,14 @@ class GoogleDriveUploader
     public function upload(string $absolutePath, string $name, string $mimeType = 'application/octet-stream'): string
     {
         if (! $this->isConfigured()) {
-            throw new BackupStepException('Google Drive belum dikonfigurasi.');
+            throw new BackupStepException('Google Drive is not configured.');
         }
 
         $size = @filesize($absolutePath);
         $handle = @fopen($absolutePath, 'rb');
 
         if ($size === false || $handle === false) {
-            throw new BackupStepException('File backup tidak dapat dibaca untuk diunggah ke Google Drive.');
+            throw new BackupStepException('The backup file could not be read for upload to Google Drive.');
         }
 
         try {
@@ -92,7 +92,7 @@ class GoogleDriveUploader
             return;
         }
 
-        throw new BackupStepException($this->failure('Gagal menghapus file lama di Google Drive', $response));
+        throw new BackupStepException($this->failure('Could not delete the old file on Google Drive', $response));
     }
 
     /**
@@ -104,7 +104,7 @@ class GoogleDriveUploader
     public function createFolder(string $name): string
     {
         if (! $this->clientConfigured()) {
-            throw new BackupStepException('Client ID, client secret, atau refresh token Google Drive belum diisi.');
+            throw new BackupStepException('The Google Drive client ID, client secret, or refresh token is missing.');
         }
 
         $response = $this->request(fn () => Http::withToken($this->token())
@@ -112,7 +112,7 @@ class GoogleDriveUploader
             ->post(self::FILES_URL.'?fields=id', ['name' => $name, 'mimeType' => self::FOLDER_MIME]));
 
         if (! $response->successful() || ! is_string($response->json('id'))) {
-            throw new BackupStepException($this->failure('Gagal membuat folder di Google Drive', $response));
+            throw new BackupStepException($this->failure('Could not create the folder on Google Drive', $response));
         }
 
         return $response->json('id');
@@ -134,7 +134,7 @@ class GoogleDriveUploader
         $location = $response->header('Location');
 
         if (! $response->successful() || $location === '') {
-            throw new BackupStepException($this->failure('Gagal memulai unggahan ke Google Drive', $response));
+            throw new BackupStepException($this->failure('Could not start the upload to Google Drive', $response));
         }
 
         return $location;
@@ -151,7 +151,7 @@ class GoogleDriveUploader
             $length = strlen($chunk);
 
             if ($size > 0 && $length === 0) {
-                throw new BackupStepException('File backup berubah saat diunggah ke Google Drive.');
+                throw new BackupStepException('The backup file changed while it was being uploaded to Google Drive.');
             }
 
             $range = $size === 0
@@ -172,7 +172,7 @@ class GoogleDriveUploader
                 $id = $response->json('id');
 
                 if (! is_string($id) || $id === '') {
-                    throw new BackupStepException('Google Drive tidak mengembalikan ID file.');
+                    throw new BackupStepException('Google Drive returned no file ID.');
                 }
 
                 return $id;
@@ -206,8 +206,8 @@ class GoogleDriveUploader
             $code = $this->errorCode($response);
 
             throw new BackupStepException($code === 'invalid_grant'
-                ? 'Refresh token Google Drive ditolak (invalid_grant). Buat refresh token baru.'
-                : $this->failure('Login ke Google Drive gagal', $response));
+                ? 'Google Drive rejected the refresh token (invalid_grant). Create a new one.'
+                : $this->failure('Google Drive sign-in failed', $response));
         }
 
         $this->accessToken = $token;
@@ -223,7 +223,7 @@ class GoogleDriveUploader
         try {
             return $send();
         } catch (ConnectionException) {
-            throw new BackupStepException('Tidak dapat terhubung ke Google Drive. Periksa koneksi internet server.');
+            throw new BackupStepException('Could not reach Google Drive. Check the server internet connection.');
         }
     }
 

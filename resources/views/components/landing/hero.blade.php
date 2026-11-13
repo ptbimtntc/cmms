@@ -28,7 +28,7 @@
             <div class="cine-in mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center" style="--d: 0.35s">
 
                 <a href="{{ route('qr.scan') }}"
-                    class="inline-flex min-h-14 items-center justify-center gap-3 rounded-md bg-amber-500 px-7 text-lg font-semibold text-amber-950 hover:bg-amber-400 active:bg-amber-600">
+                    class="inline-flex min-h-14 items-center justify-center gap-3 rounded-md bg-white px-7 text-lg font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-100">
                     <x-landing.icon name="qr" class="h-6 w-6" />
                     Scan Mesin
                 </a>

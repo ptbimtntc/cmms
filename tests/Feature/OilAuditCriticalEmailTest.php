@@ -262,11 +262,11 @@ test('settings page reports queue worker status from the heartbeat', function ()
     config(['queue.default' => 'database']);
 
     Cache::forget(QueueWorkerStatus::KEY);
-    $this->get(route('email-notifications.edit'))->assertSee('TIDAK AKTIF');
+    $this->get(route('email-notifications.edit'))->assertSee('NOT ACTIVE');
 
     event(new Looping('database', 'default'));
-    $this->get(route('email-notifications.edit'))->assertSee('Queue worker: AKTIF', false);
+    $this->get(route('email-notifications.edit'))->assertSee('Queue worker: ACTIVE', false);
 
     Cache::put(QueueWorkerStatus::KEY, time() - 600);
-    $this->get(route('email-notifications.edit'))->assertSee('TIDAK AKTIF');
+    $this->get(route('email-notifications.edit'))->assertSee('NOT ACTIVE');
 });

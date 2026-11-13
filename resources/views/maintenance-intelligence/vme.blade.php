@@ -7,10 +7,10 @@
     $contentMaxWidth = 'max-w-[110rem]';
 
     $labels = [
-        'display' => ['VME Display', 'Menampilkan halaman peta VME (/vme).'],
-        'activity_sync' => ['Today Activity Synchronization', 'Snapshot membaca aktivitas aktual PIC dari FreeDOMS. OFF = karakter selalu idle.'],
-        'human_movement' => ['Human Character Movement', 'Karakter berjalan ke lokasi aktivitas. OFF = karakter tetap di basis.'],
-        'ai_characters' => ['AI Character Display', 'Menampilkan karakter AI di Office (hanya memantau, tidak mengubah data FreeDOMS). OFF = karakter AI tidak tampil.'],
+        'display' => ['VME Display', 'Shows the VME map page (/vme).'],
+        'activity_sync' => ['Today Activity Synchronization', 'The snapshot reads what each PIC is actually doing in FreeDOMS. OFF means characters stay idle.'],
+        'human_movement' => ['Human Character Movement', 'Characters walk to where the activity is. OFF keeps them at their base.'],
+        'ai_characters' => ['AI Character Display', 'Shows the AI characters in the Office (they only watch; they never change FreeDOMS data). OFF hides them.'],
     ];
 @endphp
 
@@ -21,10 +21,10 @@
         <a href="{{ route('maintenance-intelligence.index') }}" class="btn btn-ghost -ml-2 min-h-11">Maintenance Intelligence Center</a>
         <h1 class="mt-3 font-signage text-2xl font-semibold leading-tight text-text sm:text-3xl">Virtual Maintenance Environment</h1>
         <p class="mt-1 text-sm text-text-muted">
-            Visualisasi 2D aktivitas aktual FreeDOMS. VME hanya membaca data; mematikannya tidak memengaruhi PM, Greasing, Oil Audit, atau modul lain.
+            A 2D view of what is actually happening in FreeDOMS. VME only reads data; turning it off changes nothing in PM, Greasing, Oil Audit, or any other module.
         </p>
         @if ($effective['display'])
-            <a href="{{ route('vme.index') }}" class="btn btn-primary mt-3 min-h-11">Buka VME</a>
+            <a href="{{ route('vme.index') }}" class="btn btn-primary mt-3 min-h-11">Open VME</a>
         @endif
     </div>
 
@@ -40,7 +40,7 @@
         <h2 class="text-lg font-semibold text-text">Feature Switch</h2>
         @if ($killed)
             <div class="alert alert-danger mt-3" role="alert">
-                Kill switch lingkungan aktif (<code>VME_KILL_SWITCH=true</code>): seluruh fitur VME dinonaktifkan, apa pun isi pengaturan di bawah.
+                The environment kill switch is on (<code>VME_KILL_SWITCH=true</code>): every VME feature is off, whatever the settings below say.
             </div>
         @endif
         <form method="POST" action="{{ route('maintenance-intelligence.vme.settings') }}" class="mt-4 space-y-3">
@@ -60,8 +60,8 @@
             @if (count($aiCharacters))
                 <input type="hidden" name="characters_submitted" value="1">
                 <div class="rounded-control border border-border p-4">
-                    <p class="text-sm font-semibold text-text">Karakter AI</p>
-                    <p class="text-xs text-text-muted">Berlaku bila AI Character Display ON. Karakter yang dimatikan tidak tampil di peta.</p>
+                    <p class="text-sm font-semibold text-text">AI characters</p>
+                    <p class="text-xs text-text-muted">Applies when AI Character Display is ON. A character that is off does not appear on the map.</p>
                     <div class="mt-2 space-y-1">
                         @foreach ($aiCharacters as $key => $c)
                             <label class="flex min-h-11 items-start gap-2 py-2 text-sm text-text">
@@ -70,17 +70,17 @@
                             </label>
                         @endforeach
                     </div>
-                    <a href="{{ route('maintenance-intelligence.vme.ai-runs') }}" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-2 hover:underline">Lihat kumpulan hasil AI</a>
+                    <a href="{{ route('maintenance-intelligence.vme.ai-runs') }}" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-2 hover:underline">See the AI result log</a>
                 </div>
             @endif
-            <button class="btn btn-primary min-h-11">Simpan</button>
+            <button class="btn btn-primary min-h-11">Save</button>
         </form>
     </section>
 
     {{-- Avatars --}}
     <section class="card p-5 sm:p-6">
-        <h2 class="text-lg font-semibold text-text">Avatar Karakter PIC</h2>
-        <p class="mt-1 text-sm text-text-muted">Satu karakter per PIC aktif. PIC tanpa pilihan mendapat avatar otomatis.</p>
+        <h2 class="text-lg font-semibold text-text">PIC Character Avatars</h2>
+        <p class="mt-1 text-sm text-text-muted">One character per active PIC. A PIC with no choice gets an avatar automatically.</p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             @forelse ($pics as $pic)
                 <form method="POST" action="{{ route('maintenance-intelligence.vme.avatar', $pic) }}" class="flex flex-col gap-2 rounded-control border border-border p-3 sm:flex-row sm:items-center">
@@ -95,38 +95,38 @@
                             <option value="{{ $key }}" @selected(($profiles[$pic->id] ?? null) === $key)>{{ $a['label'] }}</option>
                         @endforeach
                     </select>
-                    <button class="btn btn-outline btn-sm min-h-11 shrink-0 lg:min-h-9">Simpan</button>
+                    <button class="btn btn-outline btn-sm min-h-11 shrink-0 lg:min-h-9">Save</button>
                 </form>
             @empty
-                <p class="text-sm text-text-muted">Belum ada PIC aktif.</p>
+                <p class="text-sm text-text-muted">No active PIC yet.</p>
             @endforelse
         </div>
     </section>
 
     {{-- Unmapped --}}
     <section class="card p-5 sm:p-6">
-        <h2 class="text-lg font-semibold text-text">Aktivitas yang Belum Dapat Dipetakan</h2>
+        <h2 class="text-lg font-semibold text-text">Activity That Cannot Be Mapped</h2>
         <p class="mt-1 text-sm text-text-muted">
-            PM dan Greasing menyimpan PIC sebagai nama. Bila nama dipakai lebih dari satu akun PIC, atau tidak cocok dengan PIC mana pun, VME tidak menebak dan tidak menampilkan aktivitasnya.
+            PM and Greasing store the PIC as a name. When that name belongs to more than one PIC account, or matches none, VME does not guess and leaves the activity out.
         </p>
         <div class="mt-3 grid gap-4 md:grid-cols-2">
             <div>
-                <h3 class="text-sm font-semibold text-text">Nama PIC ganda</h3>
+                <h3 class="text-sm font-semibold text-text">Duplicate PIC names</h3>
                 <ul class="mt-2 space-y-1 text-sm text-text-muted">
                     @forelse ($diagnostics['ambiguous'] as $row)
                         <li>{{ $row['name'] }} <span class="text-xs text-text-muted">(user id {{ implode(', ', $row['user_ids']) }})</span></li>
                     @empty
-                        <li class="text-text-muted">Tidak ada.</li>
+                        <li class="text-text-muted">None.</li>
                     @endforelse
                 </ul>
             </div>
             <div>
-                <h3 class="text-sm font-semibold text-text">Aktivitas hari ini tanpa PIC yang cocok</h3>
+                <h3 class="text-sm font-semibold text-text">Today's activity with no matching PIC</h3>
                 <ul class="mt-2 space-y-1 text-sm text-text-muted">
                     @forelse ($diagnostics['orphans'] as $row)
                         <li>{{ $row['source'] }} #{{ $row['record_id'] }}: "{{ $row['pic'] }}"</li>
                     @empty
-                        <li class="text-text-muted">Tidak ada.</li>
+                        <li class="text-text-muted">None.</li>
                     @endforelse
                 </ul>
             </div>

@@ -47,7 +47,7 @@ class SmallPmController extends Controller
         $tab = self::resolveTab($request->query('tab'));
         $tabs = collect(self::TABS)->map(fn (array $t) => ['label' => SmallPmRow::TASK_TYPES[$t['task']], 'available' => $t['available'], 'count' => null])->all();
         $tabs[self::FINDINGS_TAB] = [
-            'label' => 'Temuan Blower Mati',
+            'label' => 'Dead Blower Findings',
             'available' => true,
             'count' => SmallPmFinding::where('status', 'OPEN')->whereHas('schedule', fn ($q) => $q->visibleToUser($user))->count(),
         ];
@@ -125,7 +125,7 @@ class SmallPmController extends Controller
         $validated = $this->validateSchedule($request);
 
         if ($this->isDuplicate($validated)) {
-            return back()->withErrors(['order_number' => 'Jadwal dengan Row, Plan Date, dan Order Number yang sama sudah ada.'])->withInput();
+            return back()->withErrors(['order_number' => 'A schedule with the same Row, Plan Date, and Order Number already exists.'])->withInput();
         }
 
         SmallPmSchedule::create([
@@ -140,7 +140,7 @@ class SmallPmController extends Controller
             'remarks' => $validated['remarks'] ?? null,
         ]);
 
-        return redirect()->route('small-pm.index', ['tab' => $tab])->with('success', 'Jadwal Small PM ditambahkan.');
+        return redirect()->route('small-pm.index', ['tab' => $tab])->with('success', 'Small PM schedule added.');
     }
 
     public function edit(Request $request, SmallPmSchedule $schedule)
@@ -161,7 +161,7 @@ class SmallPmController extends Controller
         $validated = $this->validateSchedule($request);
 
         if ($this->isDuplicate($validated, $schedule->id)) {
-            return back()->withErrors(['order_number' => 'Jadwal dengan Row, Plan Date, dan Order Number yang sama sudah ada.'])->withInput();
+            return back()->withErrors(['order_number' => 'A schedule with the same Row, Plan Date, and Order Number already exists.'])->withInput();
         }
 
         $dueDate = SmallPmSchedule::calculateDueDate($validated['plan_date']);
@@ -179,7 +179,7 @@ class SmallPmController extends Controller
 
         return redirect()
             ->route('small-pm.index', ['tab' => $this->tabFor($schedule), 'page' => $request->input('return_page')])
-            ->with('success', 'Jadwal Small PM disimpan.');
+            ->with('success', 'Small PM schedule saved.');
     }
 
     public function destroy(Request $request, SmallPmSchedule $schedule): RedirectResponse
@@ -187,7 +187,7 @@ class SmallPmController extends Controller
         $this->authorizeManage($request->user(), $schedule);
         $schedule->delete();
 
-        return back()->with('success', 'Jadwal Small PM dihapus.');
+        return back()->with('success', 'Small PM schedule deleted.');
     }
 
     public function import(Request $request): RedirectResponse
@@ -203,10 +203,10 @@ class SmallPmController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->withErrors(['file' => 'Import gagal. Periksa format kolom dan isi file.']);
+            return back()->withErrors(['file' => 'Import failed. Check the column format and the file contents.']);
         }
 
-        return back()->with('success', 'Import jadwal Small PM selesai.');
+        return back()->with('success', 'Small PM schedule import finished.');
     }
 
     public function generate(Request $request): RedirectResponse
@@ -239,13 +239,13 @@ class SmallPmController extends Controller
     public function assignPic(Request $request, SmallPmSchedule $schedule): JsonResponse
     {
         if (! $this->canManage($request->user(), $schedule)) {
-            return response()->json(['success' => false, 'message' => 'Anda tidak boleh mengatur PIC di area ini.'], 403);
+            return response()->json(['success' => false, 'message' => 'You may not set the PIC in this area.'], 403);
         }
 
         $areaId = $schedule->row?->area_id;
 
         if ($areaId === null) {
-            return response()->json(['success' => false, 'message' => 'Row ini belum punya Area. Atur dulu di master Row Small PM.'], 422);
+            return response()->json(['success' => false, 'message' => 'This row has no Area yet. Set one first in Small PM Rows.'], 422);
         }
 
         $requested = $request->input('pic_user_id');
@@ -274,11 +274,11 @@ class SmallPmController extends Controller
         abort_unless($user->isPic() && $schedule->isAccessibleBy($user), 403);
 
         if ($schedule->isDone()) {
-            return back()->with('warning', 'Jadwal ini sudah selesai.');
+            return back()->with('warning', 'This schedule is already finished.');
         }
 
         if (filled($schedule->start_time)) {
-            return back()->with('warning', 'Jadwal ini sudah dimulai.');
+            return back()->with('warning', 'This schedule has already started.');
         }
 
         $validated = $request->validate(['started_at' => ['required', 'date']]);
@@ -328,7 +328,7 @@ class SmallPmController extends Controller
             'dead_machine_ids' => ['nullable', 'array'],
             'dead_machine_ids.*' => ['integer', 'distinct', Rule::exists('machines', 'id')->where('small_pm_row_id', $schedule->small_pm_row_id)],
         ], [
-            'dead_machine_ids.*.exists' => 'Mesin blower filter mati harus dari row ini.',
+            'dead_machine_ids.*.exists' => 'A dead filter blower machine must come from this row.',
         ]);
 
         $next = DB::transaction(function () use ($schedule, $validated, $user) {
@@ -348,7 +348,7 @@ class SmallPmController extends Controller
 
         return redirect()
             ->route('small-pm.index', ['tab' => $this->tabFor($schedule), 'page' => $request->input('return_page')])
-            ->with('success', 'Execution disimpan.'.($next ? ' Jadwal berikutnya: '.$next->plan_date->format('d M Y').'.' : ''));
+            ->with('success', 'Execution saved.'.($next ? ' Next schedule: '.$next->plan_date->format('d M Y').'.' : ''));
     }
 
     /** @param  array<string, mixed>  $shared */
@@ -484,7 +484,7 @@ class SmallPmController extends Controller
             'pic_user_id' => ['nullable', 'integer'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ], [
-            'small_pm_row_id.in' => 'Pilih row dari area Anda.',
+            'small_pm_row_id.in' => 'Pick a row from your own area.',
             'cycle.regex' => 'Cycle ditulis dalam minggu, misalnya 26W.',
         ], [
             'small_pm_row_id' => 'row',
@@ -499,7 +499,7 @@ class SmallPmController extends Controller
             $ok = User::whereKey($request->pic_user_id)->where('role', User::ROLE_PIC)->where('area_id', $areaId)->exists();
 
             if (! $ok) {
-                $v->errors()->add('pic_user_id', 'PIC harus user PIC dari area row ini.');
+                $v->errors()->add('pic_user_id', 'The PIC must be a PIC user from this row area.');
             }
         })->validate();
     }

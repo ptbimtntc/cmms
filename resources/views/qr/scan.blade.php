@@ -1,6 +1,6 @@
 @extends('layouts.guest')
 
-@section('title', 'Scan QR Mesin · FreeDOMS')
+@section('title', 'Scan Machine QR · FreeDOMS')
 
 @section('content')
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -13,8 +13,8 @@
             </div>
 
             <div class="mt-8 text-center">
-                <h1 class="font-signage text-4xl font-semibold text-text">Scan QR Mesin</h1>
-                <p class="mt-2 text-text-muted">Arahkan kamera ke QR Code yang terdapat pada mesin.</p>
+                <h1 class="font-signage text-4xl font-semibold text-text">Scan Machine QR</h1>
+                <p class="mt-2 text-text-muted">Point the camera at the QR code on the machine.</p>
             </div>
 
             <div id="reader" class="mx-auto mt-8 aspect-square w-full overflow-hidden rounded-card bg-neutral-900 shadow-popover"></div>
@@ -46,11 +46,11 @@
                     // ignore per-frame scan misses
                 }
             ).then(function () {
-                status.textContent = 'Kamera aktif. Arahkan ke QR Code mesin.';
+                status.textContent = 'Camera on. Point it at the machine QR code.';
             }).catch(function () {
                 // Camera refused or unavailable: say so and let the user try again.
                 button.disabled = false;
-                status.textContent = 'Kamera tidak bisa dibuka. Izinkan akses kamera di browser, lalu coba lagi.';
+                status.textContent = 'The camera could not open. Allow camera access in the browser, then try again.';
                 status.className = 'text-center text-sm font-medium text-danger';
             });
         });

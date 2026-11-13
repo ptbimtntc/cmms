@@ -9,7 +9,7 @@
 
 @php
     // Computed into a plain variable (not inlined into @json() below) so
-    // the expression passed to @json() has no comma of its own — Blade's
+    // the expression passed to @json() has no comma of its own, Blade's
     // @json() directive naively splits its argument on every literal ','
     // with no regard for nesting, so array_map('strval', $selected) (which
     // has an internal comma) would get its json_encode() flags silently
@@ -21,7 +21,7 @@
 {{--
     Multi-select filter rendered as a button that opens a checkbox list.
     Submits as `{name}[]=value1&{name}[]=value2` via plain GET, same as any
-    other filter in these forms — no JS is needed server-side to read it,
+    other filter in these forms, no JS is needed server-side to read it,
     `$request->filled('{name}')` + `(array) $request->{name}` just works.
 
     `autoSubmit` matches the per-field auto-submit convention some filter
@@ -34,7 +34,7 @@
          delimiters are always literal double quotes (JSON_HEX_QUOT only
          escapes quote CHARACTERS INSIDE string content, not the delimiters
          themselves), so @json() output can never be embedded safely inside
-         a double-quoted attribute — it would close the attribute early the
+         a double-quoted attribute, it would close the attribute early the
          moment the array has any string in it. Single-quoting the
          attribute avoids that; JSON_HEX_APOS (part of @json()'s default
          flags) then escapes any single quote inside the values instead. --}}
@@ -55,7 +55,7 @@
     >
         {{-- Text is also rendered server-side (not just via x-text) so the
              correct label is visible immediately even if Alpine hasn't
-             finished initializing yet — x-text keeps it live afterwards. --}}
+             finished initializing yet, x-text keeps it live afterwards. --}}
         <span x-text="selected.length ? '{{ $label }} (' + selected.length + ')' : @js($allText)">{{ count($selected) ? $label.' ('.count($selected).')' : $allText }}</span>
         <svg class="h-4 w-4 shrink-0 text-text-muted" :class="open ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.293l3.71-4.06a.75.75 0 111.08 1.04l-4.25 4.65a.75.75 0 01-1.08 0l-4.25-4.65a.75.75 0 01.02-1.06z" clip-rule="evenodd" />

@@ -77,7 +77,7 @@
                 {{-- Feature 3: flagship, dark plate --}}
                 <article class="on-dark grid gap-5 rounded-lg bg-blue-950 p-6 text-white sm:grid-cols-[auto_1fr] sm:gap-6 sm:p-8">
 
-                    <span class="flex h-14 w-14 items-center justify-center rounded-md bg-amber-500 text-amber-950">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-md bg-white text-blue-900">
                         <x-landing.icon name="qr" class="h-8 w-8" />
                     </span>
 
@@ -91,13 +91,13 @@
                         </p>
 
                         <ul class="mt-5 flex flex-wrap gap-x-6 gap-y-2 font-medium">
-                            <li class="flex items-center gap-2"><span class="h-2 w-2 bg-amber-400" aria-hidden="true"></span>Scan QR</li>
-                            <li class="flex items-center gap-2"><span class="h-2 w-2 bg-amber-400" aria-hidden="true"></span>Machine History</li>
-                            <li class="flex items-center gap-2"><span class="h-2 w-2 bg-amber-400" aria-hidden="true"></span>Maintenance Detail</li>
+                            <li class="flex items-center gap-2"><span class="h-2 w-2 bg-blue-300" aria-hidden="true"></span>Scan QR</li>
+                            <li class="flex items-center gap-2"><span class="h-2 w-2 bg-blue-300" aria-hidden="true"></span>Machine History</li>
+                            <li class="flex items-center gap-2"><span class="h-2 w-2 bg-blue-300" aria-hidden="true"></span>Maintenance Detail</li>
                         </ul>
 
                         <a href="#scan-demo"
-                            class="mt-6 inline-flex min-h-11 items-center font-semibold text-amber-300 underline underline-offset-4 hover:text-amber-200">
+                            class="mt-6 inline-flex min-h-11 items-center font-semibold text-blue-300 underline underline-offset-4 hover:text-blue-200">
                             Lihat contoh riwayat mesin
                         </a>
                     </div>

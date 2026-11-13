@@ -25,7 +25,7 @@ class DatabaseDumper
     public function dumpTo(string $path): void
     {
         if (! function_exists('gzopen')) {
-            throw new BackupStepException('Ekstensi zlib tidak tersedia di server.');
+            throw new BackupStepException('The zlib extension is not available on the server.');
         }
 
         $connection = DB::connection();
@@ -38,7 +38,7 @@ class DatabaseDumper
         $handle = gzopen($path, 'wb9');
 
         if ($handle === false) {
-            throw new BackupStepException('Tidak dapat membuat file backup sementara.');
+            throw new BackupStepException('Could not create a temporary backup file.');
         }
 
         try {
@@ -62,7 +62,7 @@ class DatabaseDumper
     {
         $lines = [
             '-- FreeDOMS database backup',
-            '-- Dibuat: '.now()->timezone(config('app.timezone'))->format('Y-m-d H:i:s'),
+            '-- Created: '.now()->timezone(config('app.timezone'))->format('Y-m-d H:i:s'),
             '',
         ];
 
@@ -178,7 +178,7 @@ class DatabaseDumper
     private function write($handle, string $sql): void
     {
         if (gzwrite($handle, $sql) === false) {
-            throw new BackupStepException('Gagal menulis file backup.');
+            throw new BackupStepException('Could not write the backup file.');
         }
     }
 }

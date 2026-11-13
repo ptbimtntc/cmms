@@ -56,15 +56,15 @@ class EmailNotificationSetting extends Model
     {
         if (! filter_var($this->sender_email, FILTER_VALIDATE_EMAIL)
             || ! str_ends_with(strtolower((string) $this->sender_email), '@gmail.com')) {
-            return 'Alamat Gmail pengirim belum diisi atau tidak valid.';
+            return 'The sender Gmail address is missing or not valid.';
         }
 
         if (! $this->hasPassword()) {
-            return 'Gmail App Password belum diisi.';
+            return 'The Gmail App Password is missing.';
         }
 
         if ($this->recipientList() === []) {
-            return 'Daftar email penerima masih kosong.';
+            return 'The recipient email list is empty.';
         }
 
         return null;

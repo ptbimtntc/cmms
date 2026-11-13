@@ -30,7 +30,7 @@ class PlanSaveService
         $ids = array_map(fn ($r) => (int) $r['pm_schedule_id'], $rows);
 
         if (count($ids) !== count(array_unique($ids))) {
-            throw ValidationException::withMessages(['items' => 'Satu PM Schedule hanya boleh dijadwalkan sekali dalam seminggu.']);
+            throw ValidationException::withMessages(['items' => 'A PM Schedule may be planned only once in a week.']);
         }
 
         $schedules = PMSchedule::query()
@@ -41,11 +41,11 @@ class PlanSaveService
 
         foreach ($rows as $i => $row) {
             if (! $schedules->has((int) $row['pm_schedule_id'])) {
-                throw ValidationException::withMessages(["items.$i.pm_schedule_id" => 'PM Schedule tidak ditemukan di area '.$plan->area.'.']);
+                throw ValidationException::withMessages(["items.$i.pm_schedule_id" => 'PM Schedule not found in area '.$plan->area.'.']);
             }
 
             if (! in_array($row['day'], $days, true)) {
-                throw ValidationException::withMessages(["items.$i.day" => 'Hari harus Senin sampai Jumat minggu ini.']);
+                throw ValidationException::withMessages(["items.$i.day" => 'The day must be Monday to Friday of this week.']);
             }
 
             if (filled($row['pic'] ?? null) && ! in_array($row['pic'], $pics, true)) {

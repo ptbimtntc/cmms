@@ -132,12 +132,12 @@ test('unmatched or invalid rows are reported with a reason and never inserted', 
 
     $import = siLast();
     expect($import->failed_rows)->toBe(7)->and($import->processed_rows)->toBe(0)->and(PMSparepart::count())->toBe(0)
-        ->and(siRow(2)->reason)->toContain('Order Number tidak ditemukan')
-        ->and(siRow(3)->reason)->toContain('SAP Number tidak cocok')
+        ->and(siRow(2)->reason)->toContain('Order Number not found')
+        ->and(siRow(3)->reason)->toContain('SAP Number does not match')
         ->and(siRow(4)->reason)->toContain('Month')
         ->and(siRow(5)->reason)->toContain('Qty')
         ->and(siRow(6)->reason)->toContain('Qty')
-        ->and(siRow(7)->reason)->toContain('Order Number kosong')
+        ->and(siRow(7)->reason)->toContain('Order Number is empty')
         ->and(siRow(8)->reason)->toContain('Month');
 });
 
@@ -148,7 +148,7 @@ test('an order number shared by several schedules is not guessed', function () {
 
     siImport(siUser('admin'), [['October', 'SAP-1', 1, 'ORD-DUP']]);
 
-    expect(PMSparepart::count())->toBe(0)->and(siRow(2)->reason)->toContain('lebih dari satu');
+    expect(PMSparepart::count())->toBe(0)->and(siRow(2)->reason)->toContain('more than one');
 });
 
 test('wrong headers are rejected before anything is processed', function () {
@@ -170,7 +170,7 @@ test('koordinator can only inject into PM schedules of their own area', function
     ]);
 
     expect(PMSparepart::pluck('pm_schedule_id')->all())->toBe([$own->id])
-        ->and(siRow(3)->reason)->toContain('Order Number tidak ditemukan')
+        ->and(siRow(3)->reason)->toContain('Order Number not found')
         ->and(PMSparepart::where('pm_schedule_id', $foreign->id)->count())->toBe(0);
 });
 
@@ -219,7 +219,7 @@ test('re-uploading the same file or an overlapping one never adds qty or usage a
 
     expect(PMSparepart::count())->toBe(1)->and(PMSparepart::sole()->qty)->toBe(5)
         ->and(siLast()->processed_rows)->toBe(0)->and(siLast()->skipped_rows)->toBe(2)
-        ->and(siRow(2)->reason)->toContain('Sparepart Usage sudah ada');
+        ->and(siRow(2)->reason)->toContain('Sparepart Usage already exists');
 
     // Overlap: old rows skipped, the new order is applied.
     siImport($admin, array_merge($file, [['November', 'SAP-2', 1, 'ORD-2']]));
@@ -239,7 +239,7 @@ test('existing sparepart usage is never overwritten, reduced or re-added', funct
     siImport(siUser('admin'), [['October', 'SAP-1', 2, 'ORD-1'], ['October', 'SAP-1', 3, 'ORD-1']]);
 
     expect(PMSparepart::count())->toBe(1)->and($existing->fresh()->qty)->toBe(7)->and($existing->fresh()->source)->toBeNull()
-        ->and(siRow(2)->status)->toBe('SKIPPED')->and(siRow(2)->reason)->toContain('Sparepart Usage sudah ada')
+        ->and(siRow(2)->status)->toBe('SKIPPED')->and(siRow(2)->reason)->toContain('Sparepart Usage already exists')
         ->and(siLast()->usage_added)->toBe(0);
 });
 

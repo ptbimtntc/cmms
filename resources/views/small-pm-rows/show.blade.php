@@ -10,10 +10,10 @@
 
     <div class="space-y-5">
         <x-ui.button variant="ghost" href="{{ route('small-pm-rows.index') }}" class="-ml-2">Kembali ke Row Small PM</x-ui.button>
-        <x-ui.page-header :title="$row->name" :description="$machines->count().' mesin · Urutan '.$row->sort_order.($row->area ? ' · Area: '.$row->area->name : '')" />
+        <x-ui.page-header :title="$row->name" :description="$machines->count().' machines · Order '.$row->sort_order.($row->area ? ' · Area: '.$row->area->name : '')" />
 
         @if ($machines->isEmpty())
-            <x-ui.empty-state title="Belum ada mesin di row ini" />
+            <x-ui.empty-state title="No machine in this row yet" />
         @else
             <div class="card hidden overflow-hidden md:block">
                 <div class="relative overflow-x-auto">

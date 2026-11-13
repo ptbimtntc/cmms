@@ -238,7 +238,7 @@ export function initWeeklyPlan(root) {
 
     function scheduleSave() {
         dirty = true;
-        setStatus('Ada perubahan, menyimpan...');
+        setStatus('Changes pending, saving...');
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => { saveTimer = null; save(); }, SAVE_DELAY_MS);
     }
@@ -254,12 +254,12 @@ export function initWeeklyPlan(root) {
             const released = result.pic_released > 0
                 ? `, PIC ${result.pic_released} PM di PM Schedule dikembalikan`
                 : '';
-            setStatus(dirty ? 'Ada perubahan, menyimpan...' : `Tersimpan${released}`);
+            setStatus(dirty ? 'Changes pending, saving...' : `Saved${released}`);
             renderEmail();
         } catch (error) {
             dirty = true;
-            setStatus('Gagal simpan');
-            showError(`Perubahan belum tersimpan: ${error.message}`);
+            setStatus('Save failed');
+            showError(`Changes are not saved: ${error.message}`);
             throw error;
         }
     }
@@ -284,7 +284,7 @@ export function initWeeklyPlan(root) {
         await save();
 
         if (dirty) {
-            throw new Error('perubahan terakhir belum tersimpan.');
+            throw new Error('the last change is not saved yet.');
         }
     }
 
@@ -325,11 +325,11 @@ export function initWeeklyPlan(root) {
         const reason = card.pic ? unavailableReason(card.day, card.pic) : null;
 
         if (reason) {
-            return `<p data-pic-warning class="text-xs font-medium text-danger">${escapeHtml(card.pic)} tidak masuk hari ini (${escapeHtml(reason)}).</p>`;
+            return `<p data-pic-warning class="text-xs font-medium text-danger">${escapeHtml(card.pic)} is off today (${escapeHtml(reason)}).</p>`;
         }
 
         if (!card.pic) {
-            return '<p data-pic-warning class="text-xs text-text-muted">PIC belum dipilih.</p>';
+            return '<p data-pic-warning class="text-xs text-text-muted">No PIC picked yet.</p>';
         }
 
         return '<span data-pic-warning hidden></span>';
@@ -337,13 +337,13 @@ export function initWeeklyPlan(root) {
 
     function badges(card) {
         const parts = [];
-        if (card.carried_over) parts.push('<span class="badge badge-warning whitespace-normal">Minggu lalu belum selesai</span>');
+        if (card.carried_over) parts.push('<span class="badge badge-warning whitespace-normal">Unfinished from last week</span>');
         if (card.overdue) parts.push('<span class="badge badge-danger">Overdue</span>');
         return parts.join(' ');
     }
 
     function dayOptions(card) {
-        const options = [`<option value="" ${card.day === null ? 'selected' : ''}>Belum dijadwalkan</option>`];
+        const options = [`<option value="" ${card.day === null ? 'selected' : ''}>Unscheduled</option>`];
 
         for (const day of state.days) {
             options.push(`<option value="${day.date}" ${card.day === day.date ? 'selected' : ''}>${escapeHtml(day.name)}</option>`);
@@ -383,7 +383,7 @@ export function initWeeklyPlan(root) {
         return `
             <article data-card="${escapeHtml(key)}" class="@container ${placed ? 'min-w-0' : 'w-64 shrink-0'} overflow-hidden rounded-lg border border-border-strong bg-surface shadow-sm">
                 <div class="flex items-start gap-2 border-b border-border bg-primary-light px-3 py-2">
-                    <span class="wp-handle mt-1 cursor-grab select-none text-primary-hover" aria-hidden="true" title="Seret">
+                    <span class="wp-handle mt-1 cursor-grab select-none text-primary-hover" aria-hidden="true" title="Drag">
                         <svg width="12" height="18" viewBox="0 0 14 20" fill="currentColor"><circle cx="4" cy="4" r="1.6"/><circle cx="10" cy="4" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="4" cy="16" r="1.6"/><circle cx="10" cy="16" r="1.6"/></svg>
                     </span>
                     <div class="min-w-0 flex-1">
@@ -397,7 +397,7 @@ export function initWeeklyPlan(root) {
                         </div>
                     </div>
                     ${placed ? `
-                    <button type="button" data-unschedule aria-label="Kembalikan ${escapeHtml(card.machine_number)} ke Belum dijadwalkan" title="Kembalikan ke Belum dijadwalkan"
+                    <button type="button" data-unschedule aria-label="Move ${escapeHtml(card.machine_number)} back to Unscheduled" title="Move back to Unlum dijadwalkan"
                         class="-mr-1 -mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-muted transition-colors hover:bg-danger-light hover:text-danger focus-visible:outline-2 focus-visible:outline-primary active:bg-danger-light lg:min-h-8 lg:min-w-8">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                     </button>` : ''}
@@ -430,35 +430,35 @@ export function initWeeklyPlan(root) {
         const total = day.types.reduce((sum, row) => sum + row.count, 0);
 
         if (total > day.limit) {
-            return `Kombinasi tipe berjumlah ${total} mesin, melebihi maks. mesin ${day.limit}. Belum disimpan.`;
+            return `The type mix adds up to ${total} machines, over the limit of ${day.limit}. Not saved.`;
         }
 
         const chosen = day.types.map((row) => row.type).filter(Boolean);
         const duplicate = chosen.find((type, i) => chosen.indexOf(type) !== i);
 
-        return duplicate ? `Tipe ${duplicate} dipilih dua kali. Belum disimpan.` : null;
+        return duplicate ? `Type ${duplicate} is picked twice. Not saved.` : null;
     }
 
     function typeRowsHtml(day) {
         const max = state.max_day_limit ?? 6;
 
         return day.types.map((row, index) => {
-            const typeOptions = [`<option value="" ${row.type === '' ? 'selected' : ''}>Pilih tipe</option>`]
+            const typeOptions = [`<option value="" ${row.type === '' ? 'selected' : ''}>Select a type</option>`]
                 .concat((state.machine_types ?? []).map((type) =>
                     `<option value="${escapeHtml(type)}" ${type === row.type ? 'selected' : ''}>${escapeHtml(type)}</option>`))
                 .join('');
             const countOptions = Array.from({ length: max }, (_, n) =>
                 `<option value="${n + 1}" ${n + 1 === row.count ? 'selected' : ''}>${n + 1}</option>`).join('');
             const placed = row.type ? state.items.filter((c) => c.day === day.date && c.type_family === row.type).length : null;
-            const name = row.type || `baris ${index + 1}`;
+            const name = row.type || `row ${index + 1}`;
 
             return `
                 <div class="grid gap-1 rounded-md border border-border bg-surface p-1.5">
-                    <select data-type-field="type" data-date="${day.date}" data-index="${index}" aria-label="Tipe mesin ${escapeHtml(name)}" class="select min-h-11 w-full min-w-0 py-0.5 text-xs lg:min-h-0">${typeOptions}</select>
+                    <select data-type-field="type" data-date="${day.date}" data-index="${index}" aria-label="Machine type ${escapeHtml(name)}" class="select min-h-11 w-full min-w-0 py-0.5 text-xs lg:min-h-0">${typeOptions}</select>
                     <div class="flex items-center gap-1.5">
-                        <select data-type-field="count" data-date="${day.date}" data-index="${index}" aria-label="Jumlah mesin ${escapeHtml(name)}" class="select min-h-11 w-14 shrink-0 py-0.5 text-xs lg:min-h-0">${countOptions}</select>
-                        <span class="min-w-0 flex-1 text-[11px] text-text-muted">${placed !== null ? `terisi ${placed}` : 'mesin'}</span>
-                        <button type="button" data-type-remove data-date="${day.date}" data-index="${index}" aria-label="Hapus tipe ${escapeHtml(name)}" class="btn btn-ghost min-h-11 min-w-11 shrink-0 px-0 py-0 text-base leading-none lg:min-h-7 lg:min-w-7">&times;</button>
+                        <select data-type-field="count" data-date="${day.date}" data-index="${index}" aria-label="Machine count ${escapeHtml(name)}" class="select min-h-11 w-14 shrink-0 py-0.5 text-xs lg:min-h-0">${countOptions}</select>
+                        <span class="min-w-0 flex-1 text-[11px] text-text-muted">${placed !== null ? `${placed} placed` : 'machines'}</span>
+                        <button type="button" data-type-remove data-date="${day.date}" data-index="${index}" aria-label="Remove type ${escapeHtml(name)}" class="btn btn-ghost min-h-11 min-w-11 shrink-0 px-0 py-0 text-base leading-none lg:min-h-7 lg:min-w-7">&times;</button>
                     </div>
                 </div>`;
         }).join('');
@@ -468,12 +468,12 @@ export function initWeeklyPlan(root) {
         const cards = state.items.filter((c) => c.day === day.date);
         const off = Object.entries(state.unavailable?.[day.date] ?? {});
         const offText = off.length
-            ? `<p class="text-xs text-danger">Tidak masuk: ${off.map(([n, r]) => `${escapeHtml(n)} (${escapeHtml(r)})`).join(', ')}</p>`
+            ? `<p class="text-xs text-danger">Off: ${off.map(([n, r]) => `${escapeHtml(n)} (${escapeHtml(r)})`).join(', ')}</p>`
             : '';
         const over = cards.length > day.limit;
         const count = over
-            ? `<p class="text-xs font-medium text-warning-hover">${cards.length} mesin, lewat batas ${day.limit}</p>`
-            : `<p class="text-xs text-text-muted">${cards.length} mesin</p>`;
+            ? `<p class="text-xs font-medium text-warning-hover">${cards.length} machines, over the limit of ${day.limit}</p>`
+            : `<p class="text-xs text-text-muted">${cards.length} machines</p>`;
         const options = Array.from({ length: (state.max_day_limit ?? 6) + 1 }, (_, n) =>
             `<option value="${n}" ${n === day.limit ? 'selected' : ''}>${n}</option>`).join('');
         const error = dayErrors[day.date];
@@ -483,15 +483,15 @@ export function initWeeklyPlan(root) {
             <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
                 ${count}
                 <label class="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-text-muted">
-                    Maks. mesin
+                    Max machines
                     <select data-day-limit="${day.date}" class="select min-h-11 w-16 shrink-0 py-0.5 text-xs lg:min-h-0">${options}</select>
                 </label>
             </div>
             <div class="mt-2 grid gap-1.5">
-                <p class="text-xs font-medium text-text-muted">Kombinasi tipe</p>
+                <p class="text-xs font-medium text-text-muted">Type mix</p>
                 ${typeRowsHtml(day)}
                 ${error ? `<p class="text-xs font-medium text-danger" role="alert">${escapeHtml(error)}</p>` : ''}
-                <button type="button" data-type-add="${day.date}" class="link min-h-11 justify-self-start text-xs font-semibold disabled:cursor-not-allowed disabled:text-text-disabled lg:min-h-0" ${day.limit === 0 ? 'disabled' : ''}>+ Tambah tipe</button>
+                <button type="button" data-type-add="${day.date}" class="link min-h-11 justify-self-start text-xs font-semibold disabled:cursor-not-allowed disabled:text-text-disabled lg:min-h-0" ${day.limit === 0 ? 'disabled' : ''}>+ Add type</button>
             </div>
             ${offText}`;
     }
@@ -508,7 +508,7 @@ export function initWeeklyPlan(root) {
         renderDayHeaders();
 
         if (error) {
-            setStatus(`Pengaturan ${day.name} belum disimpan`);
+            setStatus(`${day.name} settings are not saved`);
             return;
         }
 
@@ -517,7 +517,7 @@ export function initWeeklyPlan(root) {
                 limits: { [date]: day.limit },
                 types: { [date]: day.types.filter((row) => row.type) },
             });
-            setStatus(`Pengaturan ${day.name} tersimpan`);
+            setStatus(`${day.name} settings saved`);
         } catch (error) {
             dayErrors[date] = error.message;
             renderDayHeaders();
@@ -544,9 +544,9 @@ export function initWeeklyPlan(root) {
 
         bar.innerHTML = `
             <p class="text-text-muted">${matches
-                ? `Maks. mesin dan kombinasi tipe sesuai default ${area}.`
-                : `Maks. mesin atau kombinasi tipe minggu ini sudah diubah dari default ${area}.`}</p>
-            <button type="button" data-day-defaults class="btn btn-outline btn-sm min-h-11 lg:min-h-0" ${matches ? 'disabled' : ''}>Kembalikan ke default ${area}</button>`;
+                ? `Machine limit and type mix match the ${area} default.`
+                : `This week's machine limit or type mix differs from the ${area} default.`}</p>
+            <button type="button" data-day-defaults class="btn btn-outline btn-sm min-h-11 lg:min-h-0" ${matches ? 'disabled' : ''}>Restore the ${area} default</button>`;
 
         if (hadFocus) bar.querySelector('[data-day-defaults]')?.focus();
     }
@@ -562,9 +562,9 @@ export function initWeeklyPlan(root) {
             Object.keys(dayErrors).forEach((k) => delete dayErrors[k]);
             renderBoard();
             renderEmail();
-            setStatus(`Maks. mesin dan kombinasi tipe kembali ke default ${state.plan.area}`);
+            setStatus(`Machine limit and type mix are back to the ${state.plan.area} default`);
         } catch (error) {
-            showError(`Gagal mengembalikan pengaturan default: ${error.message}`);
+            showError(`Could not restore the defaults: ${error.message}`);
             button.disabled = false;
         }
     }
@@ -611,31 +611,31 @@ export function initWeeklyPlan(root) {
         els.reset.disabled = state.items.length === 0;
 
         const noPics = state.pics.length === 0
-            ? `<div class="alert alert-warning">Belum ada user dengan role PIC di area ${escapeHtml(state.plan.area)}, jadi PIC belum bisa dipilih.</div>`
+            ? `<div class="alert alert-warning">No user has the PIC role in area ${escapeHtml(state.plan.area)}, so no PIC can be picked.</div>`
             : '';
 
         const poolEmptyText = state.pool.length === 0
-            ? 'Semua mesin sudah dijadwalkan.'
-            : 'Tidak ada mesin yang cocok dengan pencarian.';
+            ? 'Every machine is scheduled.'
+            : 'No machine matches the search.';
 
         els.board.innerHTML = `
             ${noPics}
             <section class="min-w-0 rounded-xl bg-surface-muted p-3">
                 <div class="mb-3 flex flex-wrap items-end gap-x-4 gap-y-2">
                     <div class="mr-auto">
-                        <h3 class="font-semibold text-text">Belum dijadwalkan</h3>
-                        <p class="text-xs text-text-muted">${state.pool.length} PM terbuka belum masuk jadwal. Geser ke samping untuk melihat semuanya.</p>
+                        <h3 class="font-semibold text-text">Unscheduled</h3>
+                        <p class="text-xs text-text-muted">${state.pool.length} open PMs are not in the plan. Scroll sideways to see them all.</p>
                     </div>
                     <label class="grid w-full gap-1 text-xs font-medium text-text-muted sm:w-64">
-                        Cari mesin
-                        <input type="search" data-pool-filter value="${escapeHtml(poolFilter)}" placeholder="Nomor atau tipe" class="input w-full min-w-0 min-h-11 py-1 text-sm lg:min-h-0">
+                        Search machines
+                        <input type="search" data-pool-filter value="${escapeHtml(poolFilter)}" placeholder="Number or type" class="input w-full min-w-0 min-h-11 py-1 text-sm lg:min-h-0">
                     </label>
                     <label class="flex min-h-11 items-center gap-2 text-sm text-text lg:min-h-9">
                         <input type="checkbox" data-due-only class="checkbox" ${dueOnly ? 'checked' : ''}>
-                        Hanya yang due sampai Jumat
+                        Only those due by Friday
                     </label>
                 </div>
-                <div data-list="" role="region" aria-label="Mesin belum dijadwalkan" tabindex="0" class="flex min-h-24 items-start gap-3 overflow-x-auto pb-2">
+                <div data-list="" role="region" aria-label="Unscheduled machines" tabindex="0" class="flex min-h-24 items-start gap-3 overflow-x-auto pb-2">
                     ${pool.map(cardHtml).join('') || `<p class="p-2 text-sm text-text-muted">${poolEmptyText}</p>`}
                 </div>
             </section>
@@ -647,7 +647,7 @@ export function initWeeklyPlan(root) {
                         <div class="flex min-w-0 flex-col rounded-xl bg-surface-muted p-3">
                             <div data-day-header="${day.date}" class="mb-3 border-b border-border-strong pb-2">${dayHeader(day)}</div>
                             <div data-list="${day.date}" class="grid min-h-24 flex-1 auto-rows-max content-start gap-3">
-                                ${cards.map(cardHtml).join('') || '<p data-empty class="rounded-lg border border-dashed border-border-strong bg-surface p-3 text-xs text-text-muted">Seret mesin ke sini, atau pilih hari ini di kartu mesin.</p>'}
+                                ${cards.map(cardHtml).join('') || '<p data-empty class="rounded-lg border border-dashed border-border-strong bg-surface p-3 text-xs text-text-muted">Drag a machine here, or pick this day on the machine card.</p>'}
                             </div>
                         </div>`;
                 }).join('')}
@@ -697,38 +697,38 @@ export function initWeeklyPlan(root) {
 
         if (!email?.text) {
             els.email.innerHTML = `
-                <h2 class="text-base font-semibold text-text">Teks email</h2>
-                <p class="mt-1 text-sm text-text-muted">Teks email muncul di sini setelah ada mesin yang ditaruh di salah satu hari.</p>`;
+                <h2 class="text-base font-semibold text-text">Email text</h2>
+                <p class="mt-1 text-sm text-text-muted">The email text shows up here once a machine is placed on a day.</p>`;
         } else {
             const sentLine = sentAt
-                ? `Ditandai terkirim ${escapeHtml(sentAt)}. Kalau jadwal berubah lagi, kirim email revisi di bawah.`
-                : 'Setelah email dikirim, tandai di sini supaya perubahan berikutnya bisa dikirim sebagai revisi.';
+                ? `Marked sent ${escapeHtml(sentAt)}. If the schedule changes again, send the revision email below.`
+                : 'Once the email is sent, mark it here so the next changes can go out as a revision.';
 
             let revisionHtml = '';
 
             if (revision) {
                 revisionHtml = revision.count > 0
                     ? outputBlock({
-                        title: `Email revisi (${revision.count} perubahan)`,
-                        description: 'Hanya berisi perubahan sejak terakhir dikirim, lalu jadwal terbaru lengkap.',
+                        title: `Revision email (${revision.count} changes)`,
+                        description: 'Only the changes since the last send, followed by the full current schedule.',
                         html: revision.html,
-                        copyLabel: 'Copy email revisi',
+                        copyLabel: 'Copy revision email',
                         attr: 'data-copy="revision"',
                     })
-                    : '<p class="text-sm text-text-muted">Belum ada perubahan sejak email terakhir ditandai terkirim.</p>';
+                    : '<p class="text-sm text-text-muted">Nothing has changed since the last email was marked sent.</p>';
             }
 
             els.email.innerHTML = `
                 <div class="grid gap-5">
                     ${outputBlock({
-                        title: 'Teks email jadwal',
-                        description: 'Copy lalu paste ke body email. Judul hari tetap tebal dan baris tetap sejajar.',
+                        title: 'Schedule email text',
+                        description: 'Copy it, then paste into the email body. Day headings stay bold and the lines stay aligned.',
                         html: email.html,
-                        copyLabel: 'Copy ke email',
+                        copyLabel: 'Copy for email',
                         attr: 'data-copy="email"',
                     })}
                     <div class="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                        <button type="button" class="btn btn-outline min-h-11 lg:min-h-0" data-mark-sent>${sentAt ? 'Tandai terkirim lagi' : 'Tandai sudah dikirim'}</button>
+                        <button type="button" class="btn btn-outline min-h-11 lg:min-h-0" data-mark-sent>${sentAt ? 'Mark sent again' : 'Mark as senm'}</button>
                         <p class="text-sm text-text-muted">${sentLine}</p>
                     </div>
                     ${revisionHtml}
@@ -741,16 +741,16 @@ export function initWeeklyPlan(root) {
 
     function renderPicSync() {
         const sync = outputs.pic_sync ?? { pending: 0, applied_at: null };
-        const when = sync.applied_at ? ` Terakhir diterapkan ${escapeHtml(sync.applied_at)}.` : '';
+        const when = sync.applied_at ? ` Last applied ${escapeHtml(sync.applied_at)}.` : '';
 
         if (sync.pending > 0) {
             els.picSyncStatus.className = 'font-medium text-warning-hover sm:text-right';
-            els.picSyncStatus.innerHTML = `${sync.pending} perubahan PIC belum diterapkan ke PM Schedule.${when}`;
+            els.picSyncStatus.innerHTML = `${sync.pending} PIC changes are not applied to PM Schedule yet.${when}`;
         } else {
             els.picSyncStatus.className = 'text-text-muted sm:text-right';
             els.picSyncStatus.innerHTML = sync.applied_at
-                ? `PIC di PM Schedule sudah sama dengan jadwal ini.${when}`
-                : 'PIC di jadwal ini belum diterapkan ke PM Schedule. Teknisi baru melihat PM-nya setelah PIC diterapkan.';
+                ? `The PIC in PM Schedule already matches this plan.${when}`
+                : 'The PIC in this plan is not applied to PM Schedule yet. A technician only sees their PM once it is.';
         }
     }
 
@@ -760,11 +760,11 @@ export function initWeeklyPlan(root) {
             .map((a) => `${a.machine}: ${a.from ?? 'kosong'} jadi ${a.to ?? 'kosong'}`).join('; ');
         const lines = [];
 
-        if (preview.set) lines.push(`- ${preview.set} PM diisi PIC dari jadwal ini`);
-        if (preview.replace) lines.push(`- ${preview.replace} PM yang sudah punya PIC lain akan diganti (${sample('replace')})`);
-        if (preview.restore) lines.push(`- ${preview.restore} PM yang keluar dari jadwal dikembalikan ke PIC sebelumnya (${sample('restore')})`);
-        if (preview.locked) lines.push(`- ${preview.locked} PM dilewati karena sudah dikerjakan atau selesai`);
-        if (preview.changed) lines.push(`- ${preview.changed} PM dilewati karena PIC-nya sudah diubah manual di PM Schedule`);
+        if (preview.set) lines.push(`- ${preview.set} PMs get their PIC from this plan`);
+        if (preview.replace) lines.push(`- ${preview.replace} PMs that already have another PIC are replaced (${sample('replace')})`);
+        if (preview.restore) lines.push(`- ${preview.restore} PMs dropped from the plan go back to their previous PIC (${sample('restore')})`);
+        if (preview.locked) lines.push(`- ${preview.locked} PMs are skipped because they are in progress or done`);
+        if (preview.changed) lines.push(`- ${preview.changed} PMs are skipped because their PIC was changed by hand in PM Schedule`);
 
         return `Terapkan PIC ke PM Schedule?\n\n${lines.join('\n')}`;
     }
@@ -778,8 +778,8 @@ export function initWeeklyPlan(root) {
 
             if (preview.pending === 0) {
                 setStatus(preview.locked || preview.changed
-                    ? 'Tidak ada PIC yang bisa diterapkan, sisanya sedang dikerjakan atau diubah manual'
-                    : 'PIC di PM Schedule sudah sama dengan jadwal ini');
+                    ? 'No PIC can be applied; the rest are in progress or were changed by hand'
+                    : 'The PIC in PM Schedule already matches this plan');
                 return;
             }
 
@@ -791,9 +791,9 @@ export function initWeeklyPlan(root) {
             outputs = result;
             renderEmail();
             const r = result.result;
-            setStatus(`PIC diterapkan: ${r.set + r.replace} diisi, ${r.restore} dikembalikan`);
+            setStatus(`PIC applied: ${r.set + r.replace} set, ${r.restore} restored`);
         } catch (error) {
-            showError(`Gagal menerapkan PIC: ${error.message}`);
+            showError(`Could not apply the PIC: ${error.message}`);
         } finally {
             els.picSync.disabled = false;
             els.picSync.removeAttribute('aria-busy');
@@ -813,12 +813,12 @@ export function initWeeklyPlan(root) {
         els.realization.innerHTML = `
             <details>
                 <summary class="flex min-h-11 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 lg:min-h-0">
-                    <span class="font-semibold text-text">Realisasi minggu lalu (${escapeHtml(r.week)})</span>
-                    <span class="text-sm text-text-muted">${r.total - r.open.length} dari ${r.total} mesin selesai, ${r.open.length} belum</span>
+                    <span class="font-semibold text-text">Last week's result (${escapeHtml(r.week)})</span>
+                    <span class="text-sm text-text-muted">${r.total - r.open.length} of ${r.total} machines done, ${r.open.length} not</span>
                 </summary>
                 <div class="mt-3 grid gap-3">
-                    ${r.open.length ? '<p class="text-sm text-text-muted">Mesin yang belum selesai sudah ada di kolom Belum dijadwalkan dengan tanda "Minggu lalu belum selesai".</p>' : ''}
-                    ${outputBlock({ title: 'Ringkasan untuk email', description: '', html: r.html, copyLabel: 'Copy ringkasan', attr: 'data-copy="realization"' })}
+                    ${r.open.length ? '<p class="text-sm text-text-muted">Unfinished machines are already in the Unscheduled column, tagged "Unfinished from last week".</p>' : ''}
+                    ${outputBlock({ title: 'Summary for email', description: '', html: r.html, copyLabel: 'Copy summary', attr: 'data-copy="realization"' })}
                 </div>
             </details>`;
     }
@@ -829,28 +829,28 @@ export function initWeeklyPlan(root) {
         const label = button.textContent;
 
         const ok = await copyRich(source.html, source.text);
-        button.textContent = ok ? 'Tersalin' : 'Gagal copy, blok teksnya manual';
+        button.textContent = ok ? 'Copied' : 'Copy failed, select the text by hand';
         setTimeout(() => { button.textContent = label; }, 2000);
     }
 
     async function runAutofill() {
         els.autofill.disabled = true;
         els.autofill.setAttribute('aria-busy', 'true');
-        setStatus('Mengisi jadwal otomatis...');
+        setStatus('Filling the schedule...');
         try {
             await flush();
             const result = await request(root.dataset.autofillUrl, 'POST');
             state = result.state;
             outputs = result;
             showError(null);
-            const left = result.left > 0 ? `, ${result.left} tidak muat karena batas per hari sudah penuh` : '';
+            const left = result.left > 0 ? `, ${result.left} did not fit because the daily limits are full` : '';
             setStatus(result.placed > 0 || result.left > 0
-                ? `${result.placed} mesin ditempatkan${left}`
-                : 'Tidak ada mesin due minggu ini yang belum dijadwalkan');
+                ? `${result.placed} machines placed${left}`
+                : 'No machine due this week is still unscheduled');
             renderBoard();
             renderEmail();
         } catch (error) {
-            showError(`Isi otomatis gagal: ${error.message}`);
+            showError(`Auto fill failed: ${error.message}`);
         } finally {
             els.autofill.disabled = false;
             els.autofill.removeAttribute('aria-busy');
@@ -867,7 +867,7 @@ export function initWeeklyPlan(root) {
             outputs = result;
             renderEmail();
         } catch (error) {
-            showError(`Gagal menandai terkirim: ${error.message}`);
+            showError(`Could not mark it sent: ${error.message}`);
             button.disabled = false;
         }
     }
@@ -990,7 +990,7 @@ export function initWeeklyPlan(root) {
         const count = state.items.length;
         if (count === 0) return;
 
-        const ok = window.confirm(`Kosongkan ${count} mesin dari Senin sampai Jumat? Semua kembali ke kolom Belum dijadwalkan. Batas mesin per hari tidak berubah.`);
+        const ok = window.confirm(`Clear ${count} machines from Monday to Friday? They all go back to the Unscheduled column. The daily machine limits do not change.`);
         if (!ok) return;
 
         state = { ...state, ...resetCards(state) };
@@ -999,9 +999,9 @@ export function initWeeklyPlan(root) {
 
         try {
             await flush();
-            setStatus(`Jadwal dikosongkan, ${count} mesin kembali ke Belum dijadwalkan`);
+            setStatus(`Schedule cleared, ${count} machines are back in Unscheduled`);
         } catch (error) {
-            showError(`Gagal mengosongkan jadwal: ${error.message}`);
+            showError(`Could not clear the schedule: ${error.message}`);
         }
     });
 

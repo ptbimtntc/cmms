@@ -65,7 +65,7 @@ class SparepartAnalystController extends Controller
         return redirect()
             ->route('maintenance-intelligence.sparepart-analyst', ['run' => $run->id])
             ->with($run->status === AiForecastRun::COMPLETED ? 'success' : 'error',
-                $run->status === AiForecastRun::COMPLETED ? 'Analisis forecast selesai.' : 'Analisis gagal: '.$run->error);
+                $run->status === AiForecastRun::COMPLETED ? 'Analisis forecast selesai.' : 'Analysis failed: '.$run->error);
     }
 
     public function export(AiForecastRun $run)

@@ -25,7 +25,7 @@
 
                 <button type="button" @click="$store.sidebar.open = false"
                     class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sidebar-muted transition hover:bg-sidebar-hover hover:text-sidebar-foreground active:bg-sidebar-border lg:hidden"
-                    aria-label="Tutup menu">
+                    aria-label="Close menu">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5" aria-hidden="true">
                         <path d="M18 6 6 18" />
@@ -42,7 +42,7 @@
         $isPic = $authUser->isPic();
         $isSupervisor = $authUser->isSupervisor();
         // Oil Audit is a permanent WWD-only business rule (see
-        // OilAudit::AREA), not general area authorization — hasArea()
+        // OilAudit::AREA), not general area authorization, hasArea()
         // already returns true unconditionally for ADMIN, so this one flag
         // covers every role that may see WWD-only menu items.
         $hasWwdArea = $authUser->hasArea('WWD');
@@ -50,7 +50,7 @@
         // Machine History Detail opened via Report PM's View button keeps
         // the PM Report environment active in the sidebar (and Machine
         // History's own active state suppressed) instead of switching to
-        // Machine History — navigation context carried via ?from=report-pm
+        // Machine History, navigation context carried via ?from=report-pm
         // from reports/pm/index.blade.php. Any other route, or this same
         // route without that query param, is unaffected.
         $cameFromReportPm = request()->routeIs('machine-history.detail') && request()->query('from') === 'report-pm';
@@ -89,7 +89,7 @@
         $smallPmActive = request()->routeIs('small-pm.*');
         $profileActive = request()->routeIs('profile.*');
 
-        // Individual report routes — each links straight to its own report
+        // Individual report routes, each links straight to its own report
         // page from the sidebar now (no more intermediate Report Center hub).
         $reportsPmActive = request()->routeIs('reports.pm') || $cameFromReportPm;
         $reportsGreasingActive = request()->routeIs('reports.greasing');
@@ -100,7 +100,7 @@
         $reportsCostActive = request()->routeIs('reports.cost');
 
         // Oil Audit is a WWD-only module (same rule as its own route
-        // middleware) — hide its report link for roles that could never
+        // middleware), hide its report link for roles that could never
         // open it, same rule the old Report Center hub used.
         $oilAuditReportEligible = $hasWwdArea;
 
@@ -161,7 +161,7 @@
             ],
             [
             'route' => route('weekly-plan.index'),
-            'label' => 'Planning PM Mingguan',
+            'label' => 'Weekly PM Plan',
             'active' => $weeklyPlanActive,
             // calendar-range: a Monday-Friday span
             'icon' => '
@@ -176,7 +176,7 @@
             ],
             [
             'route' => route('oil-audits.scan'),
-            'label' => 'Audit Oli',
+            'label' => 'Oil Audit',
             'active' =>
             $oilAuditActive && !request()->routeIs('oil-audits.report', 'oil-audits.history'),
             // droplet
@@ -187,7 +187,7 @@
             ],
             [
             'route' => route('oil-audits.report'),
-            'label' => 'Action Audit Oli',
+            'label' => 'Oil Audit Action',
             'active' => $oilAuditActionActive,
             // clipboard-check
             'icon' => '
@@ -381,7 +381,7 @@
             ],
             [
             'route' => route('small-pm-rows.index'),
-            'label' => 'Row Small PM',
+            'label' => 'Small PM Rows',
             'active' => $smallPmRowActive,
             // rows-3: machines standing in rows
             'icon' => '
@@ -545,7 +545,7 @@
             ],
             [
             'route' => route('email-notifications.edit'),
-            'label' => 'Notifikasi Email',
+            'label' => 'Email Notifications',
             'active' => $emailNotificationActive,
             // mail
             'icon' => '

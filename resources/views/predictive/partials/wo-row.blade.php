@@ -5,7 +5,7 @@
     </td>
     <td>
         @include('predictive.partials.status-badge', ['wo' => $wo])
-        <span @class(['mt-1 block text-xs', 'font-medium text-text' => $wo->pic, 'text-text-muted' => ! $wo->pic])>{{ $wo->pic?->name ?? 'Belum di-claim' }}</span>
+        <span @class(['mt-1 block text-xs', 'font-medium text-text' => $wo->pic, 'text-text-muted' => ! $wo->pic])>{{ $wo->pic?->name ?? 'Unclaimed' }}</span>
     </td>
     <td class="whitespace-nowrap">{{ $wo->area }}</td>
     <td>

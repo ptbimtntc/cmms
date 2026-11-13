@@ -58,7 +58,7 @@ class OilAuditFollowUpService
                 ->filter();
 
             if ($problems->count() !== $problems->unique()->count()) {
-                $validator->errors()->add('problems', 'Setiap problem hanya boleh dipilih satu kali.');
+                $validator->errors()->add('problems', 'Each problem may be selected only once.');
             }
 
             foreach ($problemRows as $i => $problem) {
@@ -72,7 +72,7 @@ class OilAuditFollowUpService
                 if ($findings->count() !== $findings->unique()->count()) {
                     $validator->errors()->add(
                         "problems.{$i}.findings",
-                        'Setiap finding dalam satu problem harus berbeda.'
+                        'Findings within one problem must differ.'
                     );
                 }
 
@@ -83,8 +83,8 @@ class OilAuditFollowUpService
                         $validator->errors()->add(
                             "problems.{$i}.findings.{$j}.finding",
                             in_array($problemText, OilAudit::GENERIC_FINDING_PROBLEMS, true)
-                                ? 'Untuk problem "'.$problemText.'", finding hanya bisa "'.OilAudit::GENERIC_FINDING.'".'
-                                : 'Finding tidak valid untuk problem yang dipilih.'
+                                ? 'For the problem "'.$problemText.'", the finding can only be "'.OilAudit::GENERIC_FINDING.'".'
+                                : 'That finding is not valid for the selected problem.'
                         );
                     }
                 }

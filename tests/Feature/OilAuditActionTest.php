@@ -338,8 +338,8 @@ test('month filter accepts several months and a legacy single month', function (
 
     $this->actingAs($admin)->get(route('oil-audits.report', ['month' => [9, 11]]))
         ->assertOk()
-        ->assertSee('Bulan (2)');
-    $this->actingAs($admin)->get(route('oil-audits.report'))->assertSee('Semua bulan');
+        ->assertSee('Month (2)');
+    $this->actingAs($admin)->get(route('oil-audits.report'))->assertSee('All months');
 });
 
 test('condition filter accepts several conditions and a legacy single condition', function () {
@@ -356,8 +356,8 @@ test('condition filter accepts several conditions and a legacy single condition'
         ->and($ids(['condition' => ['BOGUS']]))->toBe([$oke->id, $kritis->id, $pas->id]);
 
     $this->actingAs($admin)->get(route('oil-audits.report', ['condition' => ['KRITIS', 'PAS_GARIS']]))
-        ->assertSee('Kondisi (2)');
-    $this->actingAs($admin)->get(route('oil-audits.report'))->assertSee('Semua kondisi');
+        ->assertSee('Condition (2)');
+    $this->actingAs($admin)->get(route('oil-audits.report'))->assertSee('All conditions');
 });
 
 test('back from history keeps the date and multi-select filters of the action page', function () {

@@ -221,7 +221,7 @@
 
                     @if ($canManage)
                         <div class="mt-3 border-t border-border pt-3">
-                            <p class="mb-1.5 text-xs text-text-muted">PIC: {{ $picName($pm->pic) ?? 'Belum diassign' }}</p>
+                            <p class="mb-1.5 text-xs text-text-muted">PIC: {{ $picName($pm->pic) ?? 'Unassigned' }}</p>
                             @include('partials.assign-pic-select', ['id' => 'assign-pic-c-' . $pm->id, 'recordId' => $pm->id, 'label' => $pm->machine_number, 'pics' => $picsByArea[$pm->area] ?? [], 'current' => $pm->pic])
                         </div>
                     @endif

@@ -352,7 +352,7 @@ test('type mix is rejected when it exceeds the day limit, repeats a type or name
 
     $this->actingAs($koor)->putJson($url, ['types' => ['2026-11-09' => [['type' => 'NDE', 'count' => 3], ['type' => 'SHUIXING', 'count' => 2]]]])
         ->assertUnprocessable()
-        ->assertJsonPath('message', 'Kombinasi tipe Senin berjumlah 5 mesin, melebihi maks. mesin 4.');
+        ->assertJsonPath('message', 'The type mix for Senin adds up to 5 machines, over the limit of 4.');
     $this->actingAs($koor)->putJson($url, ['types' => ['2026-11-09' => [['type' => 'NDE', 'count' => 1], ['type' => 'NDE', 'count' => 1]]]])
         ->assertUnprocessable();
     $this->actingAs($koor)->putJson($url, ['types' => ['2026-11-09' => [['type' => 'BFM', 'count' => 1]]]])

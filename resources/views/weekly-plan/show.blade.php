@@ -2,7 +2,7 @@
 
 @php($fullWidth = true)
 
-@section('title', 'Planning PM Mingguan')
+@section('title', 'Weekly PM Plan')
 
 @section('content')
     <div id="weekly-plan"
@@ -15,10 +15,10 @@
         data-pm-schedules-url="{{ route('pm-schedules.index') }}"
         class="space-y-5">
 
-        <x-ui.page-header title="Planning PM {{ $areaModel->name }}" description="Minggu {{ $weekLabel }}. Jadwal ini terpisah dari PM Schedule: plan date dan PIC di sana tidak berubah.">
+        <x-ui.page-header title="Weekly PM Plan {{ $areaModel->name }}" description="Week {{ $weekLabel }}. This plan is separate from PM Schedule: the plan date and PIC there do not change.">
             <x-slot:actions>
-                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $prevWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Minggu sebelumnya</x-ui.button>
-                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $nextWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Minggu berikutnya</x-ui.button>
+                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $prevWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Previous webelumnya</x-ui.button>
+                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $nextWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Next werikutnya</x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>
 
@@ -33,10 +33,10 @@
                 </select>
             </div>
             <div class="grid gap-1.5 sm:w-56">
-                <label for="wp-week" class="text-xs font-medium text-text-muted">Minggu (pilih tanggal mana saja)</label>
+                <label for="wp-week" class="text-xs font-medium text-text-muted">Week (pick any date in it)</label>
                 <input id="wp-week" type="date" name="week" value="{{ $plan->week_start->toDateString() }}" class="input lg:min-h-9">
             </div>
-            <x-ui.button type="submit" class="lg:min-h-9">Buka</x-ui.button>
+            <x-ui.button type="submit" class="lg:min-h-9">Open</x-ui.button>
         </form>
 
         {{-- Last week's realization (only when last week had a plan) --}}
@@ -48,13 +48,13 @@
                  PIC status) lives on its own line below so the buttons never move. --}}
             <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                 <div class="min-w-0 xl:max-w-xl">
-                    <h2 class="text-base font-semibold text-text">Susun jadwal</h2>
-                    <p class="text-sm text-text-muted">Seret kartu mesin ke hari, atau pilih hari langsung di kartunya. Isi otomatis mengikuti batas mesin per hari di judul tiap kolom.</p>
+                    <h2 class="text-base font-semibold text-text">Build the plan</h2>
+                    <p class="text-sm text-text-muted">Drag a machine card onto a day, or pick the day on the card itself. Auto fill follows the per-day machine limit shown in each column heading.</p>
                 </div>
                 <div class="grid gap-2 sm:flex sm:shrink-0 sm:flex-wrap sm:items-center sm:gap-3 xl:justify-end">
-                    <button type="button" class="btn btn-outline min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-pic-sync>Terapkan PIC ke PM Schedule</button>
-                    <button type="button" class="btn btn-outline min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-reset>Kosongkan semua hari</button>
-                    <button type="button" class="btn btn-primary min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-autofill>Isi otomatis mesin yang due minggu ini</button>
+                    <button type="button" class="btn btn-outline min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-pic-sync>Apply the PIC to PM Schedule</button>
+                    <button type="button" class="btn btn-outline min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-reset>Clear every day</button>
+                    <button type="button" class="btn btn-primary min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-autofill>Auto fill machines due this week</button>
                 </div>
             </div>
 

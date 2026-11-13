@@ -15,7 +15,7 @@
         <div class="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-end lg:gap-16">
 
             <div>
-                <p class="font-signage text-lg font-semibold text-amber-300">How It Works</p>
+                <p class="font-signage text-lg font-semibold text-blue-300">How It Works</p>
 
                 <h2 class="mt-2 font-signage text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
                     Maintenance Menjadi Lebih Mudah Dalam 4 Langkah

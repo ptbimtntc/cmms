@@ -21,7 +21,7 @@
             <label for="vme-area" class="flex items-center gap-2 text-xs font-medium text-text-muted">
                 Area
                 <select id="vme-area" class="select w-auto lg:min-h-9">
-                    <option value="">Semua area</option>
+                    <option value="">All areas</option>
                     @foreach ($areaOptions as $option)
                         <option value="{{ $option->slug }}" @selected($selectedArea === $option->slug)>{{ $option->name }}</option>
                     @endforeach
@@ -66,7 +66,7 @@
                         <h3 id="vme-detail-title" class="truncate text-base font-semibold text-text"></h3>
                     </div>
                     <div class="flex shrink-0 items-center gap-1">
-                        <button type="button" id="vme-detail-reload" class="btn btn-ghost btn-sm min-h-11 lg:min-h-9" title="Muat ulang detail">Muat ulang</button>
+                        <button type="button" id="vme-detail-reload" class="btn btn-ghost btn-sm min-h-11 lg:min-h-9" title="Reload the detail">Reload</button>
                         <button type="button" id="vme-detail-close" class="btn btn-ghost min-h-11 min-w-11 px-0 text-lg leading-none lg:min-h-9 lg:min-w-9" aria-label="Tutup detail">&times;</button>
                     </div>
                 </header>
@@ -77,10 +77,10 @@
         </div>
 
         <aside class="card p-4">
-            <h2 class="font-semibold text-text">Aktivitas Aktual</h2>
-            <p class="mt-1 text-xs text-text-muted">Hanya PIC yang benar-benar memulai aktivitas di FreeDOMS.</p>
+            <h2 class="font-semibold text-text">Live Activity</h2>
+            <p class="mt-1 text-xs text-text-muted">Only PICs who actually started an activity in FreeDOMS.</p>
             <ul id="vme-list" class="mt-3 space-y-2 text-sm"></ul>
-            <p id="vme-empty" class="mt-3 hidden text-sm text-text-muted">Tidak ada aktivitas aktif.</p>
+            <p id="vme-empty" class="mt-3 hidden text-sm text-text-muted">No active activity.</p>
         </aside>
     </div>
 </div>

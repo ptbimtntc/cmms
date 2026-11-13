@@ -36,8 +36,8 @@ class QueueWorkerStatus
         return [
             'active' => false,
             'message' => $beat > 0
-                ? 'Tidak ada sinyal sejak '.date('d-m-Y H:i', $beat).'. Jalankan: php artisan queue:work --tries=3'
-                : 'Belum pernah ada sinyal worker. Jalankan: php artisan queue:work --tries=3',
+                ? 'No heartbeat since '.date('d-m-Y H:i', $beat).'. Jalankan: php artisan queue:work --tries=3'
+                : 'The worker has never reported in. Run: php artisan queue:work --tries=3',
             'pending' => $pending,
         ];
     }

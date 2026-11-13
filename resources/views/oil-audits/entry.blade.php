@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Input Audit Oli')
+@section('title', 'Oil Audit Entry')
 
 @php
     $fullWidth = true;
@@ -10,13 +10,13 @@
     // Condition scale, mildest to worst. Colours carry the severity (they are status, not
     // decoration) and match the "last check" card so a result reads at a glance.
     $conditions = [
-        ['key' => 'OKE', 'number' => '1', 'label' => 'Oke', 'detail' => 'Aman', 'class' => 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-500 hover:bg-emerald-100 focus-visible:ring-emerald-300'],
-        ['key' => 'PANTAU', 'number' => '2', 'label' => 'Pantau', 'detail' => 'Periksa berkala', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300'],
-        ['key' => 'HAMPIR_GARIS', 'number' => '3', 'label' => 'Hampir Garis', 'detail' => 'Perlu action', 'class' => 'border-orange-200 bg-orange-50 text-orange-800 hover:border-orange-500 hover:bg-orange-100 focus-visible:ring-orange-300'],
-        ['key' => 'PAS_GARIS', 'number' => '4', 'label' => 'Pas Garis', 'detail' => 'Perlu action', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300'],
-        ['key' => 'KRITIS', 'number' => '5', 'label' => 'Kritis', 'detail' => 'Segera action', 'class' => 'border-red-300 bg-red-50 text-red-900 hover:border-red-600 hover:bg-red-100 focus-visible:ring-red-300'],
-        ['key' => 'OLI_KERUH', 'number' => '6', 'label' => 'Oli Hitam', 'detail' => 'Periksa kualitas oli', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300'],
-        ['key' => 'GLASS_BUREM', 'number' => '7', 'label' => 'LG Burem', 'detail' => 'Butuh tindak lanjut', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300'],
+        ['key' => 'OKE', 'number' => '1', 'label' => 'Oke', 'detail' => 'Safe', 'class' => 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-500 hover:bg-emerald-100 focus-visible:ring-emerald-300'],
+        ['key' => 'PANTAU', 'number' => '2', 'label' => 'Pantau', 'detail' => 'Check regularly', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300'],
+        ['key' => 'HAMPIR_GARIS', 'number' => '3', 'label' => 'Hampir Garis', 'detail' => 'Needs action', 'class' => 'border-orange-200 bg-orange-50 text-orange-800 hover:border-orange-500 hover:bg-orange-100 focus-visible:ring-orange-300'],
+        ['key' => 'PAS_GARIS', 'number' => '4', 'label' => 'Pas Garis', 'detail' => 'Needs action', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300'],
+        ['key' => 'KRITIS', 'number' => '5', 'label' => 'Kritis', 'detail' => 'Action now', 'class' => 'border-red-300 bg-red-50 text-red-900 hover:border-red-600 hover:bg-red-100 focus-visible:ring-red-300'],
+        ['key' => 'OLI_KERUH', 'number' => '6', 'label' => 'Oli Hitam', 'detail' => 'Check oil quality', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300'],
+        ['key' => 'GLASS_BUREM', 'number' => '7', 'label' => 'LG Burem', 'detail' => 'Needs follow-up', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300'],
     ];
 
     $lastTone = $last ? match ($last->condition) {
@@ -31,33 +31,33 @@
 
 @section('content')
     <div class="mx-auto max-w-4xl space-y-5">
-        <x-ui.button variant="ghost" href="{{ route('oil-audits.scan') }}" class="-ml-2">Kembali ke scan</x-ui.button>
+        <x-ui.button variant="ghost" href="{{ route('oil-audits.scan') }}" class="-ml-2">Back to scan</x-ui.button>
 
-        <section class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6" aria-label="Mesin">
+        <section class="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6" aria-label="Machine">
             <div>
-                <p class="text-sm font-medium text-text-muted">Mesin terdeteksi</p>
+                <p class="text-sm font-medium text-text-muted">Machine detected</p>
                 <h1 class="mt-1 font-signage text-4xl font-semibold leading-none text-text">{{ $machine->machine_number }}</h1>
                 <p class="mt-2 text-sm text-text-muted">{{ $machine->machine_type }} · {{ $machine->area }}@if ($machine->description) · {{ $machine->description }}@endif</p>
             </div>
             <div class="rounded-control bg-surface-sunken px-4 py-3 text-sm">
                 <span class="block font-semibold text-text">{{ auth()->user()->name }}</span>
-                <span class="block text-xs text-text-muted">Pengaudit saat ini</span>
+                <span class="block text-xs text-text-muted">Auditing now</span>
             </div>
         </section>
 
         @if ($last)
-            <section class="rounded-card border p-5 sm:p-6 {{ $lastTone }}" aria-label="Riwayat pengecekan terakhir">
+            <section class="rounded-card border p-5 sm:p-6 {{ $lastTone }}" aria-label="Last check">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-sm font-medium opacity-80">Riwayat pengecekan terakhir</p>
+                        <p class="text-sm font-medium opacity-80">Last check</p>
                         <p class="mt-1 text-lg font-semibold">{{ $last->conditionLabel() }}</p>
-                        <p class="mt-1 text-sm opacity-80">{{ $last->audited_at->format('d M Y, H:i') }} · oleh {{ $last->audited_by_name }}</p>
+                        <p class="mt-1 text-sm opacity-80">{{ $last->audited_at->format('d M Y, H:i') }} · by {{ $last->audited_by_name }}</p>
                     </div>
                     <div class="flex flex-col items-start gap-2 sm:items-end">
                         @if ($last->needsFollowUp() && $last->followUp)
-                            <x-ui.badge tone="success">Telah ditindaklanjuti</x-ui.badge>
+                            <x-ui.badge tone="success">Followed up</x-ui.badge>
                         @elseif ($last->needsFollowUp())
-                            <x-ui.badge tone="warning">Menunggu tindak lanjut</x-ui.badge>
+                            <x-ui.badge tone="warning">Awaiting follow-up</x-ui.badge>
                         @endif
                         <span class="text-xs opacity-80">{{ $last->machine_type }} · {{ $last->area }}</span>
                     </div>
@@ -71,14 +71,14 @@
 
         <section class="card p-5 sm:p-6" aria-labelledby="condition-heading">
             @if ($viewOnly)
-                <x-ui.alert tone="info" class="mb-4">Mode lihat saja. Supervisor tidak dapat menyimpan hasil pengecekan.</x-ui.alert>
+                <x-ui.alert tone="info" class="mb-4">View only. A Supervisor cannot save a check result.</x-ui.alert>
             @endif
             <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h2 id="condition-heading" class="font-signage text-2xl font-semibold text-text">Bagaimana kondisi oli mesin?</h2>
-                    <p class="mt-1 text-sm text-text-muted">Pilih satu kondisi untuk menyimpan audit sekarang. Tekan tombol angka <span class="font-semibold text-text">1 sampai 7</span> untuk lebih cepat.</p>
+                    <h2 id="condition-heading" class="font-signage text-2xl font-semibold text-text">How does the oil look?</h2>
+                    <p class="mt-1 text-sm text-text-muted">Pick one condition to save the audit right away. Press number keys <span class="font-semibold text-text">1 to 7</span> to go faster.</p>
                 </div>
-                <span class="text-xs text-text-muted">Tersimpan otomatis dengan waktu saat ini</span>
+                <span class="text-xs text-text-muted">Saved automatically with the current time</span>
             </div>
 
             <div @class(['mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7', 'pointer-events-none opacity-50 grayscale' => $viewOnly]) id="condition-buttons" @if ($viewOnly) aria-disabled="true" @endif>

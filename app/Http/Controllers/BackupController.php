@@ -66,7 +66,7 @@ class BackupController extends Controller
 
         if (! $backupRun->isDownloadable()) {
             return redirect()->route('backup.index')
-                ->with('error', 'File backup tersebut tidak tersedia lagi. Buat backup baru.');
+                ->with('error', 'That backup file is no longer available. Create a new backup.');
         }
 
         $path = $this->backups->startDownload($backupRun, $admin);

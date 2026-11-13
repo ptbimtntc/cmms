@@ -65,7 +65,7 @@ class SendOilAuditCriticalNotification implements ShouldQueue
         }
 
         if (! $notification->oilAudit) {
-            $notification->update(['status' => OilAuditNotification::SKIPPED, 'last_error' => 'Data audit tidak ditemukan.']);
+            $notification->update(['status' => OilAuditNotification::SKIPPED, 'last_error' => 'Audit data not found.']);
 
             return;
         }

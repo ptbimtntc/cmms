@@ -126,14 +126,14 @@ class SyncOperationController extends Controller
         if (! in_array($user->role, self::ALLOWED_ROLES[$type], true)) {
             return $this->respond('forbidden', 403, [
                 'operation_uuid' => $uuid,
-                'message' => 'Role Anda tidak diizinkan untuk operasi ini.',
+                'message' => 'Your role is not allowed to perform this operation.',
             ]);
         }
 
         if (isset(self::AREA_RESTRICTED_TYPES[$type]) && ! $user->hasArea(self::AREA_RESTRICTED_TYPES[$type])) {
             return $this->respond('forbidden', 403, [
                 'operation_uuid' => $uuid,
-                'message' => 'Area Anda tidak diizinkan untuk operasi ini.',
+                'message' => 'Your area is not allowed to perform this operation.',
             ]);
         }
 
@@ -212,7 +212,7 @@ class SyncOperationController extends Controller
 
             return $this->respond('failed', 500, [
                 'operation_uuid' => $uuid,
-                'message' => 'Operasi gagal diproses di server. Operasi ini aman untuk dicoba lagi.',
+                'message' => 'The server could not process this operation. It is safe to retry.',
             ]);
         }
     }
@@ -232,14 +232,14 @@ class SyncOperationController extends Controller
         if (! $existing) {
             return $this->respond('failed', 500, [
                 'operation_uuid' => $uuid,
-                'message' => 'Tidak dapat menentukan status operasi ini. Operasi ini aman untuk dicoba lagi.',
+                'message' => 'The status of this operation cannot be determined. It is safe to retry.',
             ]);
         }
 
         if ($existing->payload_hash !== $payloadHash) {
             return $this->respond('payload_mismatch', 409, [
                 'operation_uuid' => $uuid,
-                'message' => 'operation_uuid ini sudah pernah digunakan dengan payload yang berbeda. Operasi TIDAK diproses ulang.',
+                'message' => 'This operation_uuid was already used with a different payload. The operation was NOT processed again.',
             ]);
         }
 
@@ -250,7 +250,7 @@ class SyncOperationController extends Controller
             // than guessing success or failure.
             return $this->respond('in_progress', 409, [
                 'operation_uuid' => $uuid,
-                'message' => 'Operasi ini sedang diproses oleh request lain. Silakan coba lagi sesaat lagi.',
+                'message' => 'Another request is processing this operation. Try again in a moment.',
             ]);
         }
 
@@ -359,7 +359,7 @@ class SyncOperationController extends Controller
 
         if (! $pmSchedule) {
             throw new SyncConflictException(
-                'PM Schedule tidak ditemukan (mungkin sudah dihapus sejak device terakhir sync).',
+                'PM Schedule not found; it may have been deleted since this device last synced.',
                 ['pm_schedule_id' => $payload['pm_schedule_id'] ?? null]
             );
         }
@@ -376,7 +376,7 @@ class SyncOperationController extends Controller
         $pmSchedule = $this->findPmSchedule($payload);
 
         if (! $pmSchedule->isAccessibleBy($user)) {
-            throw new AuthorizationException('Anda tidak memiliki akses ke PM Schedule ini.');
+            throw new AuthorizationException('You do not have access to this PM Schedule.');
         }
 
         $this->assertNoStateConflict($expectedState, [
@@ -399,7 +399,7 @@ class SyncOperationController extends Controller
             }
 
             throw new SyncConflictException(
-                'PIC memiliki aktivitas lain yang masih berjalan — konfirmasi END & START diperlukan.',
+                'The PIC still has another activity running. Confirm END and START first.',
                 [
                     'current_activity' => [
                         'source' => $conflict->source,
@@ -428,7 +428,7 @@ class SyncOperationController extends Controller
         $pmSchedule = $this->findPmSchedule($payload);
 
         if (! $pmSchedule->isAccessibleBy($user)) {
-            throw new AuthorizationException('Anda tidak memiliki akses ke PM Schedule ini.');
+            throw new AuthorizationException('You do not have access to this PM Schedule.');
         }
 
         $this->assertNoStateConflict($expectedState, ['status' => $pmSchedule->status]);
@@ -463,7 +463,7 @@ class SyncOperationController extends Controller
         $pmSchedule = $this->findPmSchedule($payload);
 
         if (! $pmSchedule->isAccessibleBy($user)) {
-            throw new AuthorizationException('Anda tidak memiliki akses ke PM Schedule ini.');
+            throw new AuthorizationException('You do not have access to this PM Schedule.');
         }
 
         $checklistService = app(PMChecklistSaveService::class);
@@ -494,7 +494,7 @@ class SyncOperationController extends Controller
 
         if (! empty($errors)) {
             throw ValidationException::withMessages([
-                'checklists' => ['Fill PM belum lengkap: '.implode(', ', $errors)],
+                'checklists' => ['Fill PM is incomplete: '.implode(', ', $errors)],
             ]);
         }
 
@@ -514,7 +514,7 @@ class SyncOperationController extends Controller
 
         if (! in_array($user->role, self::ALLOWED_ROLES[self::TYPE_PM_CHECKLIST_SAVE], true)
             || ! $pmSchedule->isAccessibleBy($user)) {
-            return response()->json(['success' => false, 'message' => 'Anda tidak memiliki akses ke PM Schedule ini.'], 403);
+            return response()->json(['success' => false, 'message' => 'You do not have access to this PM Schedule.'], 403);
         }
 
         return response()->json([
@@ -542,7 +542,7 @@ class SyncOperationController extends Controller
 
         if (! $machine) {
             throw ValidationException::withMessages([
-                'machine_id' => ['Machine tidak ditemukan atau tidak memenuhi syarat audit oli.'],
+                'machine_id' => ['Machine not found, or it is not eligible for an oil audit.'],
             ]);
         }
 
@@ -563,20 +563,20 @@ class SyncOperationController extends Controller
 
         if (! $oilAudit) {
             throw new SyncConflictException(
-                'Oil Audit tidak ditemukan (mungkin sudah berubah sejak device terakhir sync).',
+                'Oil Audit not found; it may have changed since this device last synced.',
                 ['oil_audit_id' => $payload['oil_audit_id'] ?? null]
             );
         }
 
         if (! $oilAudit->isInAuditScope()) {
             throw ValidationException::withMessages([
-                'oil_audit_id' => ['Oil Audit di luar scope yang diizinkan.'],
+                'oil_audit_id' => ['This Oil Audit is outside the allowed scope.'],
             ]);
         }
 
         if (! $oilAudit->needsFollowUp()) {
             throw ValidationException::withMessages([
-                'oil_audit_id' => ['Follow up hanya diperlukan untuk kondisi oli yang tidak oke.'],
+                'oil_audit_id' => ['A follow-up is only needed when the oil condition is not OK.'],
             ]);
         }
 

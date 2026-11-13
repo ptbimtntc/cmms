@@ -180,7 +180,7 @@
 
                 <x-ui.field label="Remarks" for="remarks" class="mt-5">
                     <textarea id="remarks" name="remarks" rows="3" class="textarea"
-                        placeholder="Contoh: Kapstan 1,2 oblak, kapstan 3 bocor, ganti ring kapstan 1 dan 4, ganti nylon, ganti spindel, ganti countersheave, gant belt 1200, 1800, 1500">{{ old('remarks', $pmSchedule->remarks) }}</textarea>
+                        placeholder="Example: Kapstan 1 and 2 loose, kapstan 3 leaking, replaced rings on kapstan 1 and 4, replaced nylon, spindle, and countersheave, gant belt 1200, 1800, 1500">{{ old('remarks', $pmSchedule->remarks) }}</textarea>
                 </x-ui.field>
             </x-ui.card>
 
@@ -394,7 +394,7 @@
                 <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                     {{-- Hidden on phones to keep the sticky bar short. --}}
                     <p class="hidden text-xs text-text-muted sm:block">Saving takes you to the checklist for this PM.</p>
-                    <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Lihat Checklist</x-ui.button>
+                    <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Open checklist</x-ui.button>
                 </div>
             </div>
         </form>

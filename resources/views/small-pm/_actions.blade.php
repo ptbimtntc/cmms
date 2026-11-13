@@ -22,7 +22,7 @@
     @endunless
     @if ($canManage)
         <x-ui.button size="sm" variant="outline" class="{{ $grow }}" href="{{ route('small-pm.edit', ['schedule' => $s->id, 'page' => request('page')]) }}">Edit</x-ui.button>
-        <form method="POST" action="{{ route('small-pm.destroy', $s) }}" class="{{ $grow }}" onsubmit="return confirm('Hapus jadwal Small PM?')">
+        <form method="POST" action="{{ route('small-pm.destroy', $s) }}" class="{{ $grow }}" onsubmit="return confirm('Delete this Small PM schedule?')">
             @csrf
             @method('DELETE')
             <x-ui.button type="submit" size="sm" variant="ghost" class="w-full text-danger hover:bg-danger-light hover:text-danger-hover">Delete</x-ui.button>

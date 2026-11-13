@@ -38,7 +38,7 @@
 
     <div class="space-y-5">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <x-ui.button variant="ghost" href="{{ $backRoute }}" class="-ml-2">Kembali</x-ui.button>
+            <x-ui.button variant="ghost" href="{{ $backRoute }}" class="-ml-2">Back</x-ui.button>
             @guest
                 <x-brand-logo :framed="false" class="h-6 w-auto" aria-hidden="true" />
             @endguest
@@ -74,14 +74,14 @@
         </section>
 
         @if ($isHourCycle)
-            <x-ui.alert tone="info">Note: Next PM akan akurat jika mesin running non stop</x-ui.alert>
+            <x-ui.alert tone="info">Note: Next PM is only accurate while the machine runs non stop.</x-ui.alert>
         @endif
 
         <section aria-labelledby="mh-pm-heading" class="space-y-3">
-            <h2 id="mh-pm-heading" class="font-signage text-2xl font-semibold text-text">Riwayat PM</h2>
+            <h2 id="mh-pm-heading" class="font-signage text-2xl font-semibold text-text">PM History</h2>
 
             @if ($pmHistories->isEmpty())
-                <x-ui.empty-state title="No PM history found." description="PM yang dikerjakan untuk mesin ini akan tercatat di sini." />
+                <x-ui.empty-state title="No PM history found." description="PMs done on this machine are recorded here." />
             @endif
 
             {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}

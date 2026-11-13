@@ -12,6 +12,7 @@
                 required
                 autocomplete="current-password"
                 viewable
+                class:input="min-h-11"
             />
             <flux:input
                 wire:model="password"
@@ -21,6 +22,7 @@
                 autocomplete="new-password"
                 passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
                 viewable
+                class:input="min-h-11"
             />
             <flux:input
                 wire:model="password_confirmation"
@@ -30,10 +32,11 @@
                 autocomplete="new-password"
                 passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
                 viewable
+                class:input="min-h-11"
             />
 
             <div class="flex items-center gap-4">
-                <flux:button variant="primary" type="submit" data-test="update-password-button">{{ __('Save') }}</flux:button>
+                <flux:button variant="primary" type="submit" class="min-h-11" data-test="update-password-button">{{ __('Save') }}</flux:button>
             </div>
         </form>
 

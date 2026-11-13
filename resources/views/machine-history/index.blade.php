@@ -13,13 +13,13 @@
             <x-brand-logo :framed="false" class="h-7 w-auto" />
         @endguest
 
-        <x-ui.page-header title="Machine History" description="Riwayat Preventive Maintenance per mesin. Pilih mesin untuk melihat seluruh PM-nya." />
+        <x-ui.page-header title="Machine History" description="Preventive Maintenance history per machine. Pick a machine to see all of its PM-nya." />
 
         {{-- Filters: plain GET, every field labelled. --}}
         <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
             <div class="grid gap-1.5 sm:w-64">
-                <label for="mh-search" class="text-xs font-medium text-text-muted">Cari</label>
-                <input id="mh-search" type="text" name="search" value="{{ request('search') }}" placeholder="Nomor mesin, tipe, atau order" class="input lg:min-h-9">
+                <label for="mh-search" class="text-xs font-medium text-text-muted">Search</label>
+                <input id="mh-search" type="text" name="search" value="{{ request('search') }}" placeholder="Machine number, type, or order" class="input lg:min-h-9">
             </div>
             <div class="grid gap-1.5 sm:w-40">
                 <label for="mh-area" class="text-xs font-medium text-text-muted">Area</label>
@@ -47,7 +47,7 @@
 
         @if ($machines->isEmpty())
             <x-ui.empty-state title="No machine history found."
-                :description="$hasFilters ? 'Longgarkan filter, atau reset untuk melihat semua mesin.' : 'Mesin dari Machine Master akan muncul di sini.'">
+                :description="$hasFilters ? 'Loosen the filters, or reset them to see every machine.' : 'Machines from Machine Master show ucul di sini.'">
                 @if ($hasFilters)
                     <x-ui.button variant="outline" href="{{ route('machine-history.index') }}">Reset filter</x-ui.button>
                 @endif

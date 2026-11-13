@@ -183,9 +183,9 @@ test('import csv creates WOs and reports success, failed and skipped with row ca
 
     $reasons = collect($result['details'])->pluck('reason', 'row');
     expect($reasons[4])->toContain('GHOST-9')
-        ->and($reasons[5])->toContain('sudah terdaftar')
-        ->and($reasons[6])->toContain('sudah terdaftar')
-        ->and($reasons[7])->toContain('Format Date');
+        ->and($reasons[5])->toContain('already exists')
+        ->and($reasons[6])->toContain('already exists')
+        ->and($reasons[7])->toContain('Date format');
 
     expect(PredictiveWorkOrder::where('order_number', 'EXISTING')->value('problem_description'))->toBe('asli');
 
@@ -218,7 +218,7 @@ test('import with missing headers touches nothing and explains why', function ()
         'file' => UploadedFile::fake()->createWithContent('wo.csv', "Order Number,Machine Number\nA,NDE-001"),
     ]);
 
-    expect(session('predictive_import_result')['fatal'])->toContain('Kolom wajib')
+    expect(session('predictive_import_result')['fatal'])->toContain('Required column')
         ->and(PredictiveWorkOrder::count())->toBe(0);
 });
 

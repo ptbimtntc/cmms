@@ -74,14 +74,14 @@
             <section class="card p-5" aria-labelledby="ro-dist">
                 <div class="mb-4 flex items-start justify-between gap-3">
                     <div>
-                        <h3 id="ro-dist" class="font-semibold text-text">Distribusi Finding</h3>
-                        <p class="mt-0.5 text-xs text-text-muted">Bagian mana yang paling sering menjadi temuan follow-up?</p>
+                        <h3 id="ro-dist" class="font-semibold text-text">Finding Distribution</h3>
+                        <p class="mt-0.5 text-xs text-text-muted">Which part shows up most often in follow-up findings?</p>
                     </div>
-                    <x-ui.badge tone="primary" class="shrink-0">{{ $findingFrequency->sum('total') }} temuan</x-ui.badge>
+                    <x-ui.badge tone="primary" class="shrink-0">{{ $findingFrequency->sum('total') }} findings</x-ui.badge>
                 </div>
 
                 @if ($findingFrequency->isEmpty())
-                    <p class="rounded-control border border-dashed border-border-strong py-8 text-center text-sm text-text-muted">Belum ada finding follow-up pada scope filter ini.</p>
+                    <p class="rounded-control border border-dashed border-border-strong py-8 text-center text-sm text-text-muted">No follow-up finding in this filter scope yet.</p>
                 @else
                     <div class="mx-auto flex max-w-3xl flex-col items-center gap-6 sm:flex-row">
                         <div class="h-56 w-56 shrink-0">
@@ -106,13 +106,13 @@
                 <section class="card p-5" aria-labelledby="ro-problem">
                     <div class="mb-4 flex items-start justify-between gap-3">
                         <div>
-                            <h3 id="ro-problem" class="font-semibold text-text">Problem &amp; Finding Paling Sering Muncul</h3>
-                            <p class="mt-0.5 text-xs text-text-muted">Top 10 kombinasi problem + finding dari hasil follow-up</p>
+                            <h3 id="ro-problem" class="font-semibold text-text">Most Frequent Problem and Finding</h3>
+                            <p class="mt-0.5 text-xs text-text-muted">Top 10 problem and finding pairs from follow-up results</p>
                         </div>
-                        <x-ui.badge tone="primary" class="shrink-0">{{ $problemFrequency->sum('total') }} temuan</x-ui.badge>
+                        <x-ui.badge tone="primary" class="shrink-0">{{ $problemFrequency->sum('total') }} findings</x-ui.badge>
                     </div>
                     @if ($problemFrequency->isEmpty())
-                        <p class="text-sm text-text-muted">Belum ada problem follow-up pada scope filter ini.</p>
+                        <p class="text-sm text-text-muted">No follow-up problem in this filter scope yet.</p>
                     @else
                         @include('reports.partials.rank-bars', ['numbered' => true, 'rows' => $problemFrequency->map(fn ($row) => [
                             'label' => $row->problem.': '.$row->finding,
@@ -125,20 +125,20 @@
                 <section class="card p-5" aria-labelledby="ro-repeat">
                     <div class="mb-4 flex items-start justify-between gap-3">
                         <div>
-                            <h3 id="ro-repeat" class="font-semibold text-text">Mesin dengan Temuan Berulang</h3>
-                            <p class="mt-0.5 text-xs text-text-muted">Top 10 mesin dengan &ge; {{ $repeatFindingMin }} follow-up pada audit berbeda</p>
+                            <h3 id="ro-repeat" class="font-semibold text-text">Machines with Repeat Findings</h3>
+                            <p class="mt-0.5 text-xs text-text-muted">Top 10 machines with {{ $repeatFindingMin }} or more follow-ups across different audits</p>
                         </div>
-                        <x-ui.badge tone="warning" class="shrink-0">&ge; {{ $repeatFindingThreshold }}&times; = berulang</x-ui.badge>
+                        <x-ui.badge tone="warning" class="shrink-0">&ge; {{ $repeatFindingThreshold }}&times; = repeat</x-ui.badge>
                     </div>
                     @if ($repeatFindingMachines->isEmpty())
-                        <p class="text-sm text-text-muted">Belum ada mesin dengan temuan berulang pada scope filter ini.</p>
+                        <p class="text-sm text-text-muted">No machine has repeat findings in this filter scope yet.</p>
                     @else
                         @include('reports.partials.rank-bars', ['numbered' => true, 'rows' => $repeatFindingMachines->map(fn ($row) => [
                             'label' => $row->machine_number,
                             'value' => $row->events.'×',
                             'percent' => $maxRepeat > 0 ? $row->events / $maxRepeat * 100 : 0,
                             'href' => $historyUrl($row->machine_number),
-                            'badge' => $row->events >= $repeatFindingThreshold ? 'Berulang' : null,
+                            'badge' => $row->events >= $repeatFindingThreshold ? 'Repeat' : null,
                         ])->all()])
                     @endif
                 </section>

@@ -51,7 +51,7 @@ class SourceArchiver
         $handle = fopen($destination, 'wb');
 
         if ($handle === false) {
-            throw new BackupStepException('Tidak dapat membuat arsip ZIP sementara.');
+            throw new BackupStepException('Could not create a temporary ZIP archive.');
         }
 
         // Writes straight to the temp file on disk, not into memory — safe for a
@@ -97,7 +97,7 @@ class SourceArchiver
         } catch (Throwable $e) {
             fclose($handle);
 
-            throw $e instanceof RuntimeException ? $e : new BackupStepException('Gagal menulis arsip ZIP.');
+            throw $e instanceof RuntimeException ? $e : new BackupStepException('Could not write the ZIP archive.');
         }
 
         fclose($handle);

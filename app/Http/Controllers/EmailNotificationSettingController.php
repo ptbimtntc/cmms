@@ -57,21 +57,21 @@ class EmailNotificationSettingController extends Controller
             'recipients' => ['array', 'max:20'],
             'recipients.*' => ['nullable', 'email:rfc', 'max:255'],
         ], [
-            'sender_email.regex' => 'Pengirim harus berupa alamat @gmail.com.',
-            'sender_email.required' => 'Alamat Gmail pengirim wajib diisi.',
-            'app_password.regex' => 'App Password harus 16 huruf (spasi diabaikan).',
-            'app_password.required' => 'Gmail App Password wajib diisi.',
-            'recipients.*.email' => 'Format email penerima tidak valid.',
+            'sender_email.regex' => 'The sender must be an @gmail.com address.',
+            'sender_email.required' => 'The sender Gmail address is required.',
+            'app_password.regex' => 'The App Password must be 16 letters (spaces are ignored).',
+            'app_password.required' => 'The Gmail App Password is required.',
+            'recipients.*.email' => 'A recipient email address is not valid.',
         ]);
 
         $filled = array_values(array_filter($validated['recipients'] ?? [], fn ($r) => $r !== ''));
 
         if ($enabled && $filled === []) {
-            throw ValidationException::withMessages(['recipients' => 'Minimal satu email penerima wajib diisi.']);
+            throw ValidationException::withMessages(['recipients' => 'At least one recipient email is required.']);
         }
 
         if (count($filled) !== count(array_unique(array_map('strtolower', $filled)))) {
-            throw ValidationException::withMessages(['recipients' => 'Email penerima tidak boleh duplikat.']);
+            throw ValidationException::withMessages(['recipients' => 'Recipient emails must not repeat.']);
         }
 
         $senderEmail = ($validated['sender_email'] ?? '') !== '' ? strtolower($validated['sender_email']) : null;
@@ -91,7 +91,7 @@ class EmailNotificationSettingController extends Controller
         $setting->exists ? $setting->update($data) : $setting->fill($data)->save();
 
         return redirect()->route('email-notifications.edit')
-            ->with('success', 'Pengaturan notifikasi email disimpan.');
+            ->with('success', 'Email notification settings saved.');
     }
 
     public function test(): RedirectResponse
@@ -108,10 +108,10 @@ class EmailNotificationSettingController extends Controller
         try {
             app(GmailSmtpMailer::class)->send($setting, $setting->recipientList(), new NotificationTestMail);
             $ok = true;
-            $message = 'Email tes berhasil dikirim ke '.count($setting->recipientList()).' penerima (diterima server Gmail).';
+            $message = 'Test email sent to '.count($setting->recipientList()).' penerima (diterima server Gmail).';
         } catch (Throwable $e) {
             $ok = false;
-            $message = 'Gagal mengirim: '.GmailSmtpMailer::sanitize($e, $setting);
+            $message = 'Could not send: '.GmailSmtpMailer::sanitize($e, $setting);
         }
 
         $setting->update(['last_test_at' => now(), 'last_test_ok' => $ok, 'last_test_message' => $message]);

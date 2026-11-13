@@ -143,7 +143,7 @@ test('the page offers the Areas the viewer may see and preselects the chosen one
     $admin = vfAdmin();
 
     $page = $this->actingAs($admin)->get('/vme?area=wwd')->assertOk();
-    $page->assertSee('id="vme-area"', false)->assertSee('Semua area')->assertSee('value="bul"', false)->assertSee('value="wwd" selected', false);
+    $page->assertSee('id="vme-area"', false)->assertSee('All areas')->assertSee('value="bul"', false)->assertSee('value="wwd" selected', false);
 
     $koordinator = User::factory()->create([...roleAttributes('KOORDINATOR WWD'), 'is_active' => true]);
     $own = $this->actingAs($koordinator)->get('/vme')->assertOk();

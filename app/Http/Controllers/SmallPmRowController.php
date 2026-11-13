@@ -51,7 +51,7 @@ class SmallPmRowController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->withErrors(['file' => 'Import gagal. Periksa format kolom dan isi file.']);
+            return back()->withErrors(['file' => 'Import failed. Check the column format and the file contents.']);
         }
 
         return back()->with('small_pm_row_import_result', $import->result);
@@ -135,16 +135,16 @@ class SmallPmRowController extends Controller
     public function destroy(SmallPmRow $smallPmRow)
     {
         if ($smallPmRow->machines()->exists()) {
-            return back()->with('error', 'Row yang masih berisi mesin tidak bisa dihapus.');
+            return back()->with('error', 'A row that still holds machines cannot be deleted.');
         }
 
         if ($smallPmRow->schedules()->exists()) {
-            return back()->with('error', 'Row yang sudah punya jadwal Small PM tidak bisa dihapus.');
+            return back()->with('error', 'A row that already has a Small PM schedule cannot be deleted.');
         }
 
         $smallPmRow->delete();
 
-        return back()->with('success', 'Row dihapus.');
+        return back()->with('success', 'Row deleted.');
     }
 
     /** @return array<string, mixed> */

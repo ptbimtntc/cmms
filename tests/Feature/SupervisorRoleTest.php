@@ -349,7 +349,7 @@ test('supervisor can view oil audit pages but the check forms are greyed out', f
 
     $this->actingAs($supervisor)->get(route('oil-audits.entry', $machine->machine_number))
         ->assertOk()
-        ->assertSee('Mode lihat saja')
+        ->assertSee('View only')
         ->assertSee('grayscale')
         ->assertSee('disabled', false);
 
@@ -379,6 +379,6 @@ test('PIC still sees enabled oil audit entry buttons', function () {
 
     $this->actingAs($pic)->get(route('oil-audits.entry', $machine->machine_number))
         ->assertOk()
-        ->assertDontSee('Mode lihat saja')
+        ->assertDontSee('View only')
         ->assertDontSee('grayscale');
 });

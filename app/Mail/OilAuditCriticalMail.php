@@ -13,7 +13,7 @@ class OilAuditCriticalMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Peringatan Oil Audit KRITIS — '.$this->oilAudit->machine_number);
+        return new Envelope(subject: 'Oil Audit CRITICAL: '.$this->oilAudit->machine_number);
     }
 
     public function content(): Content

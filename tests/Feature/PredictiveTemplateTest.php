@@ -19,7 +19,7 @@ test('the import template page lists both Predictive templates', function () {
         ->assertOk()
         ->assertSee('Predictive Work Order')
         ->assertSee(route('import-templates.download', 'predictive-work-order'), false)
-        ->assertSee('Predictive Problem dan Finding')
+        ->assertSee('Predictive Problem and Finding')
         ->assertSee(route('import-templates.download', 'predictive-problem-finding'), false);
 });
 

@@ -136,7 +136,7 @@ test('an analysis that throws shows as an alert and does not break the snapshot'
 
     $bot = vaChar(vaSnap($this), 'boom');
 
-    expect($bot['status'])->toBe('ALERT')->and($bot['summary'])->toBe('Analisis tidak dapat dijalankan.');
+    expect($bot['status'])->toBe('ALERT')->and($bot['summary'])->toBe('The analysis could not be run.');
 });
 
 class VmeAiBoomAnalysis implements AiCharacterAnalysis
@@ -385,7 +385,7 @@ test('admin switches AI characters from the VME management page, ordinary saves 
     $this->actingAs($admin)->put(route('maintenance-intelligence.vme.settings'), ['display' => 1, 'ai_characters' => 1])->assertRedirect();
     expect(VmeFeature::characterEnabled('coordinator_wwd'))->toBeTrue();
 
-    $this->actingAs($admin)->get('/maintenance-intelligence/vme')->assertOk()->assertSee('Koordinator WWD')->assertSee('kumpulan hasil AI');
+    $this->actingAs($admin)->get('/maintenance-intelligence/vme')->assertOk()->assertSee('Koordinator WWD')->assertSee('AI result log');
 });
 
 test('the AI data page is admin only and can be filtered by character and date', function () {

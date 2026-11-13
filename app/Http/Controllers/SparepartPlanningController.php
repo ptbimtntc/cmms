@@ -64,7 +64,7 @@ class SparepartPlanningController extends Controller
         $user = $this->viewer($request);
         $filters = $this->filters($request, $user, $this->visibleMachineTypes($user));
 
-        abort_unless($filters['machineType'], 422, 'Pilih tipe mesin terlebih dahulu.');
+        abort_unless($filters['machineType'], 422, 'Pick a machine type first.');
 
         $estimate = $this->orderEstimate($request, $user, $filters, $service)['estimate'];
 
@@ -101,7 +101,7 @@ class SparepartPlanningController extends Controller
             'manual' => (array) $request->input('manual', []),
             'reset' => $request->input('reset'),
         ] : [];
-        $messages = $sameScope ? [] : ['Filter berubah: koreksi dan item manual sebelumnya dibuang.'];
+        $messages = $sameScope ? [] : ['The filters changed: earlier corrections and manual items were dropped.'];
 
         if ($request->filled('remove')) {
             unset($state['manual'][$request->input('remove')]);
@@ -114,13 +114,13 @@ class SparepartPlanningController extends Controller
             $isMandatory = MandatorySparepart::where('machine_type', $filters['machineType'])->where('sparepart_id', $id)->exists();
 
             if (! $part) {
-                $messages[] = 'Sparepart tidak ditemukan.';
+                $messages[] = 'Sparepart not found.';
             } elseif ($isMandatory) {
-                $messages[] = "{$part->material_number} sudah termasuk Mandatory; ubah quantity pada baris yang sudah ada.";
+                $messages[] = "{$part->material_number} is already a Mandatory part; change the quantity on the existing row.";
             } elseif (isset($state['manual'][$id])) {
-                $messages[] = "{$part->material_number} sudah ada di daftar; ubah quantity pada baris tersebut.";
+                $messages[] = "{$part->material_number} is already in the list; change the quantity on that row.";
             } elseif (! (is_string($qty) && ctype_digit($qty) && strlen($qty) <= 9)) {
-                $messages[] = 'Qty sparepart tambahan harus bilangan bulat 0 atau lebih.';
+                $messages[] = 'The extra sparepart qty must be a whole number of 0 or more.';
             } else {
                 $state['manual'][$id] = $qty;
             }

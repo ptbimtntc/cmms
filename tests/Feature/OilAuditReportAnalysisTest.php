@@ -149,7 +149,7 @@ test('the ranking is capped at the top 10 combinations', function () {
 });
 
 // ---------------------------------------------------------------------------
-// Mesin dengan Temuan Berulang
+// Machines with Repeat Findings
 // ---------------------------------------------------------------------------
 
 test('a machine needs at least two follow-ups to appear in the repeat panel', function () {
@@ -179,8 +179,8 @@ test('the repeat panel counts follow-up events regardless of problem sameness', 
 
     $row = $response->viewData('repeatFindingMachines')->firstWhere('machine_number', '30001');
     expect((int) $row->events)->toBe(3);
-    // 3 events -> "Berulang" badge is rendered.
-    $response->assertSeeInOrder(['30001', 'Berulang'], false);
+    // 3 events -> "Repeat" badge is rendered.
+    $response->assertSeeInOrder(['30001', 'Repeat'], false);
 });
 
 // ---------------------------------------------------------------------------
@@ -346,7 +346,7 @@ test('the pie chart and legend render on the oil audit report page', function ()
     $response = $this->actingAs($admin)->get(route('reports.oil-audit'));
 
     $response->assertOk();
-    $response->assertSee('Distribusi Finding');
+    $response->assertSee('Finding Distribution');
     $response->assertSee('id="findingDistributionChart"', false);
     $response->assertSee('Kapstan 1');
     $response->assertSee("type: 'pie'", false);
@@ -359,5 +359,5 @@ test('an empty finding frequency shows a placeholder instead of an empty chart',
 
     $response->assertOk();
     $response->assertDontSee('id="findingDistributionChart"', false);
-    $response->assertSee('Belum ada finding follow-up pada scope filter ini.');
+    $response->assertSee('No follow-up finding in this filter scope yet.');
 });

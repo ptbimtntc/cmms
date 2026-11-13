@@ -132,7 +132,7 @@ test('a machine that has never been audited still appears with a safe placeholde
     expect($row)->not->toBeNull()
         ->and($row->latestOilAudit)->toBeNull();
 
-    $response->assertSee('Belum Audit');
+    $response->assertSee('Not Audited');
 });
 
 test('nde and ndb machines are both fully represented, exactly once each, regardless of audit history', function () {

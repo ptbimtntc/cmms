@@ -204,7 +204,7 @@ class PredictiveOptionController extends Controller
             report($e);
 
             return redirect()->route('predictive.master.index')
-                ->with('error', 'Import gagal dibaca. Periksa format file (.xlsx, .xls, atau .csv) dan header kolom.');
+                ->with('error', 'The import could not be read. Check the file format (.xlsx, .xls, or .csv) and the column headers.');
         }
 
         return redirect()->route('predictive.master.index')->with('predictive_master_import_result', [

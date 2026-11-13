@@ -322,7 +322,7 @@ class ForecastRunner
             $add('DATA_QUALITY', 'INFO', "{$q['finished_pm_excluded_warehouse']} PM selesai tidak dipakai karena memuat data Sparepart Injection (tidak dicampur dengan histori PIC).");
         }
         if ($evaluation['status'] !== AiForecastEvaluation::AVAILABLE) {
-            $add('EVALUATION', 'WARNING', 'Accuracy Not Available — Insufficient Testing Data. Hasil prediksi belum dapat diukur akurasinya.');
+            $add('EVALUATION', 'WARNING', 'Accuracy Not Available: Insufficient Testing Data. The forecast accuracy cannot be measured yet.');
         }
 
         AiForecastRecommendation::insert($rows);

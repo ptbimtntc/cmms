@@ -130,5 +130,5 @@ test('dashboard page renders the three blocks with filters applied', function ()
         ->assertSee('Problem Summary');
 
     $this->actingAs(pvUser('ADMIN'))->get(route('predictive.index', ['tab' => 'dashboard', 'category' => 'AIR_LEAKED']))
-        ->assertOk()->assertDontSee('Bearing aus')->assertSee('Belum ada Action');
+        ->assertOk()->assertDontSee('Bearing aus')->assertSee('No Action');
 });

@@ -106,7 +106,7 @@ class BackupRun extends Model
     public function sizeLabel(): string
     {
         if ($this->file_size === null) {
-            return '—';
+            return '-';
         }
 
         $units = ['B', 'KB', 'MB', 'GB'];

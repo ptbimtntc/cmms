@@ -91,7 +91,7 @@ test('wwd page header shows wwd, not all area', function () {
     $response = $this->get(pmStatusUrl('wwd'));
 
     $response->assertOk();
-    $response->assertSee('PM Status — WWD', false);
+    $response->assertSee('PM Status: WWD', false);
     $response->assertDontSee('All Area');
 });
 
@@ -99,7 +99,7 @@ test('bul page header shows bul, not all area', function () {
     $response = $this->get(pmStatusUrl('bul'));
 
     $response->assertOk();
-    $response->assertSee('PM Status — BUL', false);
+    $response->assertSee('PM Status: BUL', false);
     $response->assertDontSee('All Area');
 });
 

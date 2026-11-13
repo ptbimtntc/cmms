@@ -23,15 +23,15 @@ class TestGoogleDriveBackup extends Command
             if ($this->option('create-folder')) {
                 $id = $drive->createFolder('FreeDOMS Backups');
 
-                $this->info('Folder "FreeDOMS Backups" dibuat di Google Drive.');
+                $this->info('The "FreeDOMS Backups" folder was created on Google Drive.');
                 $this->line("Isi di .env: GOOGLE_DRIVE_FOLDER_ID={$id}");
-                $this->line('Lalu jalankan: php artisan config:clear (atau config:cache) dan ulangi backup:drive-test.');
+                $this->line('Then run: php artisan config:clear (or config:cache) and repeat backup:drive-test.');
 
                 return self::SUCCESS;
             }
 
             if (! $drive->isConfigured()) {
-                $this->error('Google Drive belum dikonfigurasi. Isi GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN, dan GOOGLE_DRIVE_FOLDER_ID.');
+                $this->error('Google Drive is not configured. Set GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN, and GOOGLE_DRIVE_FOLDER_ID.');
 
                 return self::FAILURE;
             }
@@ -51,7 +51,7 @@ class TestGoogleDriveBackup extends Command
             return self::FAILURE;
         }
 
-        $this->info('Berhasil: file uji diunggah ke folder Google Drive lalu dihapus.');
+        $this->info('Success: a test file was uploaded to the Google Drive folder, then deleted.');
 
         return self::SUCCESS;
     }

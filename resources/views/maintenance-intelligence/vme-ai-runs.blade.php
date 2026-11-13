@@ -7,28 +7,28 @@
     $contentMaxWidth = 'max-w-[110rem]';
 
     $statusClass = ['ALERT' => 'badge-danger', 'WORKING' => 'badge-success', 'IDLE' => 'badge-neutral'];
-    $statusLabel = ['ALERT' => 'Perlu perhatian', 'WORKING' => 'Bekerja', 'IDLE' => 'Idle'];
+    $statusLabel = ['ALERT' => 'Needs attention', 'WORKING' => 'Working', 'IDLE' => 'Idle'];
 @endphp
 
 @section('content')
 <div class="space-y-6">
     <div class="card p-5 sm:p-6">
         <a href="{{ route('maintenance-intelligence.vme') }}" class="btn btn-ghost -ml-2 min-h-11">Virtual Maintenance Environment</a>
-        <h1 class="mt-3 font-signage text-2xl font-semibold leading-tight text-text sm:text-3xl">Kumpulan Hasil AI</h1>
+        <h1 class="mt-3 font-signage text-2xl font-semibold leading-tight text-text sm:text-3xl">AI Result Log</h1>
         <p class="mt-1 text-sm text-text-muted">
-            Setiap output karakter AI disimpan di sini (baris baru dibuat saat hasilnya berubah). Data ini hanya dibaca dari fitur lain; karakter AI tidak mengubah data FreeDOMS.
+            Every AI character output is kept here, with a new row each time the result changes. This data is read from other features only; AI characters never change FreeDOMS data.
         </p>
 
         <form method="GET" class="mt-4 flex flex-wrap items-end gap-3">
-            <label class="text-sm text-text-muted">Karakter
+            <label class="text-sm text-text-muted">Character
                 <select name="character" class="select mt-1 lg:min-h-9">
-                    <option value="">Semua</option>
+                    <option value="">All</option>
                     @foreach ($characters as $key => $name)
                         <option value="{{ $key }}" @selected($filters['character'] === $key)>{{ $name }}</option>
                     @endforeach
                 </select>
             </label>
-            <label class="text-sm text-text-muted">Dari tanggal
+            <label class="text-sm text-text-muted">From date
                 <input type="date" name="from" value="{{ $filters['from'] }}" class="select mt-1 lg:min-h-9">
             </label>
             <label class="text-sm text-text-muted">Sampai tanggal
@@ -47,7 +47,7 @@
             <thead>
                 <tr>
                     <th class="px-4 py-3">Waktu</th>
-                    <th class="px-4 py-3">Karakter</th>
+                    <th class="px-4 py-3">Character</th>
                     <th class="px-4 py-3">Status</th>
                     <th class="px-4 py-3">Ringkasan</th>
                     <th class="px-4 py-3">Sumber</th>
@@ -74,7 +74,7 @@
                         <td class="whitespace-nowrap px-4 py-3 text-text-muted">{{ $run->source_ref_type ? $run->source_ref_type.' #'.$run->source_ref_id : '-' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-text-muted">Belum ada hasil AI yang tersimpan{{ array_filter($filters) ? ' untuk filter ini' : '' }}.</td></tr>
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-text-muted">No AI result stored yet{{ array_filter($filters) ? ' untuk filter ini' : '' }}.</td></tr>
                 @endforelse
             </tbody>
         </table>

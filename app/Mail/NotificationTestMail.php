@@ -10,7 +10,7 @@ class NotificationTestMail extends Mailable
 {
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Email Tes Notifikasi — '.config('app.name'));
+        return new Envelope(subject: 'Notification Test: '.config('app.name'));
     }
 
     public function content(): Content

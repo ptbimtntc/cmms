@@ -17,10 +17,8 @@
                 <div class="pointer-events-none relative z-10 flex h-full flex-col justify-between p-5 sm:p-8 lg:p-12">
 
                     <a href="{{ route('home') }}"
-                        class="pointer-events-auto flex min-h-11 w-fit items-center gap-3 rounded-md focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-amber-400">
-                        <span class="flex h-10 w-10 items-center justify-center rounded-md bg-blue-600 text-white">
-                            <x-app-logo-icon class="h-6 w-6" />
-                        </span>
+                        class="pointer-events-auto flex min-h-11 w-fit items-center gap-3 rounded-md focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-white">
+                        <x-brand-logo class="h-10 w-auto shrink-0" aria-hidden="true" />
                         <span class="leading-tight">
                             <span class="block font-signage text-xl font-bold">FreeDOMS</span>
                             <span class="block text-xs text-blue-200">Preventive Maintenance System</span>
@@ -29,10 +27,10 @@
 
                     <div class="hidden max-w-md pb-14 lg:block">
                         <p class="font-signage text-4xl font-bold leading-tight">
-                            Masuk untuk mengisi checklist PM dan mencatat hasil inspeksi.
+                            Sign in to fill PM checklists and record inspection results.
                         </p>
                         <p class="mt-4 text-lg text-blue-100">
-                            Scan mesin, dashboard, dan monitor tetap bisa dibuka tanpa login.
+                            Machine scan, dashboard, and monitor stay open without signing in.
                         </p>
                     </div>
 
@@ -44,13 +42,13 @@
 
                     {{ $slot }}
 
-                    <nav aria-label="Akses tanpa login" class="mt-10 border-t-2 border-slate-200 pt-6 dark:border-slate-800">
-                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">Tanpa login</p>
+                    <nav aria-label="Access without signing in" class="mt-10 border-t-2 border-slate-200 pt-6 dark:border-slate-800">
+                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">Without signing in</p>
                         <div class="mt-3 flex flex-wrap gap-2">
                             <a href="{{ route('qr.scan') }}"
-                                class="inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-500 px-4 font-semibold text-amber-950 hover:bg-amber-400 active:bg-amber-600 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                                class="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-4 font-semibold text-white hover:bg-primary-hover active:bg-primary-active focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                                 <x-landing.icon name="qr" class="h-5 w-5" />
-                                Scan Mesin
+                                Scan a machine
                             </a>
                             <a href="{{ route('dashboard-guest') }}"
                                 class="inline-flex min-h-11 items-center rounded-md border-2 border-blue-950 px-4 font-semibold text-blue-950 hover:bg-blue-950 hover:text-white dark:border-blue-300 dark:text-white dark:hover:bg-blue-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-600">

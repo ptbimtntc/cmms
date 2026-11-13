@@ -48,7 +48,7 @@ class WeeklyPlanController extends Controller
         $area = $areas->firstWhere('slug', $request->query('area'))
             ?? $areas->firstWhere('name', config('weekly_plan.default_area'))
             ?? $areas->first();
-        abort_unless($area, 403, 'Akun ini belum punya area.');
+        abort_unless($area, 403, 'This account has no area yet.');
 
         $week = $request->filled('week') && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('week')) === 1
             ? $this->monday($request->query('week'))
@@ -140,13 +140,13 @@ class WeeklyPlanController extends Controller
         $fail = fn (string $message) => response()->json(['message' => $message, 'errors' => ['day_limits' => [$message]]], 422);
 
         if (! is_array($limits) || ! is_array($types) || array_diff(array_keys($limits + $types), $days) !== []) {
-            return $fail('Hari harus Senin sampai Jumat minggu ini.');
+            return $fail('The day must be Monday to Friday of this week.');
         }
 
         $isCount = fn ($v, int $min) => filter_var($v, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min, 'max_range' => WeeklyPmPlan::MAX_DAY_LIMIT]]) !== false;
 
         if (collect($limits)->contains(fn ($v) => ! $isCount($v, 0))) {
-            return $fail('Maks. mesin per hari harus 0 sampai '.WeeklyPmPlan::MAX_DAY_LIMIT.'.');
+            return $fail('The machine limit per day must be 0 to '.WeeklyPmPlan::MAX_DAY_LIMIT.'.');
         }
 
         $knownTypes = $board->machineTypes($plan);
@@ -154,7 +154,7 @@ class WeeklyPlanController extends Controller
 
         foreach ($types as $date => $rows) {
             if (! is_array($rows)) {
-                return $fail('Format kombinasi tipe tidak dikenali.');
+                return $fail('The type mix format was not recognised.');
             }
 
             $cleanTypes[$date] = [];
@@ -163,15 +163,15 @@ class WeeklyPlanController extends Controller
                 $type = is_array($row) ? MachineFamily::of($row['type'] ?? '') : '';
 
                 if (! in_array($type, $knownTypes, true)) {
-                    return $fail('Tipe mesin '.($type === '' ? '(kosong)' : $type).' tidak ada di area '.$plan->area.'.');
+                    return $fail('Machine type '.($type === '' ? '(empty)' : $type).' does not exist in area '.$plan->area.'.');
                 }
 
                 if (! $isCount($row['count'] ?? null, 1)) {
-                    return $fail('Jumlah mesin '.$type.' harus 1 sampai '.WeeklyPmPlan::MAX_DAY_LIMIT.'.');
+                    return $fail('Machine count '.$type.' must be 1 to '.WeeklyPmPlan::MAX_DAY_LIMIT.'.');
                 }
 
                 if (collect($cleanTypes[$date])->contains('type', $type)) {
-                    return $fail('Tipe '.$type.' dipilih dua kali di hari yang sama.');
+                    return $fail('Type '.$type.' is picked twice on the same day.');
                 }
 
                 $cleanTypes[$date][] = ['type' => $type, 'count' => (int) $row['count']];
@@ -187,7 +187,7 @@ class WeeklyPlanController extends Controller
             $total = array_sum(array_column($probe->dayTypes($date), 'count'));
 
             if ($total > $probe->dayLimit($date)) {
-                return $fail('Kombinasi tipe '.IndoDate::dayName($day).' berjumlah '.$total.' mesin, melebihi maks. mesin '.$probe->dayLimit($date).'.');
+                return $fail('The type mix for '.IndoDate::dayName($day).' adds up to '.$total.' machines, over the limit of '.$probe->dayLimit($date).'.');
             }
         }
 

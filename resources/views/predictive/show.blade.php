@@ -32,12 +32,12 @@
 
     <div x-data="{ action: @js($reopenedAction), edit: @js($reopenedEdit) }">
         <div class="space-y-5">
-        <x-ui.button variant="ghost" href="{{ route('predictive.index', ['tab' => $tab]) }}" class="-ml-2">Kembali ke daftar WO</x-ui.button>
+        <x-ui.button variant="ghost" href="{{ route('predictive.index', ['tab' => $tab]) }}" class="-ml-2">Back to the WO list</x-ui.button>
 
         @if (auth()->user()->isPic() && ! $canWork)
             <div class="alert alert-warning flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" role="status">
-                <p>Aktivitas Action Predictive belum dimulai, jadi Claim dan Action nonaktif.</p>
-                <x-ui.button variant="outline" class="shrink-0" href="{{ route('predictive.index', ['tab' => $tab]) }}">Buka daftar WO untuk memulai</x-ui.button>
+                <p>Action Predictive activity has not started, so Claim and Action are off.</p>
+                <x-ui.button variant="outline" class="shrink-0" href="{{ route('predictive.index', ['tab' => $tab]) }}">Open the WO list to start iai</x-ui.button>
             </div>
         @endif
 
@@ -61,8 +61,8 @@
                     <div><dt class="text-xs text-text-muted">Machine Number</dt><dd class="font-semibold text-text">{{ $workOrder->machine_number }}</dd></div>
                     <div><dt class="text-xs text-text-muted">Machine Type</dt><dd class="font-medium text-text">{{ $workOrder->machine_type ?: '-' }}</dd></div>
                     <div><dt class="text-xs text-text-muted">Area</dt><dd class="font-medium text-text">{{ $workOrder->area }}</dd></div>
-                    <div><dt class="text-xs text-text-muted">PIC</dt><dd class="font-medium text-text">{{ $workOrder->pic?->name ?? 'Belum di-claim' }}</dd></div>
-                    <div><dt class="text-xs text-text-muted">Tanggal WO</dt><dd class="font-medium text-text">{{ $workOrder->wo_date->format('d-m-Y') }}</dd></div>
+                    <div><dt class="text-xs text-text-muted">PIC</dt><dd class="font-medium text-text">{{ $workOrder->pic?->name ?? 'Unclaimed' }}</dd></div>
+                    <div><dt class="text-xs text-text-muted">WO date</dt><dd class="font-medium text-text">{{ $workOrder->wo_date->format('d-m-Y') }}</dd></div>
                     <div><dt class="text-xs text-text-muted">Due Date</dt><dd @class(['font-medium', 'text-danger' => $overdue, 'text-text' => ! $overdue])>{{ $workOrder->due_date->format('d-m-Y') }}{{ $overdue ? ' (terlambat)' : '' }}</dd></div>
                     <div class="col-span-2"><dt class="text-xs text-text-muted">Dibuka</dt><dd class="font-medium text-text">{{ $workOrder->created_at->format('d-m-Y H:i') }}</dd></div>
                 </dl>
@@ -77,9 +77,9 @@
         </section>
 
         <section class="card p-5 sm:p-6" aria-labelledby="pv-history-heading">
-            <h2 id="pv-history-heading" class="font-semibold text-text">Riwayat Action dan Reopen</h2>
+            <h2 id="pv-history-heading" class="font-semibold text-text">Action and Reopen History</h2>
             @if ($history->isEmpty())
-                <x-ui.empty-state class="mt-4" title="Belum ada Action." description="WO ini menunggu PIC melakukan claim." />
+                <x-ui.empty-state class="mt-4" title="No Action yet." description="This WO is waiting for a PIC to claim it." />
             @else
                 {{-- Timeline: Action dots are green (closing), Reopen dots amber; each line also says which it is. --}}
                 <ol class="ml-1 mt-4 space-y-5 border-l-2 border-border pl-5">

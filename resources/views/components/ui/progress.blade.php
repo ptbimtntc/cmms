@@ -1,7 +1,7 @@
 {{--
     Identity motif: the rounded bar from the logo's "E", filled with the brand
     gradient. Use it for real completion values only (PM done vs planned).
-    <x-ui.progress :value="$done" :max="$planned" label="PM selesai bulan ini" />
+    <x-ui.progress :value="$done" :max="$planned" label="PMs done this month" />
     The gradient carries no text; the number sits beside the bar.
 --}}
 @props([

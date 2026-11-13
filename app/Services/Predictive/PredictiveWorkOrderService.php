@@ -56,7 +56,7 @@ class PredictiveWorkOrderService
 
             if ($affected !== 1) {
                 throw new PredictiveWorkflowException(
-                    'WO ini sudah di-claim PIC lain atau sudah tidak berstatus OPEN.'
+                    'Another PIC already claimed this WO, or it is no longer OPEN.'
                 );
             }
         });
@@ -95,10 +95,10 @@ class PredictiveWorkOrderService
             'problems.*.findings.*.finding_id' => ['required', 'integer'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ], [
-            'problems.required' => 'Isi minimal satu Problem.',
-            'problems.*.problem_id.required' => 'Setiap Problem wajib dipilih.',
-            'problems.*.findings.required' => 'Setiap Problem punya minimal satu Finding.',
-            'problems.*.findings.*.finding_id.required' => 'Setiap Finding wajib dipilih.',
+            'problems.required' => 'Record at least one Problem.',
+            'problems.*.problem_id.required' => 'Every Problem must be selected.',
+            'problems.*.findings.required' => 'Every Problem needs at least one Finding.',
+            'problems.*.findings.*.finding_id.required' => 'Every Finding must be selected.',
         ]);
 
         $validator->after(function ($validator) use ($input, $options, $workOrder) {
@@ -107,7 +107,7 @@ class PredictiveWorkOrderService
             }
 
             if ($options->isEmpty()) {
-                $validator->errors()->add('problems', 'Master Problem '.$workOrder->categoryLabel().' area '.$workOrder->area.' belum diisi. Hubungi Admin atau Koordinator.');
+                $validator->errors()->add('problems', 'Master Problem '.$workOrder->categoryLabel().' area '.$workOrder->area.' is empty. Ask an Admin or Koordinator to fill it in.');
 
                 return;
             }
@@ -116,26 +116,26 @@ class PredictiveWorkOrderService
 
             $ids = collect($problems)->pluck('problem_id')->map(fn ($id) => (int) $id);
             if ($ids->count() !== $ids->unique()->count()) {
-                $validator->errors()->add('problems', 'Setiap Problem hanya boleh dipilih satu kali.');
+                $validator->errors()->add('problems', 'Each Problem may be selected only once.');
             }
 
             foreach ($problems as $i => $problem) {
                 $option = $options->get((int) $problem['problem_id']);
 
                 if (! $option) {
-                    $validator->errors()->add("problems.{$i}.problem_id", 'Problem tidak tersedia untuk kategori dan area WO ini.');
+                    $validator->errors()->add("problems.{$i}.problem_id", 'That Problem is not available for this WO category and area.');
 
                     continue;
                 }
 
                 $findingIds = collect($problem['findings'])->pluck('finding_id')->map(fn ($id) => (int) $id);
                 if ($findingIds->count() !== $findingIds->unique()->count()) {
-                    $validator->errors()->add("problems.{$i}.findings", 'Finding dalam satu Problem harus berbeda.');
+                    $validator->errors()->add("problems.{$i}.findings", 'Findings within one Problem must differ.');
                 }
 
                 foreach ($findingIds as $j => $findingId) {
                     if (! $option->findings->contains('id', $findingId)) {
-                        $validator->errors()->add("problems.{$i}.findings.{$j}.finding_id", 'Finding tidak sesuai dengan Problem yang dipilih.');
+                        $validator->errors()->add("problems.{$i}.findings.{$j}.finding_id", 'That Finding does not belong to the selected Problem.');
                     }
                 }
             }
@@ -175,11 +175,11 @@ class PredictiveWorkOrderService
             $locked = PredictiveWorkOrder::query()->whereKey($workOrder->id)->lockForUpdate()->firstOrFail();
 
             if (! $locked->isOpen()) {
-                throw new PredictiveWorkflowException('WO ini sudah CLOSED.');
+                throw new PredictiveWorkflowException('This WO is already CLOSED.');
             }
 
             if (! $locked->isClaimedBy($pic)) {
-                throw new PredictiveWorkflowException('Hanya PIC yang meng-claim WO ini yang dapat menyimpan Action.');
+                throw new PredictiveWorkflowException('Only the PIC who claimed this WO can save an Action.');
             }
 
             $next = ((int) PredictiveAction::where('work_order_id', $locked->id)->max('action_number')) + 1;
@@ -228,7 +228,7 @@ class PredictiveWorkOrderService
             $locked = PredictiveWorkOrder::query()->whereKey($workOrder->id)->lockForUpdate()->firstOrFail();
 
             if (! $locked->isClosed()) {
-                throw new PredictiveWorkflowException('Hanya WO berstatus CLOSED yang dapat di-reopen.');
+                throw new PredictiveWorkflowException('Only a CLOSED WO can be reopened.');
             }
 
             $reopen = PredictiveReopen::create([

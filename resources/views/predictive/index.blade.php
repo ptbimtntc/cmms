@@ -36,7 +36,7 @@
 
     <div x-data="{ promptOpen: @json($promptStart), startOpen: false, startAt: '', openStart() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); this.startAt = d.toISOString().slice(0, 16); this.promptOpen = false; this.startOpen = true; }, addOpen: {{ old('_form') === 'add' ? 'true' : 'false' }}, importOpen: {{ $errors->has('file') ? 'true' : 'false' }}, action: @js($reopenedAction), edit: @js($reopenedEdit) }">
         <div class="space-y-5">
-        <x-ui.page-header title="Action Predictive" description="Work order hasil pemeriksaan Vibration dan Air Leaked: claim, closing, dan reopen.">
+        <x-ui.page-header title="Action Predictive" description="Work orders from Vibration and Air Leaked inspections: claim, closing, and reopen.">
             @if ($canManage && ! $isDashboard)
                 <x-slot:actions>
                     <x-ui.button variant="outline" class="flex-1 sm:flex-none" x-on:click="importOpen = true">Import WO</x-ui.button>
@@ -76,7 +76,7 @@
 
         @if (auth()->user()->isPic() && ! $canWork)
             <div class="alert alert-warning flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="status">
-                <p>Aktivitas Action Predictive belum dimulai. Claim dan Action aktif setelah Anda memulainya.</p>
+                <p>Action Predictive activity has not started. Claim and Action turn on once you start it.</p>
                 <x-ui.button class="shrink-0" x-on:click="openStart()">Start Predictive</x-ui.button>
             </div>
         @endif
@@ -93,13 +93,13 @@
             <form method="GET" action="{{ route('predictive.index') }}" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <input type="hidden" name="tab" value="{{ $tab }}">
                 <div class="grid gap-1.5 sm:w-72">
-                    <label for="pv-search" class="text-xs font-medium text-text-muted">Cari</label>
-                    <input id="pv-search" name="search" value="{{ request('search') }}" placeholder="Order, mesin, tipe, atau problem" class="input lg:min-h-9">
+                    <label for="pv-search" class="text-xs font-medium text-text-muted">Search</label>
+                    <input id="pv-search" name="search" value="{{ request('search') }}" placeholder="Order, machine, type, or problem" class="input lg:min-h-9">
                 </div>
                 <div class="grid gap-1.5 sm:w-40">
                     <label for="pv-status" class="text-xs font-medium text-text-muted">Status</label>
                     <select id="pv-status" name="status" class="select lg:min-h-9">
-                        <option value="">Semua status</option>
+                        <option value="">All statuses</option>
                         <option value="OPEN" @selected(request('status') === 'OPEN')>OPEN</option>
                         <option value="CLOSED" @selected(request('status') === 'CLOSED')>CLOSED</option>
                     </select>
@@ -107,10 +107,10 @@
                 <div class="grid gap-1.5 sm:w-44">
                     <label for="pv-claim" class="text-xs font-medium text-text-muted">Claim</label>
                     <select id="pv-claim" name="claim" class="select lg:min-h-9">
-                        <option value="">Semua claim</option>
-                        <option value="unclaimed" @selected(request('claim') === 'unclaimed')>Belum di-claim</option>
+                        <option value="">All claims</option>
+                        <option value="unclaimed" @selected(request('claim') === 'unclaimed')>Unclaimed</option>
                         @if (auth()->user()->isPic())
-                            <option value="mine" @selected(request('claim') === 'mine')>Claim saya</option>
+                            <option value="mine" @selected(request('claim') === 'mine')>My claims</option>
                         @endif
                     </select>
                 </div>
@@ -118,7 +118,7 @@
                     <div class="grid gap-1.5 sm:w-36">
                         <label for="pv-area" class="text-xs font-medium text-text-muted">Area</label>
                         <select id="pv-area" name="area" class="select lg:min-h-9">
-                            <option value="">Semua area</option>
+                            <option value="">All areas</option>
                             @foreach ($areaOptions as $a)
                                 <option value="{{ $a }}" @selected(request('area') === $a)>{{ $a }}</option>
                             @endforeach
@@ -127,11 +127,11 @@
                 @endif
                 <div class="grid gap-3 sm:flex">
                     <div class="grid min-w-0 gap-1.5 sm:w-40">
-                        <label for="pv-from" class="text-xs font-medium text-text-muted">Tanggal WO dari</label>
+                        <label for="pv-from" class="text-xs font-medium text-text-muted">WO date from</label>
                         <input id="pv-from" type="date" name="date_from" value="{{ request('date_from') }}" class="input lg:min-h-9">
                     </div>
                     <div class="grid min-w-0 gap-1.5 sm:w-40">
-                        <label for="pv-to" class="text-xs font-medium text-text-muted">Sampai</label>
+                        <label for="pv-to" class="text-xs font-medium text-text-muted">To</label>
                         <input id="pv-to" type="date" name="date_to" value="{{ request('date_to') }}" class="input lg:min-h-9">
                     </div>
                 </div>
@@ -143,12 +143,12 @@
 
             @if ($workOrders->isEmpty())
                 @if ($hasFilters)
-                    <x-ui.empty-state title="Tidak ada WO {{ $categoryLabel }} yang sesuai filter." description="Longgarkan filter, atau reset untuk melihat semua WO.">
-                        <x-ui.button variant="outline" href="{{ route('predictive.index', ['tab' => $tab]) }}">Reset filter</x-ui.button>
+                    <x-ui.empty-state title="No {{ $categoryLabel }} WO matches these filters." description="Loosen the filters, or reset them to see every WO.">
+                        <x-ui.button variant="outline" href="{{ route('predictive.index', ['tab' => $tab]) }}">Reset filters</x-ui.button>
                     </x-ui.empty-state>
                 @else
-                    <x-ui.empty-state title="Belum ada WO {{ $categoryLabel }}."
-                        :description="$canManage ? 'Gunakan Add WO atau Import WO untuk menambahkan.' : 'WO dari hasil pemeriksaan di area Anda akan muncul di sini.'" />
+                    <x-ui.empty-state title="No {{ $categoryLabel }} WO yet."
+                        :description="$canManage ? 'Use Add WO or Import WO to add one.' : 'WOs from inspections in your area show up here.'" />
                 @endif
             @else
                 {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
@@ -202,8 +202,8 @@
             <div x-show="promptOpen" x-cloak x-transition.opacity.duration.150ms @keydown.escape.window="promptOpen = false"
                 class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="predictive-prompt-title">
                 <div class="w-full max-w-sm rounded-card border border-border bg-surface p-6 text-center shadow-popover">
-                    <h3 id="predictive-prompt-title" class="text-lg font-semibold text-text">APAKAH ANDA INGIN MEMULAI ACTION PREDICTIVE?</h3>
-                    <p class="mt-2 text-sm text-text-muted">Aktivitas ini tercatat di Today's Activity. Tanpa memulainya, Anda belum bisa Claim maupun mengisi Action.</p>
+                    <h3 id="predictive-prompt-title" class="text-lg font-semibold text-text">DO YOU WANT TO START ACTION PREDICTIVE?</h3>
+                    <p class="mt-2 text-sm text-text-muted">This activity is recorded in Today's Activity. Until you start it, you cannot Claim or fill in an Action.</p>
                     <div class="mt-5 flex justify-center gap-3">
                         <button type="button" @click="promptOpen = false" class="btn btn-outline min-h-11 px-6">NO</button>
                         <button type="button" @click="openStart()" class="btn btn-primary min-h-11 px-6">YES</button>

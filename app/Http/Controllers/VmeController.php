@@ -122,7 +122,7 @@ class VmeController extends Controller
         }
 
         $detail['link'] = $viewer->isAdmin()
-            ? ['label' => 'Buka kumpulan hasil AI', 'url' => route('maintenance-intelligence.vme.ai-runs', ['character' => $key])]
+            ? ['label' => 'Open the AI result log', 'url' => route('maintenance-intelligence.vme.ai-runs', ['character' => $key])]
             : null;
 
         return $this->noStore(response()->json($detail));

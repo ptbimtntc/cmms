@@ -60,8 +60,8 @@ class PredictiveWorkOrderImport implements ToCollection, WithHeadingRow
         $missing = array_diff(self::REQUIRED_HEADINGS, $headings);
 
         if ($missing !== []) {
-            $this->fatalError = 'Kolom wajib tidak ditemukan: '.implode(', ', $missing)
-                .'. Gunakan header: Order Number, Machine Number, Date, Problem Description.';
+            $this->fatalError = 'Required column not found: '.implode(', ', $missing)
+                .'. Use these headers: Order Number, Machine Number, Date, Problem Description.';
 
             return;
         }
@@ -88,22 +88,22 @@ class PredictiveWorkOrderImport implements ToCollection, WithHeadingRow
 
         $errors = [];
         if ($order === '') {
-            $errors[] = 'Order Number kosong';
+            $errors[] = 'Order Number is empty';
         } elseif (mb_strlen($order) > 100) {
-            $errors[] = 'Order Number lebih dari 100 karakter';
+            $errors[] = 'Order Number is longer than 100 characters';
         }
         if ($machineNumber === '') {
-            $errors[] = 'Machine Number kosong';
+            $errors[] = 'Machine Number is empty';
         }
         if (trim((string) ($values['date'] ?? '')) === '') {
-            $errors[] = 'Date kosong';
+            $errors[] = 'Date is empty';
         } elseif ($woDate === null) {
-            $errors[] = 'Format Date tidak dikenali (gunakan YYYY-MM-DD atau DD-MM-YYYY)';
+            $errors[] = 'Date format not recognised (use YYYY-MM-DD or DD-MM-YYYY)';
         }
         if ($problem === '') {
-            $errors[] = 'Problem Description kosong';
+            $errors[] = 'Problem Description is empty';
         } elseif (mb_strlen($problem) > 2000) {
-            $errors[] = 'Problem Description lebih dari 2000 karakter';
+            $errors[] = 'Problem Description is longer than 2000 characters';
         }
 
         if ($errors !== []) {
@@ -113,7 +113,7 @@ class PredictiveWorkOrderImport implements ToCollection, WithHeadingRow
         }
 
         if (PredictiveWorkOrder::where('order_number', $order)->exists()) {
-            $this->record($line, $order, 'skipped', 'Order Number sudah terdaftar, WO existing tidak diubah');
+            $this->record($line, $order, 'skipped', 'Order Number already exists; the existing WO was left unchanged');
 
             return;
         }
@@ -140,7 +140,7 @@ class PredictiveWorkOrderImport implements ToCollection, WithHeadingRow
                 'due_date' => PredictiveWorkOrder::defaultDueDate($woDate),
             ], $this->user);
         } catch (UniqueConstraintViolationException) {
-            $this->record($line, $order, 'skipped', 'Order Number sudah terdaftar, WO existing tidak diubah');
+            $this->record($line, $order, 'skipped', 'Order Number already exists; the existing WO was left unchanged');
 
             return;
         }

@@ -111,7 +111,7 @@
                                         @if ($s['availability'])
                                             {{ $s['availability']->reason }}@if ($s['availability']->notes): {{ $s['availability']->notes }}@endif
                                         @else
-                                            <span class="text-text-disabled">None</span>
+                                            <span class="text-text-muted">None</span>
                                         @endif
                                     </td>
                                     @if ($canManage)

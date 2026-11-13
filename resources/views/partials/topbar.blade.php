@@ -69,7 +69,7 @@
                         @csrf
                         <button
                             type="submit"
-                            class="flex min-h-11 w-full items-center px-4 text-left text-sm font-medium text-danger hover:bg-danger-light active:bg-danger-light"
+                            class="flex min-h-11 w-full items-center px-4 text-left text-sm font-medium text-danger hover:bg-danger-light hover:text-danger-hover active:bg-danger-light active:text-danger-hover"
                         >
                             Logout
                         </button>

@@ -99,7 +99,7 @@ export function initFollowUpForms() {
             const keep = options.includes(current) ? current : '';
 
             select.innerHTML =
-                '<option value="">Pilih finding</option>' +
+                '<option value="">Select a finding</option>' +
                 options.map((opt) => {
                     const escaped = opt.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
                     return '<option value="' + escaped + '"' + (opt === keep ? ' selected' : '') + '>' + escaped + '</option>';

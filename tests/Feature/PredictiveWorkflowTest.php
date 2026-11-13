@@ -330,7 +330,7 @@ test('a failed submit keeps the entered problems and findings and reopens the di
             ['problem_id' => $dobel['problem']->id, 'findings' => [['finding_id' => $dobel['findings'][0]->id]]],
             ['problem_id' => $dobel['problem']->id, 'findings' => [['finding_id' => $dobel['findings'][1]->id]]],
         ]])
-        ->assertSee('Dobel')->assertSee('Catatan saya')->assertSee('hanya boleh dipilih satu kali');
+        ->assertSee('Dobel')->assertSee('Catatan saya')->assertSee('may be selected only once');
 });
 
 test('the action form offers only the master of the WO category and area, and only to PICs', function () {
@@ -353,7 +353,7 @@ test('a problem without any active finding is not offered, and an empty master s
     $wo = pvWo();
     PredictiveProblemOption::create(['category' => 'VIBRATION', 'area' => 'WWD', 'name' => 'Tanpa finding']);
 
-    $this->actingAs($pic)->get(route('predictive.show', $wo))->assertDontSee('Tanpa finding')->assertSee('belum diisi');
+    $this->actingAs($pic)->get(route('predictive.show', $wo))->assertDontSee('Tanpa finding')->assertSee('is empty');
 });
 
 test('legacy single finding and problem columns are copied into the new tables by the migration', function () {

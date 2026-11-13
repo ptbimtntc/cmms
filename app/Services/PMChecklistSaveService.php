@@ -73,7 +73,7 @@ class PMChecklistSaveService
             ->where(fn ($q) => $q->whereNull('measurement_value')
                 ->orWhereRaw("TRIM(measurement_value) = ''"))
             ->exists()) {
-            $errors[] = 'Measurement (nilai actual belum diisi)';
+            $errors[] = 'Measurement (actual value is empty)';
         }
 
         if (! $pmSchedule->no_sparepart && ! $pmSchedule->spareparts()->exists()) {

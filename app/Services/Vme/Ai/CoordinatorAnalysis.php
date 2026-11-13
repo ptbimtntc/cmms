@@ -36,7 +36,7 @@ class CoordinatorAnalysis implements AiCharacterAnalysis
             ['label' => 'PM terjadwal 7 hari ke depan', 'value' => (string) $soon],
         ];
         if ($waiting !== null) {
-            $details[] = ['label' => 'PIC menunggu tugas', 'value' => (string) $waiting];
+            $details[] = ['label' => 'PICs waiting for work', 'value' => (string) $waiting];
         }
 
         return new AiAnalysisResult(

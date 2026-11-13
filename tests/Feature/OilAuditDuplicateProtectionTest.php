@@ -158,7 +158,7 @@ test('entry page opens normally for a machine not yet audited today', function (
 
     $this->actingAs(dupPic())->get(route('oil-audits.entry', $machine->machine_number))
         ->assertOk()
-        ->assertSee('Bagaimana kondisi oli mesin?');
+        ->assertSee('How does the oil look?');
 });
 
 test('sync: duplicate from a second device returns duplicate_audit 409 and stores nothing extra', function () {

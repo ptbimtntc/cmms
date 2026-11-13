@@ -212,7 +212,7 @@ test('closing is refused with a clear message while the master of that scope is 
 
     $this->actingAs($pic)->post(route('predictive.action', $wo), ['problems' => [['problem_id' => 1, 'findings' => [['finding_id' => 1]]]]])
         ->assertSessionHasErrors('problems');
-    expect(session('errors')->first('problems'))->toContain('belum diisi')->and($wo->fresh()->status)->toBe('OPEN');
+    expect(session('errors')->first('problems'))->toContain('is empty')->and($wo->fresh()->status)->toBe('OPEN');
 });
 
 test('import loads categories, areas, problems and findings, reusing what exists', function () {
@@ -236,7 +236,7 @@ test('import loads categories, areas, problems and findings, reusing what exists
     $result = session('predictive_master_import_result');
     expect($result['success'])->toBe(4)->and($result['skipped'])->toBe(1)->and($result['failed'])->toBe(3);
     $reasons = collect($result['details'])->pluck('reason', 'row');
-    expect($reasons[6])->toContain('Sudah ada')->and($reasons[7])->toContain('Category')->and($reasons[8])->toContain('NOPE');
+    expect($reasons[6])->toContain('Already in the master')->and($reasons[7])->toContain('Category')->and($reasons[8])->toContain('NOPE');
 
     expect(PredictiveProblemOption::forScope('VIBRATION', 'WWD')->count())->toBe(2)
         ->and(PredictiveProblemOption::forScope('AIR_LEAKED', 'WWD')->count())->toBe(1)
@@ -257,7 +257,7 @@ test('an import with wrong headers or file type changes nothing', function () {
     $admin = pvUser('ADMIN');
 
     $this->actingAs($admin)->post(route('predictive.master.import'), ['file' => UploadedFile::fake()->createWithContent('m.csv', "Problem,Finding\nA,B")]);
-    expect(session('predictive_master_import_result')['fatal'])->toContain('Kolom wajib')->and(PredictiveProblemOption::count())->toBe(0);
+    expect(session('predictive_master_import_result')['fatal'])->toContain('Required column')->and(PredictiveProblemOption::count())->toBe(0);
 
     $this->actingAs($admin)->post(route('predictive.master.import'), ['file' => UploadedFile::fake()->create('m.pdf', 10, 'application/pdf')])->assertSessionHasErrors('file');
 });

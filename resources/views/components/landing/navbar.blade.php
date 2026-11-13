@@ -7,7 +7,7 @@
         ['href' => route('dashboard-guest'), 'label' => 'Dashboard'],
         ['href' => route('monitor'), 'label' => 'Monitor'],
     ];
-    $linkClass = 'inline-flex min-h-11 items-center text-[15px] font-medium text-blue-100 hover:text-white hover:underline underline-offset-8 decoration-2 decoration-amber-400';
+    $linkClass = 'inline-flex min-h-11 items-center text-[15px] font-medium text-blue-100 hover:text-white hover:underline underline-offset-8 decoration-2 decoration-blue-300';
 @endphp
 
 <header class="on-dark sticky top-0 z-50 border-b border-blue-800 bg-blue-950 text-white" x-data="{ menu: false }"
@@ -18,11 +18,10 @@
 
         <a href="{{ route('home') }}" class="flex min-h-11 items-center gap-3">
 
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white">
-                <x-app-logo-icon class="h-6 w-6 text-white" />
-            </span>
+            <x-brand-logo class="h-8 w-auto shrink-0 sm:h-10" aria-hidden="true" />
 
-            <span class="leading-tight">
+            {{-- On phones the logo carries the name; the text stays for screen readers. --}}
+            <span class="sr-only leading-tight sm:not-sr-only">
                 <span class="block font-signage text-xl font-bold text-white">FreeDOMS</span>
                 <span class="hidden text-xs text-blue-200 sm:block">Preventive Maintenance</span>
             </span>
@@ -119,7 +118,7 @@
 
             {{-- Amber is reserved for the scan action: it is where a technician starts. --}}
             <a href="{{ route('qr.scan') }}"
-                class="inline-flex min-h-11 items-center gap-2 rounded-md bg-amber-500 px-3 text-[15px] font-semibold text-amber-950 hover:bg-amber-400 active:bg-amber-600 sm:px-4">
+                class="inline-flex min-h-11 items-center gap-2 rounded-md bg-white px-3 text-[15px] font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-100 sm:px-4">
                 <x-landing.icon name="qr" class="h-5 w-5" />
                 <span>Scan<span class="max-sm:sr-only"> Mesin</span></span>
             </a>
@@ -179,7 +178,7 @@
                 @guest
                     <li class="sm:hidden">
                         <a href="{{ route('login') }}"
-                            class="flex min-h-12 items-center font-semibold text-amber-300">
+                            class="flex min-h-12 items-center font-semibold text-blue-300">
                             Login
                         </a>
                     </li>

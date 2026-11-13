@@ -517,13 +517,13 @@ test('extra spareparts are added, edited, removed, never duplicated and not mult
     $response = spEstimate($admin, ['manual' => [$extra->id => 7], 'add_sparepart_id' => $extra->id, 'add_qty' => 1]);
     expect($response->viewData('estimate')['rows']->where('sparepart_id', $extra->id))->toHaveCount(1)
         ->and(spOrderRows($response)['MAT-X']['order_qty'])->toBe(7)
-        ->and(implode(' ', $response->viewData('messages')))->toContain('sudah ada');
+        ->and(implode(' ', $response->viewData('messages')))->toContain('already in the list');
 
     // A mandatory material is refused as an extra row and the user is pointed to the existing one.
     $response = spEstimate($admin, ['add_sparepart_id' => $a->id, 'add_qty' => 5]);
     expect($response->viewData('estimate')['rows']->where('sparepart_id', $a->id))->toHaveCount(1)
         ->and(spOrderRows($response)['MAT-A']['source'])->toBe('Mandatory')
-        ->and(implode(' ', $response->viewData('messages')))->toContain('sudah termasuk Mandatory');
+        ->and(implode(' ', $response->viewData('messages')))->toContain('already a Mandatory part');
 
     // Remove.
     $response = spEstimate($admin, ['manual' => [$extra->id => 7], 'remove' => $extra->id]);

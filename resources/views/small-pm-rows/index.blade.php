@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Row Small PM')
+@section('title', 'Small PM Rows')
 
 @section('content')
     @php
@@ -12,16 +12,16 @@
     @endphp
 
     <div class="space-y-5">
-        <x-ui.page-header title="Row Small PM" description="Kelompok mesin per row untuk Small PM. Urutan dipakai saat generate jadwal.">
+        <x-ui.page-header title="Small PM Rows" description="Machine groups per row for Small PM. The order decides how schedules are generated.">
             @if ($canManage)
                 <x-slot:actions>
-                    <x-ui.button href="{{ route('small-pm-rows.create') }}">Tambah Row</x-ui.button>
+                    <x-ui.button href="{{ route('small-pm-rows.create') }}">Add Row</x-ui.button>
                 </x-slot:actions>
             @endif
         </x-ui.page-header>
 
         @if ($canManage)
-            @include('partials.master.import-form', ['action' => route('small-pm-rows.import'), 'id' => 'rowFileInput', 'fileLabel' => 'File import row', 'template' => route('import-templates.download', 'small-pm-row')])
+            @include('partials.master.import-form', ['action' => route('small-pm-rows.import'), 'id' => 'rowFileInput', 'fileLabel' => 'Row import file', 'template' => route('import-templates.download', 'small-pm-row')])
         @endif
 
         @if (session('success'))
@@ -31,19 +31,19 @@
             <x-ui.alert tone="danger">{{ $errors->first('file') }}</x-ui.alert>
         @endif
         @if ($ir)
-            <x-ui.alert :tone="$ir['skipped'] > 0 ? 'warning' : 'success'" title="Hasil import">
-                <span class="font-semibold">{{ $ir['rows_created'] }}</span> row baru,
-                <span class="font-semibold">{{ $ir['assigned'] }}</span> mesin masuk row,
-                <span class="font-semibold">{{ $ir['moved'] }}</span> mesin pindah row,
-                {{ $ir['unchanged'] }} sudah sesuai,
-                <span class="font-semibold">{{ $ir['skipped'] }}</span> dilewati.
+            <x-ui.alert :tone="$ir['skipped'] > 0 ? 'warning' : 'success'" title="Import result">
+                <span class="font-semibold">{{ $ir['rows_created'] }}</span> new rows,
+                <span class="font-semibold">{{ $ir['assigned'] }}</span> machines added to a row,
+                <span class="font-semibold">{{ $ir['moved'] }}</span> machines moved to another row,
+                {{ $ir['unchanged'] }} already correct,
+                <span class="font-semibold">{{ $ir['skipped'] }}</span> skipped.
                 @if ($ir['errors'])
                     <ul class="mt-2 list-disc space-y-0.5 pl-5 text-xs">
                         @foreach ($ir['errors'] as $err)
                             <li>{{ $err }}</li>
                         @endforeach
                         @if ($ir['skipped'] > count($ir['errors']))
-                            <li>dan {{ $ir['skipped'] - count($ir['errors']) }} baris lain.</li>
+                            <li>and {{ $ir['skipped'] - count($ir['errors']) }} other rows.</li>
                         @endif
                     </ul>
                 @endif
@@ -55,8 +55,8 @@
 
         <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
             <div class="grid gap-1.5 sm:w-72">
-                <label for="spr-search" class="text-xs font-medium text-text-muted">Cari</label>
-                <input id="spr-search" type="text" name="search" value="{{ request('search') }}" placeholder="Nama row" class="input lg:min-h-9">
+                <label for="spr-search" class="text-xs font-medium text-text-muted">Search</label>
+                <input id="spr-search" type="text" name="search" value="{{ request('search') }}" placeholder="Row name" class="input lg:min-h-9">
             </div>
             <div class="flex gap-2 sm:ml-auto">
                 <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
@@ -65,7 +65,7 @@
         </form>
 
         @if ($rows->isEmpty())
-            <x-ui.empty-state title="Belum ada row" :description="$canManage ? 'Tambah row satu per satu, atau import file dengan template di atas.' : null" />
+            <x-ui.empty-state title="No row yet" :description="$canManage ? 'Add rows one at a time, or import a file using the template above.' : null" />
         @endif
 
         {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
@@ -74,10 +74,10 @@
                 <table class="data-table min-w-full">
                     <thead>
                         <tr>
-                            <th scope="col" class="text-right">Urutan</th>
+                            <th scope="col" class="text-right">Order</th>
                             <th scope="col">Nama Row</th>
                             <th scope="col">Area</th>
-                            <th scope="col" class="text-right">Jumlah Mesin</th>
+                            <th scope="col" class="text-right">Machine Count</th>
                             <th scope="col"><span class="sr-only">Action</span></th>
                         </tr>
                     </thead>
@@ -101,7 +101,7 @@
             @foreach ($rows as $row)
                 <article class="card min-w-0 p-4">
                     <h2 class="break-words text-base font-semibold text-text">{{ $row->name }}</h2>
-                    <p class="text-sm text-text-muted">Urutan {{ $row->sort_order }} · {{ $row->area->name ?? 'Tanpa area' }} · {{ $row->machines_count }} mesin</p>
+                    <p class="text-sm text-text-muted">Order {{ $row->sort_order }} · {{ $row->area->name ?? 'No area' }} · {{ $row->machines_count }} machinin</p>
                     <div class="mt-3 border-t border-border pt-3">@include('partials.master.row-actions', $actions($row, true))</div>
                 </article>
             @endforeach

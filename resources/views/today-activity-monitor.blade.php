@@ -316,7 +316,7 @@
                         offset += len;
                     });
                 }
-                return `<svg viewBox="0 0 120 120" class="h-32 w-32 2xl:h-36 2xl:w-36" role="img" aria-label="${total} aktivitas aktif">${segs}
+                return `<svg viewBox="0 0 120 120" class="h-32 w-32 2xl:h-36 2xl:w-36" role="img" aria-label="${total} active activities">${segs}
                     <text x="60" y="60" text-anchor="middle" class="font-signage" style="fill: var(--color-text); font-size:28px; font-weight:600">${total}</text>
                     <text x="60" y="76" text-anchor="middle" style="fill: var(--color-text-muted); font-size:10px">active</text>
                 </svg>`;

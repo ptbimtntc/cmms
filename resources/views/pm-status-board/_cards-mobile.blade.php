@@ -16,7 +16,7 @@
 
         <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
             <div>
-                <dt class="text-xs text-text-muted">Bulan</dt>
+                <dt class="text-xs text-text-muted">Month</dt>
                 <dd class="font-medium text-text">{{ $schedule['month_label'] }}</dd>
             </div>
             <div>

@@ -1,6 +1,6 @@
 {{--
     Visible label + control + hint + validation error.
-    <x-ui.field label="Nama mesin" for="name" error="name" hint="Sesuai plat nama mesin.">
+    <x-ui.field label="Machine name" for="name" error="name" hint="As printed on the machine nameplate.">
         <input id="name" name="name" class="input" value="{{ old('name') }}">
     </x-ui.field>
     error: the validation key to read from $errors.

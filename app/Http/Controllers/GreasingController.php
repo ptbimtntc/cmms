@@ -262,7 +262,7 @@ class GreasingController extends Controller
         if ($area === null) {
             return response()->json([
                 'success' => false,
-                'message' => 'This group has no Area assigned — set one in Group Management before assigning a PIC.',
+                'message' => 'This group has no Area assigned. Set one in Group Management before assigning a PIC.',
             ], 422);
         }
 

@@ -19,4 +19,6 @@
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-@fluxAppearance
+{{-- No @fluxAppearance: it switched these pages to dark whenever the device was
+     in dark mode, while every page behind the login stays light. One theme
+     everywhere until dark mode is designed and verified in both modes. --}}

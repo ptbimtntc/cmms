@@ -7,19 +7,19 @@
         $fullWidth = true;
         // [title, what the file contains, template key]
         $templates = [
-            ['Machine Master', 'Template import machine master', 'machine'],
-            ['Sparepart Master', 'Template import sparepart', 'sparepart'],
-            ['Sparepart Injection', 'Template import pengeluaran sparepart gudang (Month, SAP Number, Qty, Order Number)', 'sparepart-injection'],
-            ['PM Schedule Master', 'Template untuk import PM schedule', 'pm-schedule'],
-            ['Machine Problem Master', 'Template untuk import machine problem', 'machine-problem'],
-            ['Problem Finding Master', 'Template untuk import problem finding', 'machine-problem-finding'],
-            ['Measurement Master', 'Template untuk import measurement master', 'machine-measurement'],
-            ['Checklist Master', 'Template untuk import machine checklist', 'machine-checklist'],
-            ['Greasing Schedule', 'Template untuk import greasing schedule', 'greasing-schedule'],
-            ['Row Small PM', 'Template untuk import row Small PM dan mesinnya (satu baris per mesin)', 'small-pm-row'],
-            ['Small PM Schedule', 'Template untuk import jadwal Small PM (kolom row = nama row di master Row Small PM)', 'small-pm-schedule'],
-            ['Predictive Work Order', 'Template import WO Action Predictive Vibration dan Air Leaked (Order Number, Machine Number, Date, Problem Description). Area dan Machine Type diambil dari Machine Master. Due Date dihitung otomatis: Date + 14 hari.', 'predictive-work-order'],
-            ['Predictive Problem dan Finding', 'Template import pilihan Problem dan Finding untuk form Action Predictive (Category, Area, Problem, Finding). Category: VIBRATION atau AIR_LEAKED. Ulangi Problem di baris berikutnya untuk menambah Finding.', 'predictive-problem-finding'],
+            ['Machine Master', 'Import template for machine master data', 'machine'],
+            ['Sparepart Master', 'Import template for sparepart master data', 'sparepart'],
+            ['Sparepart Injection', 'Import template for warehouse sparepart issues (Month, SAP Number, Qty, Order Number)', 'sparepart-injection'],
+            ['PM Schedule Master', 'Import template for PM schedules', 'pm-schedule'],
+            ['Machine Problem Master', 'Import template for machine problems', 'machine-problem'],
+            ['Problem Finding Master', 'Import template for problem findings', 'machine-problem-finding'],
+            ['Measurement Master', 'Import template for measurement master data', 'machine-measurement'],
+            ['Checklist Master', 'Import template for machine checklists', 'machine-checklist'],
+            ['Greasing Schedule', 'Import template for greasing schedules', 'greasing-schedule'],
+            ['Small PM Rows', 'Import template for Small PM rows and their machines (one line per machine)', 'small-pm-row'],
+            ['Small PM Schedule', 'Import template for Small PM schedules (the row column is the row name in Small PM Rows)', 'small-pm-schedule'],
+            ['Predictive Work Order', 'Import template for Vibration and Air Leaked Action Predictive WOs (Order Number, Machine Number, Date, Problem Description). Area and Machine Type come from Machine Master. The Due Date is worked out automatically: Date plus 14 days.', 'predictive-work-order'],
+            ['Predictive Problem and Finding', 'Import template for the Problem and Finding choices in the Action Predictive form (Category, Area, Problem, Finding). Category: VIBRATION or AIR_LEAKED. Repeat the Problem on the next line to add another Finding.', 'predictive-problem-finding'],
         ];
     @endphp
 

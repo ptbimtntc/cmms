@@ -1,6 +1,6 @@
 {{--
-    <x-ui.card title="Jadwal hari ini">
-        <x-slot:actions><x-ui.button size="sm" variant="outline">Lihat semua</x-ui.button></x-slot:actions>
+    <x-ui.card title="Today's schedule">
+        <x-slot:actions><x-ui.button size="sm" variant="outline">See all</x-ui.button></x-slot:actions>
         ...
     </x-ui.card>
     padded=false lets a table run edge to edge inside the card.

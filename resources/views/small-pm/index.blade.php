@@ -10,7 +10,7 @@
 
 @section('content')
     <div class="space-y-5">
-        <x-ui.page-header title="Small PM" description="Jadwal PM per row mesin. Row diatur di Master Data, Row Small PM.">
+        <x-ui.page-header title="Small PM" description="PM schedules per machine row. Rows are set up in Master Data, Small PM Rows.">
             @if ($canManage && $available && ! $isFindingsTab)
                 <x-slot:actions>
                     <x-ui.button variant="outline" id="small-pm-import-open">Import</x-ui.button>
@@ -33,7 +33,7 @@
                     ])>
                     {{ $t['label'] }}
                     @unless ($t['available'])
-                        <span class="text-xs font-medium text-text-muted">(belum tersedia)</span>
+                        <span class="text-xs font-medium text-text-muted">(not available yet)</span>
                     @endunless
                     @if ($t['count'])
                         <x-ui.badge tone="warning">{{ $t['count'] }} open</x-ui.badge>
@@ -52,18 +52,18 @@
         @endif
         @if (session('small_pm_import_result'))
             @php($importResult = session('small_pm_import_result'))
-            <x-ui.alert tone="info" title="Hasil import">
+            <x-ui.alert tone="info" title="Import result">
                 <span class="font-semibold">{{ $importResult['imported'] }}</span> masuk,
                 <span class="font-semibold">{{ $importResult['duplicate'] }}</span> duplikat,
-                <span class="font-semibold">{{ $importResult['skipped'] }}</span> dilewati atau tidak valid.
+                <span class="font-semibold">{{ $importResult['skipped'] }}</span> skipped or invalid.
             </x-ui.alert>
         @endif
 
         @if ($isFindingsTab)
             @include('small-pm._findings-tab')
         @elseif (! $available)
-            <x-ui.empty-state :title="$tabs[$tab]['label'] . ' belum tersedia.'"
-                description="Jadwalnya akan diatur di tab ini setelah Cleaning Kisi-Kisi Motor berjalan." />
+            <x-ui.empty-state :title="$tabs[$tab]['label'] . ' is not available yet.'"
+                description="Its schedule is set up in this tab once Cleaning Kisi-Kisi Motor is running." />
         @else
             @if ($canManage && $unscheduledCount > 0)
                 {{-- Rows with no OPEN schedule in this tab: the one thing to act on before the list. --}}
@@ -71,21 +71,21 @@
                     x-data="{ busy: false }" @submit="busy = true">
                     @csrf
                     <input type="hidden" name="tab" value="{{ $tab }}">
-                    <p class="font-semibold text-text">{{ $unscheduledCount }} row belum punya jadwal OPEN di tab ini.</p>
+                    <p class="font-semibold text-text">{{ $unscheduledCount }} rows have no OPEN schedule in this tab.</p>
                     <p class="mt-1 text-sm text-warning-text">
-                        Generate menjadwalkan {{ $rowsPerWeek }} row per minggu sesuai urutan row ({{ (int) ceil($unscheduledCount / $rowsPerWeek) }} minggu).
+                        Generate schedules {{ $rowsPerWeek }} rows a week in row order ({{ (int) ceil($unscheduledCount / $rowsPerWeek) }} weeks).
                         Plan date diisi hari Senin.
                     </p>
                     <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
                         <div class="grid gap-1.5">
-                            <label for="start-week" class="text-xs font-medium text-text">Mulai minggu</label>
+                            <label for="start-week" class="text-xs font-medium text-text">Start week</label>
                             <input id="start-week" type="date" name="start_week" required value="{{ old('start_week', $thisMonday->toDateString()) }}" class="input sm:w-44">
                         </div>
                         <div class="grid gap-1.5">
                             <label for="gen-cycle" class="text-xs font-medium text-text">Cycle</label>
                             <input id="gen-cycle" type="text" name="cycle" required value="{{ old('cycle', $defaultCycle) }}" pattern="\d+[Ww]" title="Angka diikuti W, misalnya 26W" class="input sm:w-24">
                         </div>
-                        <x-ui.button type="submit" x-bind:disabled="busy">Generate {{ $unscheduledCount }} row</x-ui.button>
+                        <x-ui.button type="submit" x-bind:disabled="busy">Generate {{ $unscheduledCount }} rows</x-ui.button>
                     </div>
                 </form>
             @endif
@@ -94,13 +94,13 @@
             <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <input type="hidden" name="tab" value="{{ $tab }}">
                 <div class="grid gap-1.5 sm:w-72">
-                    <label for="spm-filter-search" class="text-xs font-medium text-text-muted">Cari</label>
-                    <input id="spm-filter-search" type="text" name="search" value="{{ request('search') }}" placeholder="Cycle, PIC, atau order number" class="input lg:min-h-9">
+                    <label for="spm-filter-search" class="text-xs font-medium text-text-muted">Search</label>
+                    <input id="spm-filter-search" type="text" name="search" value="{{ request('search') }}" placeholder="Cycle, PIC, or order number" class="input lg:min-h-9">
                 </div>
                 <div class="grid gap-1.5 sm:w-48">
                     <label for="spm-filter-row" class="text-xs font-medium text-text-muted">Row</label>
                     <select id="spm-filter-row" name="row_id" class="select lg:min-h-9">
-                        <option value="">Semua Row</option>
+                        <option value="">All rows</option>
                         @foreach ($rows as $r)
                             <option value="{{ $r->id }}" @selected(request('row_id') == $r->id)>{{ $r->name }}</option>
                         @endforeach
@@ -120,8 +120,8 @@
 
             @if ($schedules->isEmpty())
                 <x-ui.empty-state
-                    :title="$hasFilters ? 'Tidak ada jadwal yang sesuai filter.' : 'Belum ada jadwal Small PM'"
-                    :description="$hasFilters ? 'Longgarkan filter, atau reset untuk melihat semua jadwal.' : ($canManage ? 'Generate jadwal untuk row di atas, tambah satu per satu, atau import file.' : 'Jadwal untuk row di area Anda akan muncul di sini.')">
+                    :title="$hasFilters ? 'No schedule matches these filters.' : 'No Small PM schedule yet'"
+                    :description="$hasFilters ? 'Loosen the filters, or reset them to see every schedule.' : ($canManage ? 'Generate schedules for the rows above, add them one at a time, or import a file.' : 'Schedules for rows in your area show up here.')">
                     @if ($hasFilters)
                         <x-ui.button variant="outline" href="{{ route('small-pm.index', ['tab' => $tab]) }}">Reset filter</x-ui.button>
                     @endif
@@ -199,7 +199,7 @@
                             </div>
                             @if ($hasFindings)
                                 <div class="col-span-2">
-                                    <dt class="text-xs text-text-muted">Blower filter mati</dt>
+                                    <dt class="text-xs text-text-muted">Dead filter blower</dt>
                                     <dd class="mt-1">@include('small-pm._findings-badge', ['s' => $s])</dd>
                                 </div>
                             @endif
@@ -218,11 +218,11 @@
                 <p id="small-pm-start-row" class="mt-1 text-sm text-text-muted"></p>
                 <form id="small-pm-start-form" method="POST" class="mt-5 space-y-4">
                     @csrf
-                    <x-ui.field label="Tanggal & jam mulai" for="small-pm-start-input" required>
+                    <x-ui.field label="Start date and time" for="small-pm-start-input" required>
                         <input type="datetime-local" name="started_at" id="small-pm-start-input" required class="input">
                     </x-ui.field>
                     <div class="flex justify-end gap-2 pt-2">
-                        <x-ui.button variant="ghost" id="small-pm-start-cancel">Batal</x-ui.button>
+                        <x-ui.button variant="ghost" id="small-pm-start-cancel">Cancel</x-ui.button>
                         <x-ui.button type="submit">START</x-ui.button>
                     </div>
                 </form>
@@ -290,7 +290,7 @@
                             if (!res.ok) throw new Error();
                             say('Tersimpan', 'ok');
                         }).catch(function () {
-                            say('PIC gagal disimpan. Muat ulang halaman lalu coba lagi.', 'error');
+                            say('Could not save the PIC. Reload the page and try again.', 'error');
                         }).finally(function () {
                             select.disabled = false;
                         });
@@ -301,7 +301,7 @@
     </div>
 
     @if ($canManage && $available && ! $isFindingsTab)
-        <x-ui.modal id="small-pm-import-modal" title="Import jadwal Small PM" description="Upload file .csv, .xlsx, atau .xls sesuai template import Small PM untuk tab ini.">
+        <x-ui.modal id="small-pm-import-modal" title="Import Small PM schedules" description="Upload a .csv, .xlsx, or .xls file matching the Small PM import template for this tab.">
             <form action="{{ route('small-pm.import') }}" method="POST" enctype="multipart/form-data" class="mt-5 space-y-4">
                 @csrf
                 <input type="hidden" name="tab" value="{{ $tab }}">
@@ -310,7 +310,7 @@
                         class="block w-full text-sm text-text file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-medium file:text-text hover:file:bg-surface-muted">
                 </x-ui.field>
                 <div class="flex justify-end gap-2 pt-2">
-                    <x-ui.button variant="ghost" id="small-pm-import-cancel">Batal</x-ui.button>
+                    <x-ui.button variant="ghost" id="small-pm-import-cancel">Cancel</x-ui.button>
                     <x-ui.button type="submit" variant="success">Import</x-ui.button>
                 </div>
             </form>

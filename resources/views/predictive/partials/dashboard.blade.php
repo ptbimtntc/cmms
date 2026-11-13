@@ -4,17 +4,17 @@
 <form method="GET" action="{{ route('predictive.index') }}" class="card grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6 lg:items-end">
     <input type="hidden" name="tab" value="dashboard">
     <div class="grid gap-1.5">
-        <label for="pd-from" class="text-xs font-medium text-text-muted">Dari tanggal WO</label>
+        <label for="pd-from" class="text-xs font-medium text-text-muted">WO date from</label>
         <input id="pd-from" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" class="input lg:min-h-9">
     </div>
     <div class="grid gap-1.5">
-        <label for="pd-to" class="text-xs font-medium text-text-muted">Sampai tanggal WO</label>
+        <label for="pd-to" class="text-xs font-medium text-text-muted">WO date to</label>
         <input id="pd-to" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" class="input lg:min-h-9">
     </div>
     <div class="grid gap-1.5">
-        <label for="pd-category" class="text-xs font-medium text-text-muted">Kategori</label>
+        <label for="pd-category" class="text-xs font-medium text-text-muted">Category</label>
         <select id="pd-category" name="category" class="select lg:min-h-9">
-            <option value="">Semua</option>
+            <option value="">All</option>
             @foreach (\App\Models\PredictiveWorkOrder::CATEGORIES as $key => $label)
                 <option value="{{ $key }}" @selected(($filters['category'] ?? '') === $key)>{{ $label }}</option>
             @endforeach
@@ -24,7 +24,7 @@
         <div class="grid gap-1.5">
             <label for="pd-area" class="text-xs font-medium text-text-muted">Area</label>
             <select id="pd-area" name="area" class="select lg:min-h-9">
-                <option value="">Semua area</option>
+                <option value="">All areas</option>
                 @foreach ($areaOptions as $a)
                     <option value="{{ $a }}" @selected(($filters['area'] ?? '') === $a)>{{ $a }}</option>
                 @endforeach
@@ -34,7 +34,7 @@
     <div class="grid gap-1.5">
         <label for="pd-type" class="text-xs font-medium text-text-muted">Machine Type</label>
         <select id="pd-type" name="machine_type" class="select lg:min-h-9">
-            <option value="">Semua tipe</option>
+            <option value="">All types</option>
             @foreach ($machineTypes as $t)
                 <option value="{{ $t }}" @selected(($filters['machine_type'] ?? '') === $t)>{{ $t }}</option>
             @endforeach
@@ -43,20 +43,20 @@
     <div class="grid gap-1.5">
         <label for="pd-pic" class="text-xs font-medium text-text-muted">PIC</label>
         <select id="pd-pic" name="pic" class="select lg:min-h-9">
-            <option value="">Semua PIC</option>
+            <option value="">All PICs</option>
             @foreach ($pics as $p)
                 <option value="{{ $p->id }}" @selected((string) ($filters['pic'] ?? '') === (string) $p->id)>{{ $p->name }}</option>
             @endforeach
         </select>
     </div>
     <div class="flex gap-2 sm:col-span-2 lg:col-span-6 lg:justify-end">
-        <x-ui.button type="submit" class="flex-1 lg:min-h-9 lg:flex-none">Terapkan filter</x-ui.button>
+        <x-ui.button type="submit" class="flex-1 lg:min-h-9 lg:flex-none">Apply filters</x-ui.button>
         <x-ui.button variant="ghost" href="{{ route('predictive.index', ['tab' => 'dashboard']) }}" class="lg:min-h-9">Reset</x-ui.button>
     </div>
 </form>
 
 <p class="-mt-2 text-xs text-text-muted">
-    Periode memakai tanggal WO. Filter PIC mencakup WO yang sedang di-claim atau pernah diberi Action oleh PIC tersebut.
+    The period uses the WO date. The PIC filter covers WOs that PIC currently claims or has ever given an Action.
 </p>
 
 {{-- A. WO Overview. Closing Rate is the focal figure and the only brand gradient here; the rest are supporting counts. --}}
@@ -67,7 +67,7 @@
         <div class="mt-4 h-2.5 overflow-hidden rounded-full bg-surface-muted" role="progressbar" aria-valuenow="{{ $rate }}" aria-valuemin="0" aria-valuemax="100" aria-label="Closing Rate">
             <div class="h-full rounded-full bg-linear-to-r from-brand-from to-brand-to" style="width: {{ $rate }}%"></div>
         </div>
-        <p class="mt-2 text-xs text-text-muted">{{ $overview['closed'] }} dari {{ $overview['total'] }} WO berstatus CLOSED. WO yang di-reopen dihitung OPEN.</p>
+        <p class="mt-2 text-xs text-text-muted">{{ $overview['closed'] }} of {{ $overview['total'] }} WOs are CLOSED. A WO that is di-reopen dihitung OPEN.</p>
     </div>
     <dl class="card grid grid-cols-3 divide-x divide-border lg:col-span-3">
         <div class="flex min-w-0 flex-col justify-center px-3 py-5 sm:px-5">
@@ -86,13 +86,13 @@
 </section>
 
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-    @foreach ([['Finding Summary', 'Finding apa yang paling sering muncul?', $findings], ['Problem Summary', 'Problem apa yang paling sering muncul?', $problems]] as [$title, $question, $rows])
+    @foreach ([['Finding Summary', 'Which finding comes up most often?', $findings], ['Problem Summary', 'Which problem comes up most ofteg sering muncul?', $problems]] as [$title, $question, $rows])
         @php($max = max(1, (int) ($rows->max('total') ?? 0)))
         <section class="card p-5" aria-label="{{ $title }}">
             <h2 class="font-semibold text-text">{{ $title }}</h2>
-            <p class="mt-0.5 text-sm text-text-muted">{{ $question }} Dari seluruh histori Action, termasuk setelah Reopen.</p>
+            <p class="mt-0.5 text-sm text-text-muted">{{ $question }} Across all Action history, including after a Reopen.</p>
             @if ($rows->isEmpty())
-                <x-ui.empty-state class="mt-4" title="Belum ada Action pada WO yang sesuai filter." />
+                <x-ui.empty-state class="mt-4" title="No Action on any WO matching these filters." />
             @else
                 <ol class="mt-4 space-y-3">
                     @foreach ($rows as $row)

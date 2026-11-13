@@ -220,16 +220,19 @@ class OilAudit extends Model
 
     public function conditionColor(): array
     {
+        // One shade per condition, used for the badge, the timeline dot, and the history bar,
+        // so a condition reads as the same colour wherever it appears. Every shade carries
+        // white label text at 4.5:1 or better (WCAG AA for the 12px badge).
         return match ($this->condition) {
-            'OKE' => ['badge' => 'bg-emerald-600 text-white', 'dot' => 'bg-emerald-500', 'bar' => 'bg-emerald-500'],
-            'PANTAU' => ['badge' => 'bg-amber-500 text-white', 'dot' => 'bg-amber-400', 'bar' => 'bg-amber-400'],
-            'HAMPIR_GARIS' => ['badge' => 'bg-orange-500 text-white', 'dot' => 'bg-orange-500', 'bar' => 'bg-orange-500'],
+            'OKE' => ['badge' => 'bg-emerald-600 text-white', 'dot' => 'bg-emerald-600', 'bar' => 'bg-emerald-600'],
+            'PANTAU' => ['badge' => 'bg-amber-700 text-white', 'dot' => 'bg-amber-700', 'bar' => 'bg-amber-700'],
+            'HAMPIR_GARIS' => ['badge' => 'bg-orange-700 text-white', 'dot' => 'bg-orange-700', 'bar' => 'bg-orange-700'],
             'PAS_GARIS' => ['badge' => 'bg-rose-500 text-white', 'dot' => 'bg-rose-500', 'bar' => 'bg-rose-500'],
             'KRITIS' => ['badge' => 'bg-red-700 text-white', 'dot' => 'bg-red-700', 'bar' => 'bg-red-700'],
             // New conditions: give OLI_KERUH a monitoring color and GLASS_BUREM a follow-up color
-            'OLI_KERUH' => ['badge' => 'bg-amber-600 text-white', 'dot' => 'bg-amber-500', 'bar' => 'bg-amber-500'],
-            'GLASS_BUREM' => ['badge' => 'bg-rose-600 text-white', 'dot' => 'bg-rose-500', 'bar' => 'bg-rose-500'],
-            default => ['badge' => 'bg-slate-500 text-white', 'dot' => 'bg-slate-400', 'bar' => 'bg-slate-400'],
+            'OLI_KERUH' => ['badge' => 'bg-amber-800 text-white', 'dot' => 'bg-amber-800', 'bar' => 'bg-amber-800'],
+            'GLASS_BUREM' => ['badge' => 'bg-rose-600 text-white', 'dot' => 'bg-rose-600', 'bar' => 'bg-rose-600'],
+            default => ['badge' => 'bg-slate-500 text-white', 'dot' => 'bg-slate-500', 'bar' => 'bg-slate-500'],
         };
     }
 }

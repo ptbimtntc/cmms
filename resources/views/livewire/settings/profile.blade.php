@@ -175,15 +175,15 @@
         </div>
 
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
+            <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" class:input="min-h-11" />
 
             <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" class:input="min-h-11" />
 
             </div>
 
             <div class="flex items-center gap-4">
-                <flux:button variant="primary" type="submit">{{ __('Save') }}</flux:button>
+                <flux:button variant="primary" type="submit" class="min-h-11">{{ __('Save') }}</flux:button>
             </div>
         </form>
 

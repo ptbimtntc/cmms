@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Tambah Row')
+@section('title', 'Add Row')
 
 @section('content')
     @php
@@ -8,8 +8,8 @@
         $contentMaxWidth = 'max-w-2xl';
     @endphp
 
-    <x-ui.form-page title="Tambah Row" description="Setelah disimpan, Anda diarahkan ke halaman Edit untuk mencentang mesin di row ini."
-        :action="route('small-pm-rows.store')" :back="route('small-pm-rows.index')" back-label="Kembali ke Row Small PM" submit="Simpan" cancel-label="Batal">
+    <x-ui.form-page title="Add Row" description="Once saved, you go to the Edit page to tick the machines in this row."
+        :action="route('small-pm-rows.store')" :back="route('small-pm-rows.index')" back-label="Back to Small PM Rows" submit="Save" cancel-label="Cancel">
         @include('small-pm-rows._fields', ['row' => null])
     </x-ui.form-page>
 @endsection

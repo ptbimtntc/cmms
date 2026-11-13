@@ -12,7 +12,7 @@
     @endphp
 
     <div class="space-y-5">
-        <x-ui.page-header title="Measurement Master" description="Master measurement item berdasarkan tipe mesin">
+        <x-ui.page-header title="Measurement Master" description="Measurement master items per machine type">
             @if ($canManage)
                 <x-slot:actions>
                     <x-ui.button href="{{ route('machine-measurements.create') }}">Add Measurement</x-ui.button>

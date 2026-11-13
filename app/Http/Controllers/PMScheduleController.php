@@ -480,7 +480,7 @@ class PMScheduleController extends Controller
                     ->route('pm-schedules.edit', ['pm_schedule' => $pmSchedule->id, 'page' => $request->input('return_page')])
                     ->with(
                         'warning',
-                        'Fill PM belum lengkap : '.implode(', ', $completionErrors)
+                        'Fill PM is incomplete: '.implode(', ', $completionErrors)
                     );
             }
 

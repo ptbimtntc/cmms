@@ -216,8 +216,8 @@ describe('backup page', function () {
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->get('/backup')->assertOk()
-            ->assertSee('Database tiap 7 hari, source code tiap 14 hari')
-            ->assertSee('Belum diatur')
+            ->assertSee('Database every 7 days, source code every 14 days')
+            ->assertSee('Not configured')
             ->assertSee('cron <code>schedule:run</code>', false);
     });
 
@@ -244,10 +244,10 @@ describe('backup page', function () {
         ]);
 
         $this->actingAs($admin)->get('/backup')->assertOk()
-            ->assertSee('Aktif')
-            ->assertSee('Otomatis')
-            ->assertSee('Tersimpan')
-            ->assertSee('Salinan Google Drive gagal')
+            ->assertSee('Active')
+            ->assertSee('Automatic')
+            ->assertSee('Stored')
+            ->assertSee('Google Drive copy failed')
             ->assertSee('storageQuotaExceeded')
             ->assertDontSee('refresh-secret')
             ->assertDontSee('client-secret')

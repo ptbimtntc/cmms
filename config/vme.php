@@ -129,7 +129,7 @@ return [
         'characters' => [
             'supervisor' => [
                 'name' => 'Supervisor',
-                'role' => 'Memantau ringkasan aktivitas seluruh PIC',
+                'role' => 'Watches the activity summary for every PIC',
                 'analysis' => SupervisorAnalysis::class,
                 'avatar' => 'ai_supervisor',
             ],
@@ -137,14 +137,14 @@ return [
             // visiting its own Area. `avatars` are handed out to the areas in turn.
             'coordinator' => [
                 'name' => 'Koordinator',
-                'role' => 'Memantau rencana PM dan pembagian tugas',
+                'role' => 'Watches the PM plan and how work is shared out',
                 'analysis' => CoordinatorAnalysis::class,
                 'per_area' => true,
                 'avatars' => ['ai_coordinator', 'ai_coordinator_2', 'ai_coordinator_3', 'ai_coordinator_4'],
             ],
             'sparepart_analyst' => [
                 'name' => 'Sparepart Analyst',
-                'role' => 'Memantau hasil forecast kebutuhan sparepart',
+                'role' => 'Watches the sparepart needs forecast',
                 'analysis' => SparepartAnalystAnalysis::class,
                 'avatar' => 'ai_sparepart',
             ],

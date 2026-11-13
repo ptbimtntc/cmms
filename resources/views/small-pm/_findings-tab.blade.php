@@ -1,16 +1,16 @@
-{{-- Tab "Temuan Blower Mati": every dead-blower finding from Ganti Filter Panel, OPEN first. --}}
+{{-- Tab "Dead Blower Findings": every dead-blower finding from Ganti Filter Panel, OPEN first. --}}
 @php($canReopen = auth()->user()->isAdmin() || auth()->user()->isKoordinator())
 
 <form method="GET" class="card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end">
     <input type="hidden" name="tab" value="{{ $tab }}">
     <div class="grid gap-1.5 sm:w-64">
-        <label for="spmf-search" class="text-xs font-medium text-text-muted">Cari</label>
-        <input id="spmf-search" type="text" name="search" value="{{ request('search') }}" placeholder="Nomor mesin" class="input lg:min-h-9">
+        <label for="spmf-search" class="text-xs font-medium text-text-muted">Search</label>
+        <input id="spmf-search" type="text" name="search" value="{{ request('search') }}" placeholder="Machine number" class="input lg:min-h-9">
     </div>
     <div class="grid gap-1.5 sm:w-48">
         <label for="spmf-row" class="text-xs font-medium text-text-muted">Row</label>
         <select id="spmf-row" name="row_id" class="select lg:min-h-9">
-            <option value="">Semua Row</option>
+            <option value="">All rows</option>
             @foreach ($rows as $r)
                 <option value="{{ $r->id }}" @selected(request('row_id') == $r->id)>{{ $r->name }}</option>
             @endforeach
@@ -28,12 +28,12 @@
     </div>
 </form>
 
-<p class="text-sm text-text-muted">Temuan dicatat dengan mencentang mesin di halaman Execute jadwal Ganti Filter Panel. Isi tindakan di sini setelah blower ditangani.</p>
+<p class="text-sm text-text-muted">A finding is recorded by ticking a machine on the Execute page of a Ganti Filter Panel schedule. Record the action here once blower ditangani.</p>
 
 @if ($findings->isEmpty())
     <x-ui.empty-state
-        :title="request()->hasAny(['search', 'row_id', 'status']) ? 'Tidak ada temuan yang sesuai filter.' : 'Belum ada temuan blower filter mati.'"
-        :description="request()->hasAny(['search', 'row_id', 'status']) ? 'Longgarkan filter, atau reset untuk melihat semua temuan.' : 'Temuan muncul di sini begitu mesin dicentang saat Execute Ganti Filter Panel.'" />
+        :title="request()->hasAny(['search', 'row_id', 'status']) ? 'No finding matches these filters.' : 'No dead filter blower recorded yet.'"
+        :description="request()->hasAny(['search', 'row_id', 'status']) ? 'Loosen the filters, or reset them to see every finding.' : 'A finding shows up here as soon as a machine is ticked during Execute of Ganti Filter Panel.'" />
 @endif
 
 <div class="space-y-3" data-infinite-list="small-pm-findings">
@@ -44,7 +44,7 @@
             <div class="flex items-start justify-between gap-3">
                 <dl class="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
                     <div>
-                        <dt class="text-xs text-text-muted">Mesin</dt>
+                        <dt class="text-xs text-text-muted">Machine</dt>
                         <dd class="font-semibold text-text">{{ $finding->machine->machine_number ?? '-' }}</dd>
                         <dd class="text-xs text-text-muted">{{ $finding->machine->machine_type ?? '' }}</dd>
                     </div>
@@ -76,13 +76,13 @@
                     @method('PATCH')
                     <div class="grid flex-1 gap-1.5">
                         <label for="fa-{{ $finding->id }}" class="text-xs font-medium text-text-muted">Tindakan</label>
-                        <input id="fa-{{ $finding->id }}" type="text" name="action" required maxlength="2000" placeholder="Misalnya blower diganti baru" class="input lg:min-h-9">
+                        <input id="fa-{{ $finding->id }}" type="text" name="action" required maxlength="2000" placeholder="For example: blower replaced with a new one" class="input lg:min-h-9">
                     </div>
                     <div class="grid gap-1.5">
                         <label for="fd-{{ $finding->id }}" class="text-xs font-medium text-text-muted">Tanggal</label>
                         <input id="fd-{{ $finding->id }}" type="date" name="action_date" value="{{ now()->toDateString() }}" class="input sm:w-44 lg:min-h-9">
                     </div>
-                    <x-ui.button type="submit" variant="outline" class="lg:min-h-9">Tutup temuan</x-ui.button>
+                    <x-ui.button type="submit" variant="outline" class="lg:min-h-9">Close finding</x-ui.button>
                 </form>
             @elseif (! $open && $canReopen)
                 <form action="{{ route('small-pm.findings.update', [$schedule, $finding]) }}" method="POST" class="mt-4 border-t border-border pt-4">

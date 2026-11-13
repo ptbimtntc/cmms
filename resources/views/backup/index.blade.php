@@ -12,8 +12,8 @@
         <header>
             <h1 class="font-signage text-2xl font-semibold leading-tight text-text sm:text-3xl">Backup &amp; Data Protection</h1>
             <p class="mt-1 max-w-prose text-sm text-text-muted sm:text-base">
-                Buat dan unduh backup database serta source code yang sedang berjalan di server. Halaman ini hanya dapat diakses ADMIN.
-                File backup berisi data dan konfigurasi sensitif (termasuk <code>.env</code>); simpan di tempat yang aman dan terbatas.
+                Create and download a backup of the database and of the source code running on the server. ADMIN only.
+                Backup files hold sensitive data and configuration (including <code>.env</code>); keep them somewhere safe and restricted.
             </p>
         </header>
 
@@ -31,21 +31,21 @@
         @include('backup.partials.section', [
             'type' => \App\Models\BackupRun::TYPE_DATABASE,
             'title' => 'A. Backup Database',
-            'description' => 'Berisi struktur tabel, indeks, constraint, dan seluruh data dari semua tabel aplikasi, dalam format .sql.gz.',
+            'description' => 'Holds the table structure, indexes, constraints, and all data from every application table, as .sql.gz.',
             'action' => route('backup.database.store'),
-            'buttonLabel' => 'Buat Backup Database',
+            'buttonLabel' => 'Create Database Backup',
             'section' => $sections[\App\Models\BackupRun::TYPE_DATABASE],
-            'notes' => 'Dibuat dari transaksi baca yang konsisten. Tabel session, cache, dan job antrean ikut tercakup karena disimpan di database.',
+            'notes' => 'Taken from a consistent read transaction. The session, cache, and queue job tables are included because they live in the database.',
         ])
 
         @include('backup.partials.section', [
             'type' => \App\Models\BackupRun::TYPE_SOURCE,
             'title' => 'B. Backup Source Code Production',
-            'description' => 'Arsip .zip berisi kode yang sedang dijalankan di server, termasuk .env, vendor, public/build, dan file tersembunyi.',
+            'description' => 'A .zip archive of the code running on the server, including .env, vendor, public/build, and hidden files.',
             'action' => route('backup.source.store'),
-            'buttonLabel' => 'Buat Backup Source Code',
+            'buttonLabel' => 'Create Source Code Backup',
             'section' => $sections[\App\Models\BackupRun::TYPE_SOURCE],
-            'notes' => 'Tidak disertakan: isi storage/ (file upload seperti avatar, log, cache, sesi, dan backup lama), bootstrap/cache, node_modules, dan symbolic link. Backup database dan file storage harus dibuat terpisah.',
+            'notes' => 'Not included: the contents of storage/ (uploads such as avatars, logs, cache, sessions, and older backups), bootstrap/cache, node_modules, and symbolic links. The database and the storage files are backed up separately.',
         ])
     </div>
 @endsection

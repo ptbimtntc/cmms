@@ -65,7 +65,7 @@ class SmallPmScheduler
             $rows = $this->unscheduledRows($taskType, $areaIds);
 
             if ($rows->isEmpty()) {
-                throw new SmallPmWorkflowException('Semua row yang punya mesin sudah punya jadwal OPEN.');
+                throw new SmallPmWorkflowException('Every row that holds machines already has an OPEN schedule.');
             }
 
             return $rows->values()->map(function (SmallPmRow $row, int $i) use ($taskType, $monday, $cycle) {

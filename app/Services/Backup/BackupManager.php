@@ -89,7 +89,7 @@ class BackupManager
                 chmod($temporary, 0600);
 
                 if (! rename($temporary, $final)) {
-                    throw new BackupStepException('Gagal menyimpan file backup.');
+                    throw new BackupStepException('Could not save the backup file.');
                 }
 
                 $run->forceFill([
@@ -163,7 +163,7 @@ class BackupManager
     public function startDownload(BackupRun $run, User $admin): string
     {
         if (! $run->isDownloadable()) {
-            throw new RuntimeException('File backup tidak tersedia lagi. Buat backup baru.');
+            throw new RuntimeException('The backup file is no longer available. Create a new backup.');
         }
 
         $run->forceFill([
@@ -320,7 +320,7 @@ class BackupManager
             $run->forceFill([
                 'drive_error' => $e instanceof BackupStepException
                     ? mb_substr($e->getMessage(), 0, 250)
-                    : 'Gagal mengunggah ke Google Drive. Periksa log server.',
+                    : 'Could not upload to Google Drive. Check the server log.',
             ])->save();
 
             return;
@@ -366,7 +366,7 @@ class BackupManager
         }
 
         return $type === BackupRun::TYPE_DATABASE
-            ? 'Gagal membuat backup database. Periksa log server.'
-            : 'Gagal membuat backup source code. Periksa log server.';
+            ? 'Could not create the database backup. Check the server log.'
+            : 'Could not create the source code backup. Check the server log.';
     }
 }

@@ -72,7 +72,7 @@ class GmailSmtpMailer
 
         if (stripos($message, 'Username and Password not accepted') !== false
             || stripos($message, 'Authentication') !== false || str_contains($message, '535')) {
-            return 'Autentikasi Gmail ditolak. Periksa alamat Gmail dan App Password (verifikasi 2 langkah harus aktif).';
+            return 'Gmail rejected the sign-in. Check the Gmail address and App Password (2-step verification must be on).';
         }
 
         return mb_substr(trim(preg_replace('/\s+/', ' ', $message)), 0, 300);

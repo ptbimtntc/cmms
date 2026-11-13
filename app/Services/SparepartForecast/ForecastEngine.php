@@ -161,8 +161,8 @@ class ForecastEngine
         }
 
         $meta = [
-            'split_method' => 'Temporal hold-out per mesin: '.(int) ((1 - self::TEST_FRACTION) * 100).'% PM terlama untuk training, '
-                .(int) (self::TEST_FRACTION * 100).'% PM terbaru (minimal 1) untuk testing',
+            'split_method' => 'Temporal hold-out per machine: '.(int) ((1 - self::TEST_FRACTION) * 100).'% oldest PMs for training, '
+                .(int) (self::TEST_FRACTION * 100).'% newest PMs (at least 1) for testing',
             'train_from' => $trainDates ? min($trainDates) : null,
             'train_to' => $trainDates ? max($trainDates) : null,
             'test_from' => $testDates ? min($testDates) : null,
@@ -188,7 +188,7 @@ class ForecastEngine
             $notes[] = "Data testing hanya dari {$testMachines} mesin (minimal ".self::MIN_TEST_MACHINES.').';
         }
         if ($actualSum <= 0 && $notes === []) {
-            $notes[] = 'Tidak ada penggunaan sparepart pada data testing.';
+            $notes[] = 'No sparepart usage in the testing data.';
         }
 
         if ($notes !== []) {
@@ -200,7 +200,7 @@ class ForecastEngine
             'mae' => round($abs / $compared, 4),
             'wape' => round($abs / $actualSum, 4),
             'bias' => round($err / $actualSum, 4),
-            'notes' => ['Bias positif = prediksi lebih tinggi dari kenyataan (over-forecast).'],
+            'notes' => ['A positive bias means the forecast runs higher than reality (over-forecast).'],
         ]);
     }
 
@@ -258,7 +258,7 @@ class ForecastEngine
                 'qty_cv' => $cv,
                 'lines' => [
                     "Dipakai pada {$k} dari {$m} PM terakhir (probabilitas ".round($p * 100)."%).",
-                    'Rata-rata qty saat dipakai: '.round($avg, 2).".",
+                    'Average qty when used: '.round($avg, 2).".",
                     "Estimasi = {$upcoming} PM terjadwal × ".round($p, 2).' × '.round($avg, 2).' = '.round($expected, 2).'.',
                 ],
             ],

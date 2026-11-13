@@ -1,6 +1,6 @@
 {{--
-    <x-ui.page-header title="Jadwal PM" description="Mesin yang dijadwalkan bulan ini.">
-        <x-slot:actions><x-ui.button href="...">Tambah jadwal</x-ui.button></x-slot:actions>
+    <x-ui.page-header title="PM Schedule" description="Machines scheduled this month.">
+        <x-slot:actions><x-ui.button href="...">Add schedule</x-ui.button></x-slot:actions>
     </x-ui.page-header>
 --}}
 @props([

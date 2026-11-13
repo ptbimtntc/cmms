@@ -354,7 +354,7 @@ test('executing a filter panel schedule records the ticked machines as OPEN dead
     $s = spmFilterSchedule($row, ['pic_user_id' => $pic->id]);
     [$f1, $f2] = [Machine::where('machine_number', 'F1')->first(), Machine::where('machine_number', 'F2')->first()];
 
-    $this->actingAs($pic)->get("/small-pm/{$s->id}/execute")->assertOk()->assertSee('Blower filter mati');
+    $this->actingAs($pic)->get("/small-pm/{$s->id}/execute")->assertOk()->assertSee('Dead filter blower');
 
     $this->actingAs($pic)->post("/small-pm/{$s->id}/execute", ['action_date' => '2026-11-11', 'dead_machine_ids' => [$f1->id, $f2->id]])
         ->assertRedirect();
@@ -366,7 +366,7 @@ test('executing a filter panel schedule records the ticked machines as OPEN dead
     $this->actingAs($pic)->post("/small-pm/{$s->id}/execute", ['action_date' => '2026-11-11', 'dead_machine_ids' => [$f1->id]]);
     expect($s->findings()->pluck('machine_id')->all())->toBe([$f1->id]);
 
-    $this->actingAs($pic)->get('/small-pm?tab=filter-panel')->assertSee('1 mesin')->assertSee('1 open');
+    $this->actingAs($pic)->get('/small-pm?tab=filter-panel')->assertSee('1 machine')->assertSee('1 open');
 });
 
 test('no ticked machine means no finding, and a machine from another row is rejected', function () {
@@ -443,7 +443,7 @@ test('the findings tab gathers dead-blower findings from every filter panel sche
 
     $this->actingAs($koord)->get('/small-pm?tab=temuan-blower')
         ->assertOk()
-        ->assertSee('Temuan Blower Mati')
+        ->assertSee('Dead Blower Findings')
         ->assertSee('2 open')
         ->assertSee('Blower diganti')
         ->assertViewHas('findings', function ($p) use ($done) {

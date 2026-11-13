@@ -21,7 +21,7 @@ class SparepartAnalystAnalysis implements AiCharacterAnalysis
         $run = AiForecastRun::query()->latest('id')->first();
 
         if (! $run) {
-            return new AiAnalysisResult(AiAnalysisResult::IDLE, 'Belum ada run forecast sparepart.', ['source_tables' => ['ai_forecast_runs']]);
+            return new AiAnalysisResult(AiAnalysisResult::IDLE, 'No sparepart forecast run yet.', ['source_tables' => ['ai_forecast_runs']]);
         }
 
         $ref = ['type' => 'ai_forecast_runs', 'id' => $run->id];
@@ -65,7 +65,7 @@ class SparepartAnalystAnalysis implements AiCharacterAnalysis
             $input + ['alert_warnings_at' => $threshold],
             [
                 ['label' => 'Run', 'value' => "#{$run->id}"],
-                ['label' => 'Sparepart perlu disiapkan', 'value' => (string) $likely],
+                ['label' => 'Spareparts to prepare', 'value' => (string) $likely],
                 ['label' => 'Peringatan', 'value' => (string) $warnings],
                 ['label' => 'Selesai', 'value' => $when],
             ],

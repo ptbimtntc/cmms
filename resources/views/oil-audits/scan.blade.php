@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Audit Oli')
+@section('title', 'Oil Audit')
 
 @php($fullWidth = true)
 
 @section('content')
     <div class="mx-auto max-w-3xl space-y-5" x-data="{ manualOpen: false }">
-        <x-ui.page-header title="Audit Oli Cepat" description="Scan QR pada mesin area WWD, pilih kondisi oli, lalu lanjut ke mesin berikutnya." />
+        <x-ui.page-header title="Quick Oil Audit" description="Scan the QR on a WWD machine, pick the oil condition, then move to the next machine." />
 
         @if (session('success'))
             <x-ui.alert tone="success">{{ session('success') }}</x-ui.alert>
@@ -33,13 +33,13 @@
             <div class="overflow-hidden rounded-card border border-border bg-neutral-950">
                 <div id="oil-audit-reader" class="min-h-[320px] bg-neutral-950 sm:min-h-[420px]"></div>
                 <div class="border-t border-neutral-800 bg-neutral-900 p-4 text-center">
-                    <p id="scanner-status" class="mb-3 text-sm text-neutral-300" aria-live="polite">Arahkan kamera ke QR code nomor mesin.</p>
+                    <p id="scanner-status" class="mb-3 text-sm text-neutral-300" aria-live="polite">Point the camera at the machine number QR code.</p>
                     <x-ui.button id="start-scanner" size="lg" class="focus-visible:outline-white">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553 2.276A2 2 0 0 1 20.658 14l-4.553 2.276A2 2 0 0 1 13 14.484v-4.968A2 2 0 0 1 15 10z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h.01M3 12h.01M3 18h.01M21 6h.01M21 12h.01M21 18h.01" />
                         </svg>
-                        Aktifkan Kamera
+                        Turn on camera
                     </x-ui.button>
                 </div>
             </div>
@@ -47,13 +47,13 @@
             <div class="text-center">
                 <button type="button" @click="manualOpen = !manualOpen" :aria-expanded="manualOpen.toString()" aria-controls="manual-machine-form"
                     class="inline-flex min-h-11 items-center rounded-control px-2 text-sm font-medium text-primary underline-offset-2 hover:underline">
-                    QR tidak terbaca? Masukkan nomor mesin secara manual
+                    QR will not scan? Enter the machine number by hand
                 </button>
                 <form x-show="manualOpen" x-cloak method="GET" action="{{ route('oil-audits.entry', ['machineNumber' => '__machine__']) }}"
                     class="mx-auto mt-2 flex max-w-md gap-2" id="manual-machine-form">
-                    <label for="manual-machine-number" class="sr-only">Nomor mesin</label>
-                    <input id="manual-machine-number" type="text" required autocomplete="off" placeholder="Contoh: 10001" class="input min-w-0 flex-1 uppercase">
-                    <x-ui.button type="submit">Lanjut</x-ui.button>
+                    <label for="manual-machine-number" class="sr-only">Machine number</label>
+                    <input id="manual-machine-number" type="text" required autocomplete="off" placeholder="Example: 10001" class="input min-w-0 flex-1 uppercase">
+                    <x-ui.button type="submit">Continue</x-ui.button>
                 </form>
             </div>
         </div>
@@ -64,7 +64,7 @@
             scan -> entry page navigation is untouched.
         --}}
         <div id="oil-audit-offline-panel" class="card hidden p-5 sm:p-7">
-            <x-ui.button variant="ghost" size="sm" id="oil-audit-offline-rescan" class="mb-4 -ml-2">Scan mesin lain</x-ui.button>
+            <x-ui.button variant="ghost" size="sm" id="oil-audit-offline-rescan" class="mb-4 -ml-2">Scan another machine</x-ui.button>
             <div id="oil-audit-offline-machine-info"></div>
             <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5" id="oil-audit-offline-condition-buttons"></div>
         </div>
@@ -79,7 +79,7 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4">
             <div class="w-full max-w-sm rounded-card border border-border bg-surface p-6 text-center shadow-popover">
                 <h2 id="oil-audit-daily-prompt-title" class="text-lg font-semibold text-text">DO YOU WANT TO START OIL AUDIT?</h2>
-                <p class="mt-1 text-sm text-text-muted">Waktu mulai dicatat sebagai aktivitas hari ini.</p>
+                <p class="mt-1 text-sm text-text-muted">The start time is recorded as today's activity.</p>
                 <div class="mt-5 flex justify-center gap-2">
                     <x-ui.button variant="outline" id="oil-audit-prompt-no" class="min-w-24">NO</x-ui.button>
                     <x-ui.button id="oil-audit-prompt-yes" class="min-w-24">YES</x-ui.button>

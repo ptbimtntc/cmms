@@ -68,7 +68,7 @@ class SparepartInjectionController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->withErrors(['file' => 'Import gagal dan tidak ada data yang disimpan. Periksa file lalu coba lagi.']);
+            return back()->withErrors(['file' => 'The import failed and nothing was saved. Check the file, then try again.']);
         }
 
         return redirect()

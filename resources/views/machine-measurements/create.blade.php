@@ -8,7 +8,7 @@
         $contentMaxWidth = 'max-w-4xl';
     @endphp
 
-    <x-ui.form-page title="Add Measurement Master" description="Tambahkan measurement berdasarkan tipe mesin"
+    <x-ui.form-page title="Add Measurement Master" description="Add a measurement item for a machine type"
         :action="route('machine-measurements.store')" :back="route('machine-measurements.index')" back-label="Kembali ke Measurement Master">
         <x-ui.field label="Machine Type" for="mmc-type" error="machine_type">
             <select id="mmc-type" name="machine_type" @class(['select', 'is-invalid' => $errors->has('machine_type')])>

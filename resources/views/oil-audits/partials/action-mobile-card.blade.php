@@ -38,9 +38,9 @@
             <span aria-hidden="true"></span>
         @endif
         <div class="flex items-center gap-2">
-            <x-ui.button size="sm" variant="outline" href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}">Buka riwayat</x-ui.button>
+            <x-ui.button size="sm" variant="outline" href="{{ route('oil-audits.history', [$audit->machine_number, 'from' => 'action', 'return' => request()->getQueryString() ?? '']) }}">Open history</x-ui.button>
             @if ($canDeleteAudit)
-                <form method="POST" action="{{ route('oil-audits.destroy', $audit) }}" onsubmit="return confirm('Hapus temuan audit oli mesin {{ $audit->machine_number }} ({{ $audit->audited_at->format('d-m-Y') }})? Tindak lanjutnya juga akan terhapus.')">
+                <form method="POST" action="{{ route('oil-audits.destroy', $audit) }}" onsubmit="return confirm('Delete the oil audit for machine {{ $audit->machine_number }} ({{ $audit->audited_at->format('d-m-Y') }})? Its follow-up is deleted too.')">
                     @csrf
                     @method('DELETE')
                     <x-ui.button type="submit" size="sm" variant="ghost" class="text-danger hover:bg-danger-light hover:text-danger-hover">Delete</x-ui.button>

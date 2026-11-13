@@ -40,8 +40,8 @@ class SupervisorAnalysis implements AiCharacterAnalysis
                 ['label' => 'PIC aktif', 'value' => (string) $total],
                 ['label' => 'Sedang bekerja', 'value' => (string) $working],
                 ['label' => 'Menunggu', 'value' => (string) $idle],
-                ['label' => 'Tidak aktif hari ini', 'value' => (string) $inactive],
-                ['label' => 'Aktivitas tidak terpetakan', 'value' => (string) $context->unmapped],
+                ['label' => 'Not active today', 'value' => (string) $inactive],
+                ['label' => 'Activity not mapped', 'value' => (string) $context->unmapped],
             ],
         );
     }

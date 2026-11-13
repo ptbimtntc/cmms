@@ -26,14 +26,14 @@
 <div data-infinite-sentinel="{{ $key }}" @if ($next) data-next-url="{{ $next }}" @endif {{ $attributes->class('w-full') }}>
     <div data-infinite-trigger aria-hidden="true" class="h-px"></div>
     <p data-infinite-loading class="hidden py-4 text-center text-sm text-slate-500">Memuat data…</p>
-    <p data-infinite-end class="hidden py-4 text-center text-sm text-slate-400">Semua data sudah ditampilkan.</p>
+    <p data-infinite-end class="hidden py-4 text-center text-sm text-slate-400">Everything is loaded.</p>
     <div data-infinite-error class="hidden py-4 text-center text-sm text-rose-600">
-        Gagal memuat data berikutnya.
-        <button type="button" data-infinite-retry class="font-semibold underline">Coba lagi</button>
+        Could not load the next batch.
+        <button type="button" data-infinite-retry class="font-semibold underline">Try again</button>
     </div>
     @if ($next)
         <div data-infinite-more class="hidden py-3 text-center">
-            <button type="button" data-infinite-retry class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Muat lebih banyak</button>
+            <button type="button" data-infinite-retry class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Load more</button>
         </div>
     @endif
     <noscript>{{ $paginator->links() }}</noscript>

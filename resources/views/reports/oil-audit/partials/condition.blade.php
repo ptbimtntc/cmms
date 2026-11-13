@@ -2,5 +2,5 @@
 @if ($audit)
     <span class="badge shrink-0 {{ $audit->conditionColor()['badge'] }}">{{ $audit->conditionLabel() }}</span>
 @else
-    <x-ui.badge class="shrink-0">Belum Audit</x-ui.badge>
+    <x-ui.badge class="shrink-0">Not Audited</x-ui.badge>
 @endif

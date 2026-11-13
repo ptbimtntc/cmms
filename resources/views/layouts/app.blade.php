@@ -95,13 +95,20 @@
                 content area (e.g. a dense table) without affecting every
                 other page, which keeps the max-w-7xl default. --}}
                 <div class="mx-auto {{ $contentMaxWidth ?? 'max-w-7xl' }} p-4 sm:p-6 lg:p-8">
+                    {{-- Two entry points, because this layout serves both kinds of page:
+                         @yield('content') for Blade pages that @extend it, and $slot for the
+                         Livewire page components that render through livewire.component_layout.
+                         A Blade page never defines $slot, and Livewire never fills the section,
+                         so only one of the two is ever non-empty. --}}
                     @if ($fullWidth ?? false)
                         @yield('content')
+                        {{ $slot ?? '' }}
                     @else
                         {{-- Page-level frame for pages not yet moved to x-ui components. Flat
                              (border, no shadow): it is the ground plane, not a raised surface. --}}
                         <div class="rounded-card border border-border bg-surface p-4 sm:p-6 lg:p-8">
                             @yield('content')
+                            {{ $slot ?? '' }}
                         </div>
                     @endif
                 </div>
@@ -110,6 +117,12 @@
         </div>
 
     </div>
+
+    {{-- Only the Livewire pages rendered through $slot use Flux components, so
+         its runtime is loaded for those and skipped on every Blade page. --}}
+    @isset($slot)
+        @fluxScripts
+    @endisset
 </body>
 
 </html>

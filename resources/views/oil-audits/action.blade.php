@@ -12,9 +12,9 @@
 
 @section('content')
     <div class="space-y-5">
-        <x-ui.page-header title="Oil Audit Action" description="Setiap record audit oli area WWD, satu baris per audit, untuk monitoring tindak lanjut.">
+        <x-ui.page-header title="Oil Audit Action" description="Every WWD oil audit record, one row per audit, for follow-up monitoring.">
             <x-slot:actions>
-                <x-ui.button href="{{ route('oil-audits.scan') }}">Mulai Audit dengan QR</x-ui.button>
+                <x-ui.button href="{{ route('oil-audits.scan') }}">Start an audit with QR</x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>
 
@@ -27,10 +27,10 @@
             <section class="rounded-card border border-warning/40 bg-warning-light p-4 sm:p-5" aria-labelledby="pending-heading">
                 <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h2 id="pending-heading" class="font-semibold text-text">Follow up belum selesai <span class="font-normal text-text-muted">({{ $summary['pending'] }})</span></h2>
-                        <p class="mt-0.5 text-sm text-warning-text">Prioritaskan kondisi oli yang membutuhkan action.</p>
+                        <h2 id="pending-heading" class="font-semibold text-text">Open follow-ups <span class="font-normal text-text-muted">({{ $summary['pending'] }})</span></h2>
+                        <p class="mt-0.5 text-sm text-warning-text">Oil conditions that need an action come first.</p>
                     </div>
-                    <a href="{{ route('oil-audits.report', ['follow_up' => 1]) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-2 hover:underline lg:min-h-0">Lihat semua</a>
+                    <a href="{{ route('oil-audits.report', ['follow_up' => 1]) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-2 hover:underline lg:min-h-0">See all</a>
                 </div>
                 <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
                     @foreach ($pendingAudits as $audit)
@@ -38,7 +38,7 @@
                         <a href="{{ $historyUrl($audit) }}" class="flex min-w-0 items-center justify-between gap-3 rounded-control border border-border bg-surface px-3 py-3 transition-colors hover:border-warning">
                             <div class="min-w-0">
                                 <p class="truncate font-semibold text-text">{{ $audit->machine_number }}</p>
-                                <p class="truncate text-xs text-text-muted">Dicek {{ $audit->audited_at->format('d M Y, H:i') }} · {{ $audit->audited_by_name }}</p>
+                                <p class="truncate text-xs text-text-muted">Checked {{ $audit->audited_at->format('d M Y, H:i') }} · {{ $audit->audited_by_name }}</p>
                             </div>
                             <span class="shrink-0 wrap-anywhere rounded-full px-2.5 py-1 text-xs font-bold {{ $colors['badge'] }}">{{ $audit->conditionLabel() }}</span>
                         </a>
@@ -73,29 +73,29 @@
         @php($activeFilters = collect(request()->only(['search', 'date_from', 'date_to', 'year', 'pic', 'finding_status', 'month', 'condition']))->filter(fn ($v) => filled($v))->count())
         <div x-data="{ open: {{ $activeFilters ? 'true' : 'false' }} }" class="space-y-3">
         <x-ui.button variant="outline" class="w-full md:hidden" @click="open = !open" x-bind:aria-expanded="open.toString()" aria-controls="oa-filter-form">
-            <span x-text="open ? 'Sembunyikan filter' : 'Tampilkan filter'">{{ $activeFilters ? 'Sembunyikan filter' : 'Tampilkan filter' }}</span>
+            <span x-text="open ? 'Hide filters' : 'Show filters'">{{ $activeFilters ? 'Hide filters' : 'Show filters' }}</span>
             @if ($activeFilters)
-                <x-ui.badge tone="primary">{{ $activeFilters }} aktif</x-ui.badge>
+                <x-ui.badge tone="primary">{{ $activeFilters }} active</x-ui.badge>
             @endif
         </x-ui.button>
         <form id="oa-filter-form" method="GET" class="card space-y-3 p-4 md:!block" x-show="open" x-cloak>
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,2fr)_repeat(4,minmax(0,1fr))]">
                 <div class="grid gap-1.5 sm:col-span-2 lg:col-span-1">
-                    <label for="oa-search" class="text-xs font-medium text-text-muted">Cari</label>
-                    <input id="oa-search" name="search" value="{{ request('search') }}" placeholder="Nomor mesin, tipe, atau temuan" class="input lg:min-h-9">
+                    <label for="oa-search" class="text-xs font-medium text-text-muted">Search</label>
+                    <input id="oa-search" name="search" value="{{ request('search') }}" placeholder="Machine number, type, or finding" class="input lg:min-h-9">
                 </div>
                 <div class="grid gap-1.5">
-                    <label for="oa-from" class="text-xs font-medium text-text-muted">Tanggal audit dari</label>
+                    <label for="oa-from" class="text-xs font-medium text-text-muted">Audit date from</label>
                     <input id="oa-from" type="date" name="date_from" value="{{ request('date_from') }}" class="input lg:min-h-9">
                 </div>
                 <div class="grid gap-1.5">
-                    <label for="oa-to" class="text-xs font-medium text-text-muted">Sampai</label>
+                    <label for="oa-to" class="text-xs font-medium text-text-muted">To</label>
                     <input id="oa-to" type="date" name="date_to" value="{{ request('date_to') }}" class="input lg:min-h-9">
                 </div>
                 <div class="grid gap-1.5">
-                    <label for="oa-year" class="text-xs font-medium text-text-muted">Tahun</label>
+                    <label for="oa-year" class="text-xs font-medium text-text-muted">Year</label>
                     <select id="oa-year" name="year" class="select lg:min-h-9">
-                        <option value="">Semua tahun</option>
+                        <option value="">All years</option>
                         @foreach (range(now()->year, now()->year - 5) as $y)
                             <option value="{{ $y }}" @selected((string) request('year') === (string) $y)>{{ $y }}</option>
                         @endforeach
@@ -104,7 +104,7 @@
                 <div class="grid gap-1.5">
                     <label for="oa-pic" class="text-xs font-medium text-text-muted">PIC</label>
                     <select id="oa-pic" name="pic" class="select lg:min-h-9">
-                        <option value="">Semua PIC</option>
+                        <option value="">All PICs</option>
                         @foreach ($pics as $p)
                             <option value="{{ $p }}" @selected(request('pic') === $p)>{{ $p }}</option>
                         @endforeach
@@ -114,23 +114,23 @@
 
             <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
                 <div class="grid gap-1.5 sm:w-52">
-                    <label for="oa-finding-status" class="text-xs font-medium text-text-muted">Status temuan</label>
+                    <label for="oa-finding-status" class="text-xs font-medium text-text-muted">Finding status</label>
                     <select id="oa-finding-status" name="finding_status" class="select lg:min-h-9">
-                        <option value="">Semua status temuan</option>
+                        <option value="">All finding statuses</option>
                         <option value="NO_FINDING" @selected(request('finding_status') === 'NO_FINDING')>No Finding</option>
                         <option value="OPEN" @selected(request('finding_status') === 'OPEN')>Open</option>
                         <option value="COMPLETED" @selected(request('finding_status') === 'COMPLETED')>Completed</option>
                     </select>
                 </div>
                 <div class="grid gap-1.5">
-                    <span class="text-xs font-medium text-text-muted">Bulan</span>
-                    <x-checkbox-dropdown name="month" label="Bulan" all-label="Semua bulan"
+                    <span class="text-xs font-medium text-text-muted">Month</span>
+                    <x-checkbox-dropdown name="month" label="Month" all-label="All months"
                         :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
                         :selected="collect((array) request('month'))->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && $m >= 1 && $m <= 12)->map(fn ($m) => (int) $m)->unique()->values()->all()" />
                 </div>
                 <div class="grid gap-1.5">
-                    <span class="text-xs font-medium text-text-muted">Kondisi</span>
-                    <x-checkbox-dropdown name="condition" label="Kondisi" all-label="Semua kondisi"
+                    <span class="text-xs font-medium text-text-muted">Condition</span>
+                    <x-checkbox-dropdown name="condition" label="Condition" all-label="All conditions"
                         :options="\App\Models\OilAudit::CONDITION_LABELS"
                         :selected="collect((array) request('condition'))->filter(fn ($c) => is_string($c) && array_key_exists($c, \App\Models\OilAudit::CONDITION_LABELS))->values()->all()" />
                 </div>
@@ -143,9 +143,9 @@
         </div>
 
         @if ($audits->isEmpty())
-            <x-ui.empty-state title="Tidak ada audit yang sesuai dengan filter."
-                description="Longgarkan filter, atau reset untuk melihat semua audit oli area WWD.">
-                <x-ui.button variant="outline" href="{{ route('oil-audits.report') }}">Reset filter</x-ui.button>
+            <x-ui.empty-state title="No audit matches these filters."
+                description="Loosen the filters, or reset them to see every WWD oil audit.">
+                <x-ui.button variant="outline" href="{{ route('oil-audits.report') }}">Reset filters</x-ui.button>
             </x-ui.empty-state>
         @else
             {{-- Desktop table --}}
@@ -197,7 +197,7 @@
                                         <div class="flex items-center justify-end gap-2">
                                             <x-ui.button size="sm" variant="outline" href="{{ $historyUrl($audit) }}">View</x-ui.button>
                                             @if ($canDeleteAudit)
-                                                <form method="POST" action="{{ route('oil-audits.destroy', $audit) }}" onsubmit="return confirm('Hapus temuan audit oli mesin {{ $audit->machine_number }} ({{ $audit->audited_at->format('d-m-Y') }})? Tindak lanjutnya juga akan terhapus.')">
+                                                <form method="POST" action="{{ route('oil-audits.destroy', $audit) }}" onsubmit="return confirm('Delete the oil audit for machine {{ $audit->machine_number }} ({{ $audit->audited_at->format('d-m-Y') }})? Its follow-up is deleted too.')">
                                                     @csrf
                                                     @method('DELETE')
                                                     <x-ui.button type="submit" size="sm" variant="ghost" class="text-danger hover:bg-danger-light hover:text-danger-hover">Delete</x-ui.button>
@@ -225,10 +225,10 @@
             <div class="md:hidden">
                 <div id="oil-audit-action-mobile-sentinel" aria-hidden="true"></div>
                 <p id="oil-audit-action-mobile-loading" class="hidden py-4 text-center text-sm text-text-muted">Memuat data…</p>
-                <p id="oil-audit-action-mobile-end" class="hidden py-4 text-center text-sm text-text-muted">Semua data sudah ditampilkan.</p>
+                <p id="oil-audit-action-mobile-end" class="hidden py-4 text-center text-sm text-text-muted">Everything is loaded.</p>
                 <div id="oil-audit-action-mobile-error" class="hidden py-4 text-center text-sm text-danger" role="alert">
-                    Gagal memuat data berikutnya.
-                    <button type="button" id="oil-audit-action-mobile-retry" class="inline-flex min-h-11 items-center font-semibold underline">Coba lagi</button>
+                    Could not load the next batch.
+                    <button type="button" id="oil-audit-action-mobile-retry" class="inline-flex min-h-11 items-center font-semibold underline">Try again</button>
                 </div>
             </div>
 
@@ -244,7 +244,7 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4">
             <div class="w-full max-w-sm rounded-card border border-border bg-surface p-6 text-center shadow-popover">
                 <h2 id="oil-audit-action-daily-prompt-title" class="text-lg font-semibold text-text">DO YOU WANT TO START OIL AUDIT ACTION?</h2>
-                <p class="mt-1 text-sm text-text-muted">Waktu mulai dicatat sebagai aktivitas hari ini.</p>
+                <p class="mt-1 text-sm text-text-muted">The start time is recorded as today's activity.</p>
                 <div class="mt-5 flex justify-center gap-2">
                     <x-ui.button variant="outline" id="oil-audit-action-prompt-no" class="min-w-24">NO</x-ui.button>
                     <x-ui.button id="oil-audit-action-prompt-yes" class="min-w-24">YES</x-ui.button>

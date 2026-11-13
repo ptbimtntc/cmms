@@ -83,7 +83,7 @@ class SparepartInjectionService
         }
 
         if ($lines === []) {
-            throw new InvalidArgumentException('File tidak berisi baris data.');
+            throw new InvalidArgumentException('The file contains no data rows.');
         }
 
         if (count($lines) > self::MAX_ROWS) {
@@ -111,16 +111,16 @@ class SparepartInjectionService
             $line['qty'] = $this->parseQty($line['cell_qty'], $line['raw_qty']);
 
             if ($line['month'] === null) {
-                $line['errors'][] = 'Month harus berupa nama bulan (mis. Januari / January / Jan)';
+                $line['errors'][] = 'Month must be a month name (for example Januari / January / Jan)';
             }
             if ($line['sap'] === '') {
-                $line['errors'][] = 'SAP Number kosong';
+                $line['errors'][] = 'SAP Number is empty';
             }
             if ($line['order'] === '') {
-                $line['errors'][] = 'Order Number kosong';
+                $line['errors'][] = 'Order Number is empty';
             }
             if ($line['qty'] === null) {
-                $line['errors'][] = 'Qty harus bilangan bulat positif';
+                $line['errors'][] = 'Qty must be a positive whole number';
             }
 
             $line['status'] = $line['errors'] ? SparepartInjectionRow::FAILED : null;
@@ -145,13 +145,13 @@ class SparepartInjectionService
 
             if ($pms->isEmpty()) {
                 $line['status'] = SparepartInjectionRow::FAILED;
-                $line['reason'] = 'Order Number tidak ditemukan pada PM Schedule';
+                $line['reason'] = 'Order Number not found on any PM Schedule';
             } elseif ($pms->count() > 1) {
                 $line['status'] = SparepartInjectionRow::FAILED;
-                $line['reason'] = 'Order Number cocok dengan lebih dari satu PM Schedule';
+                $line['reason'] = 'Order Number matches more than one PM Schedule';
             } elseif (! $part) {
                 $line['status'] = SparepartInjectionRow::FAILED;
-                $line['reason'] = 'SAP Number tidak cocok dengan Material Number sparepart';
+                $line['reason'] = 'SAP Number does not match any sparepart Material Number';
             } else {
                 $line['pm_id'] = $pms->first()->id;
                 $line['sparepart_id'] = $part->id;
@@ -177,7 +177,7 @@ class SparepartInjectionService
             if ($existing->has($groupKey)) {
                 foreach ($indexes as $i) {
                     $lines[$i]['status'] = SparepartInjectionRow::SKIPPED;
-                    $lines[$i]['reason'] = 'Sparepart Usage sudah ada pada PM Schedule ini (tidak ditimpa)';
+                    $lines[$i]['reason'] = 'Sparepart Usage already exists on this PM Schedule (left as it was)';
                 }
 
                 continue;
@@ -272,7 +272,7 @@ class SparepartInjectionService
 
         $missing = array_diff(self::HEADERS, array_keys($found));
         if ($missing) {
-            throw new InvalidArgumentException('Header tidak sesuai. Kolom wajib: Month, SAP Number, Qty, Order Number. Tidak ditemukan: '.implode(', ', $missing).'.');
+            throw new InvalidArgumentException('Wrong headers. Required columns: Month, SAP Number, Qty, Order Number. Missing: '.implode(', ', $missing).'.');
         }
 
         return $found;

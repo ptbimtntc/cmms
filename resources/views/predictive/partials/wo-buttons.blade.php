@@ -17,7 +17,7 @@
     $ready = $canWork ?? true;
     // pointer-events-auto keeps the title tooltip working on a disabled .btn.
     $blocked = 'pointer-events-auto ' . $grow;
-    $blockedHint = 'Mulai aktivitas Action Predictive dulu';
+    $blockedHint = 'Start the Action Predictive activity first';
 @endphp
 <div @class(['flex flex-wrap items-center gap-2', 'w-full' => $card])>
     @if ($showDetail ?? true)
@@ -42,7 +42,7 @@
 
     @if ($wo->canBeReopenedBy($u))
         <form method="POST" action="{{ route('predictive.reopen', $wo) }}" class="{{ $grow }}"
-            onsubmit="return confirm('Reopen WO {{ $wo->order_number }}? Status kembali OPEN dan WO bisa di-claim PIC lagi. Riwayat Action tetap tersimpan.')">
+            onsubmit="return confirm('Reopen WO {{ $wo->order_number }}? The status goes back to OPEN and a PIC can claim it again. The history Action tetap tersimpan.')">
             @csrf
             <x-ui.button type="submit" variant="outline" :size="$btnSize" class="w-full border-warning/50 text-warning-text hover:bg-warning-light">Reopen</x-ui.button>
         </form>
@@ -65,10 +65,10 @@
         @endphp
         <button type="button" class="btn btn-outline {{ $sizeClass }} {{ $grow }}" @click="edit = @js($editPayload)">Edit</button>
         <form method="POST" action="{{ route('predictive.destroy', $wo) }}" class="{{ $grow }}"
-            onsubmit="return confirm(@js('Hapus WO '.$wo->order_number.'?'.($historyCount > 0 ? ' Seluruh riwayat Action dan Reopen WO ini ikut terhapus.' : '').' Tindakan ini tidak bisa dibatalkan.'))">
+            onsubmit="return confirm(@js('Delete WO '.$wo->order_number.'?'.($historyCount > 0 ? ' All of its Action and Reopen history is deleted too.' : '').' This cannot be undone.'))">
             @csrf
             @method('DELETE')
-            <x-ui.button type="submit" variant="ghost" :size="$btnSize" class="w-full text-danger hover:bg-danger-light hover:text-danger-hover">Hapus</x-ui.button>
+            <x-ui.button type="submit" variant="ghost" :size="$btnSize" class="w-full text-danger hover:bg-danger-light hover:text-danger-hover">Delete</x-ui.button>
         </form>
     @endif
 </div>

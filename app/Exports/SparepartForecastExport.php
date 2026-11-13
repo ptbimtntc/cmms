@@ -28,7 +28,7 @@ class SparepartForecastExport implements WithMultipleSheets
             ['Scope machine type', $run->scope_machine_type ?? 'Semua'],
             ['Akurasi', $eval && $eval->status === 'AVAILABLE'
                 ? sprintf('MAE %s | WAPE %s%% | Bias %s%%', $eval->mae, round($eval->wape * 100, 1), round($eval->bias * 100, 1))
-                : 'Accuracy Not Available — Insufficient Testing Data'],
+                : 'Accuracy Not Available: Insufficient Testing Data'],
         ];
 
         $forecast = [['Machine', 'Machine Type', 'Area', 'Material Number', 'Description', 'Unit', 'PM Window', 'PM Used', 'Total Qty (hist)',

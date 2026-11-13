@@ -7,7 +7,7 @@
             </h2>
             <p class="mt-0.5 break-words text-sm text-text-muted">
                 <span class="font-semibold text-text">{{ $wo->machine_number }}</span>
-                · {{ $wo->machine_type ?: 'Tipe belum diisi' }} · {{ $wo->area }}
+                · {{ $wo->machine_type ?: 'Type not set' }} · {{ $wo->area }}
             </p>
         </div>
         @include('predictive.partials.status-badge', ['wo' => $wo])
@@ -15,7 +15,7 @@
     <p class="mt-2 line-clamp-3 break-words text-sm text-text">{{ $wo->problem_description }}</p>
     <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-sm">
         <div>
-            <dt class="text-xs text-text-muted">Tanggal WO</dt>
+            <dt class="text-xs text-text-muted">WO date</dt>
             <dd class="font-medium text-text">{{ $wo->wo_date->format('d-m-Y') }}</dd>
         </div>
         <div>
@@ -24,7 +24,7 @@
         </div>
         <div class="col-span-2">
             <dt class="text-xs text-text-muted">PIC</dt>
-            <dd class="font-medium text-text">{{ $wo->pic?->name ?? 'Belum di-claim' }}</dd>
+            <dd class="font-medium text-text">{{ $wo->pic?->name ?? 'Unclaimed' }}</dd>
         </div>
     </dl>
     <div class="mt-3">@include('predictive.partials.wo-buttons', ['wo' => $wo, 'size' => 'card'])</div>

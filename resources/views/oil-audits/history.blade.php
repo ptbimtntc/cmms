@@ -7,7 +7,7 @@
     $contentMaxWidth = 'max-w-4xl';
 @endphp
 
-@section('title', 'Riwayat Audit Oli')
+@section('title', 'Oil Audit History')
 
 @section('content')
     @php
@@ -42,19 +42,19 @@
         <section class="card overflow-hidden">
             <div class="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
                 <div>
-                    <p class="text-sm font-medium text-text-muted">Riwayat audit oli</p>
+                    <p class="text-sm font-medium text-text-muted">Oil audit history</p>
                     <h1 class="mt-1 font-signage text-4xl font-semibold leading-none text-text">{{ $machine->machine_number }}</h1>
                     <p class="mt-2 text-sm text-text-muted">{{ $machine->machine_type }} · {{ $machine->area }}@if ($machine->description) · {{ $machine->description }}@endif</p>
                 </div>
                 @if ($latestAudit)
                     <div class="w-full rounded-card px-4 py-3 text-center sm:w-auto {{ $latestColors['badge'] }}">
-                        <p class="text-xs font-medium opacity-90">Kondisi terakhir</p>
+                        <p class="text-xs font-medium opacity-90">Latest condition</p>
                         <p class="mt-0.5 text-lg font-bold">{{ $latestAudit->conditionLabel() }}</p>
                     </div>
                 @else
                     <div class="w-full rounded-card bg-surface-muted px-4 py-3 text-center text-text-muted sm:w-auto">
-                        <p class="text-xs">Kondisi terakhir</p>
-                        <p class="mt-0.5 text-lg font-bold text-text">Belum ada audit</p>
+                        <p class="text-xs">Latest condition</p>
+                        <p class="mt-0.5 text-lg font-bold text-text">No audit yet</p>
                     </div>
                 @endif
             </div>
@@ -62,15 +62,15 @@
             <div class="p-5 sm:p-6">
                 <div class="mb-3 flex items-start justify-between gap-3">
                     <div>
-                        <h2 class="text-sm font-semibold text-text">Riwayat kondisi</h2>
-                        <p class="mt-0.5 text-xs text-text-muted">Kiri adalah pengecekan lama, kanan adalah yang terbaru. Makin tinggi batang, makin buruk kondisinya.</p>
+                        <h2 class="text-sm font-semibold text-text">Condition over time</h2>
+                        <p class="mt-0.5 text-xs text-text-muted">Oldest check on the left, newest on the right. The taller the bar, the worse the condition.</p>
                     </div>
                     <span class="shrink-0 text-xs font-medium text-text-muted">{{ $machine->oilAudits()->count() }} audit</span>
                 </div>
 
                 @if ($recentAudits->isNotEmpty())
                     <div class="overflow-x-auto pb-2">
-                        <ol class="flex min-w-[320px] items-end justify-end gap-1.5 border-b border-border pt-4 sm:min-w-[520px]" aria-label="Riwayat kondisi oli">
+                        <ol class="flex min-w-[320px] items-end justify-end gap-1.5 border-b border-border pt-4 sm:min-w-[520px]" aria-label="Oil condition over time">
                             @foreach ($recentAudits as $audit)
                                 @php($colors = $audit->conditionColor())
                                 {{-- max-w keeps bars slim when there are only a few audits; newest stays on the right. --}}
@@ -83,15 +83,15 @@
                         </ol>
                     </div>
                 @else
-                    <x-ui.empty-state title="Belum ada riwayat audit oli untuk mesin ini." description="Riwayat terisi setiap kali mesin ini di-scan di Audit Oli." />
+                    <x-ui.empty-state title="No oil audit history for this machine yet." description="History fills up every time this machine is scanned in Oil Audit." />
                 @endif
             </div>
         </section>
 
         <section aria-labelledby="detail-heading">
             <div class="mb-4">
-                <h2 id="detail-heading" class="font-signage text-2xl font-semibold text-text">Detail pengecekan</h2>
-                <p class="mt-1 text-sm text-text-muted">Setiap kondisi yang perlu action ditampilkan jelas agar tidak terlewat.</p>
+                <h2 id="detail-heading" class="font-signage text-2xl font-semibold text-text">Check detail</h2>
+                <p class="mt-1 text-sm text-text-muted">Conditions that need an action are called out so none is missed.</p>
             </div>
 
             {{-- Timeline: the dot repeats the condition colour; the badge says it in words. --}}
@@ -107,14 +107,14 @@
                                         <span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $colors['badge'] }}">{{ $audit->conditionLabel() }}</span>
                                         <time class="text-sm font-semibold text-text">{{ $audit->audited_at->format('d M Y, H:i') }}</time>
                                     </div>
-                                    <p class="mt-2 text-sm text-text-muted">Dicek oleh <span class="font-semibold text-text">{{ $audit->audited_by_name }}</span></p>
+                                    <p class="mt-2 text-sm text-text-muted">Checked by <span class="font-semibold text-text">{{ $audit->audited_by_name }}</span></p>
                                 </div>
                                 @if (! $audit->needsFollowUp())
-                                    <x-ui.badge>Tidak perlu tindak lanjut</x-ui.badge>
+                                    <x-ui.badge>No follow-up needed</x-ui.badge>
                                 @elseif ($audit->followUp)
-                                    <x-ui.badge tone="success">Tindak lanjut selesai</x-ui.badge>
+                                    <x-ui.badge tone="success">Follow-up done</x-ui.badge>
                                 @else
-                                    <x-ui.badge tone="warning">Action PIC diperlukan</x-ui.badge>
+                                    <x-ui.badge tone="warning">PIC action needed</x-ui.badge>
                                 @endif
                             </div>
 
@@ -150,16 +150,16 @@
                                             </div>
                                         </div>
                                         <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-success/20 pt-3">
-                                            <p class="text-sm text-text-muted">Ditindaklanjuti oleh <span class="font-semibold text-text">{{ $fu->pic_name }}</span> · {{ $fu->actioned_at->format('d M Y, H:i') }}</p>
+                                            <p class="text-sm text-text-muted">Followed up by <span class="font-semibold text-text">{{ $fu->pic_name }}</span> · {{ $fu->actioned_at->format('d M Y, H:i') }}</p>
                                             <div class="flex flex-wrap gap-2">
                                                 @unless ($viewOnly)
-                                                    <button type="button" class="js-followup-edit-toggle btn btn-outline btn-sm min-h-11 lg:min-h-9" data-target="{{ $audit->id }}">Edit tindak lanjut</button>
+                                                    <button type="button" class="js-followup-edit-toggle btn btn-outline btn-sm min-h-11 lg:min-h-9" data-target="{{ $audit->id }}">Edit follow-up</button>
                                                 @endunless
                                                 @if ($canDeleteFollowUp)
-                                                    <form method="POST" action="{{ route('oil-audits.follow-up.destroy', $audit) }}" onsubmit="return confirm('Hapus tindak lanjut ini beserta seluruh problem &amp; finding-nya?');">
+                                                    <form method="POST" action="{{ route('oil-audits.follow-up.destroy', $audit) }}" onsubmit="return confirm('Delete this follow-up along with all of its problems and findings?');">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button class="btn btn-ghost btn-sm min-h-11 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9">Hapus</button>
+                                                        <button class="btn btn-ghost btn-sm min-h-11 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9">Delete</button>
                                                     </form>
                                                 @endif
                                             </div>
@@ -189,7 +189,7 @@
                         </div>
                     </article>
                 @empty
-                    <x-ui.empty-state title="Belum ada audit oli untuk mesin ini." description="Audit pertama muncul di sini setelah mesin di-scan di Audit Oli." />
+                    <x-ui.empty-state title="No oil audit for this machine yet." description="The first audit shows up here once the machine is scanned in Oil Audit." />
                 @endforelse
             </div>
 

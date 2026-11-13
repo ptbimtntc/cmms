@@ -1,5 +1,5 @@
 {{--
-    <x-ui.button>Simpan</x-ui.button>
+    <x-ui.button>Save</x-ui.button>
     <x-ui.button variant="outline" href="{{ route('machines.index') }}">Kembali</x-ui.button>
     Renders <a> when href is given, <button> otherwise. Extra attributes
     (wire:*, x-*, data-*, name, value, form) pass straight through.

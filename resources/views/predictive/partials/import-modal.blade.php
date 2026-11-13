@@ -8,10 +8,10 @@
             <input type="hidden" name="category" value="{{ $category }}">
             <h3 id="predictive-import-title" class="text-lg font-semibold text-text">Import WO {{ $categoryLabel }}</h3>
             <p class="mt-1 text-sm text-text-muted">
-                File .xlsx, .xls, atau .csv dengan kolom
+                An .xlsx, .xls, or .csv file with the columns
                 <span class="font-medium text-text">Order Number, Machine Number, Date, Problem Description</span>. Due Date dihitung otomatis: Date + 14 hari.
-                Area dan Machine Type diambil dari Machine Master.
-                Order Number yang sudah ada dilewati, WO existing tidak diubah.
+                Area and Machine Type are taken from Machine Master.
+                An Order Number that already exists is skipped, and the existing WO is left alone.
             </p>
             <a href="{{ route('import-templates.download', 'predictive-work-order') }}" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-2 hover:underline">Unduh template (Excel)</a>
 
@@ -26,7 +26,7 @@
             </div>
 
             <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button type="button" @click="importOpen = false" class="btn btn-ghost min-h-11">Batal</button>
+                <button type="button" @click="importOpen = false" class="btn btn-ghost min-h-11">Cancel</button>
                 <button type="submit" x-bind:disabled="busy" class="btn btn-primary min-h-11">
                     <span x-show="!busy">Import</span><span x-show="busy" x-cloak>Memproses…</span>
                 </button>

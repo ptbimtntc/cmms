@@ -49,7 +49,7 @@ class VmeAdminController extends Controller
             }
         }
 
-        return back()->with('success', 'Pengaturan VME disimpan.');
+        return back()->with('success', 'VME settings saved.');
     }
 
     public function updateAvatar(Request $request, User $user): RedirectResponse

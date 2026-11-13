@@ -228,7 +228,7 @@ class SparepartPlanningService
             if ($this->isQty($rawMachines)) {
                 $machinesFinal = (int) $rawMachines;
             } else {
-                $errors[] = 'Jumlah Mesin Final harus bilangan bulat 0 atau lebih; nilai sistem dipakai.';
+                $errors[] = 'Final Machine Count must be a whole number of 0 or more; the system value was used.';
             }
         }
 

@@ -132,7 +132,7 @@ it('restricts the dashboard, run and export to ADMIN', function () {
     $run = AiForecastRun::first();
 
     $this->actingAs($admin)->get('/maintenance-intelligence/sparepart-analyst')->assertOk()
-        ->assertSee('AI Sparepart Analyst')->assertSee('Accuracy Not Available — Insufficient Testing Data');
+        ->assertSee('AI Sparepart Analyst')->assertSee('Accuracy Not Available: Insufficient Testing Data');
     $this->actingAs($admin)->get("/maintenance-intelligence/sparepart-analyst/{$run->id}/export")->assertOk();
 
     foreach (['pic', 'koordinator', 'supervisor'] as $role) {

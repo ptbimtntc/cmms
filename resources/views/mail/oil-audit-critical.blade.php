@@ -6,9 +6,9 @@
     <tr><td style="background:#b91c1c;color:#ffffff;padding:16px 20px;font-size:18px;font-weight:bold;">Peringatan Oil Audit KRITIS</td></tr>
     <tr><td style="padding:20px;font-size:14px;line-height:1.5;">
         <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;">
-            <tr><td style="color:#6b7280;width:38%;">Mesin</td><td><strong>{{ $audit->machine_number }}</strong></td></tr>
+            <tr><td style="color:#6b7280;width:38%;">Machine</td><td><strong>{{ $audit->machine_number }}</strong></td></tr>
             @if ($audit->machine_type)
-                <tr><td style="color:#6b7280;">Tipe Mesin</td><td>{{ $audit->machine_type }}</td></tr>
+                <tr><td style="color:#6b7280;">Machine Type</td><td>{{ $audit->machine_type }}</td></tr>
             @endif
             @if ($audit->area)
                 <tr><td style="color:#6b7280;">Area</td><td>{{ $audit->area }}</td></tr>
@@ -22,7 +22,7 @@
         <p style="margin:20px 0 0;">
             <a href="{{ $url }}" style="display:inline-block;background:#b91c1c;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:bold;">Lihat Detail Audit</a>
         </p>
-        <p style="margin:16px 0 0;font-size:12px;color:#6b7280;">Tautan memerlukan login ke aplikasi. Email ini dikirim otomatis oleh {{ config('app.name') }}.</p>
+        <p style="margin:16px 0 0;font-size:12px;color:#6b7280;">The link needs you to be signed in. This email was sent automatically by {{ config('app.name') }}.</p>
     </td></tr>
 </table>
 </body>

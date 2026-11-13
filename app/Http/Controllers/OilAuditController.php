@@ -150,7 +150,7 @@ class OilAuditController extends Controller
 
         return redirect()
             ->route('oil-audits.scan')
-            ->with('success', 'Oil Audit activity dimulai. Silakan mulai scan mesin.');
+            ->with('success', 'Oil Audit activity started. You can begin scanning machines.');
     }
 
     /**
@@ -572,7 +572,7 @@ class OilAuditController extends Controller
         $this->assertFollowUpAllowed($oilAudit);
 
         if ($oilAudit->followUp()->exists()) {
-            return back()->with('warning', 'Follow up untuk audit ini sudah disimpan.');
+            return back()->with('warning', 'The follow-up for this audit is already saved.');
         }
 
         $validated = $this->validateFollowUp($request);
@@ -582,7 +582,7 @@ class OilAuditController extends Controller
 
         app(OilAuditFollowUpService::class)->store($oilAudit, $validated, $user);
 
-        return back()->with('success', 'Tindak lanjut berhasil disimpan dan tercatat pada riwayat mesin.'
+        return back()->with('success', 'Follow-up saved and recorded in the machine history.'
             .($alsoClosed > 0 ? " {$alsoClosed} temuan lama yang sama pada mesin ini ikut ditutup." : ''));
     }
 
@@ -597,7 +597,7 @@ class OilAuditController extends Controller
 
         app(OilAuditFollowUpService::class)->update($followUp, $validated);
 
-        return back()->with('success', 'Tindak lanjut berhasil diperbarui.');
+        return back()->with('success', 'Follow-up updated.');
     }
 
     /**
@@ -611,13 +611,13 @@ class OilAuditController extends Controller
         abort_unless(
             $request->user()->isAdmin() || $request->user()->isKoordinator(),
             403,
-            'Hanya Admin atau Koordinator WWD yang dapat menghapus temuan audit oli.'
+            'Only an Admin or a WWD Koordinator can delete an oil audit record.'
         );
         abort_unless($oilAudit->isInAuditScope(), 404);
 
         $oilAudit->delete();
 
-        return back()->with('success', 'Temuan audit oli berhasil dihapus.');
+        return back()->with('success', 'Oil audit record deleted.');
     }
 
     public function destroyFollowUp(Request $request, OilAudit $oilAudit): RedirectResponse
@@ -627,13 +627,13 @@ class OilAuditController extends Controller
         abort_unless(
             $request->user()->isAdmin() || $request->user()->isKoordinator(),
             403,
-            'Hanya Admin atau Koordinator WWD yang dapat menghapus tindak lanjut.'
+            'Only an Admin or a WWD Koordinator can delete a follow-up.'
         );
 
         // Problems + findings are removed by the FK cascade chain.
         $oilAudit->followUp?->delete();
 
-        return back()->with('success', 'Tindak lanjut berhasil dihapus.');
+        return back()->with('success', 'Follow-up deleted.');
     }
 
     /**
@@ -646,7 +646,7 @@ class OilAuditController extends Controller
         abort_unless(
             $oilAudit->needsFollowUp(),
             422,
-            'Follow up hanya diperlukan untuk kondisi oli yang tidak oke.'
+            'A follow-up is only needed when the oil condition is not OK.'
         );
     }
 

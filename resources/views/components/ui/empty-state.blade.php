@@ -1,8 +1,8 @@
 {{--
     Say why the list is empty and give the one action that fills it.
-    <x-ui.empty-state title="Belum ada jadwal PM bulan ini"
-        description="Jadwal muncul di sini setelah dibuat dari menu PM Schedule.">
-        <x-ui.button href="{{ route('pm-schedules.create') }}">Buat jadwal</x-ui.button>
+    <x-ui.empty-state title="No PM scheduled this month"
+        description="A schedule shows up here once it is created from the PM Schedule menu.">
+        <x-ui.button href="{{ route('pm-schedules.create') }}">Create a schedule</x-ui.button>
     </x-ui.empty-state>
     tone="error" switches to the error variant (role=alert).
 --}}

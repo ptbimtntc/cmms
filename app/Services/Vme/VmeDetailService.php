@@ -190,7 +190,7 @@ class VmeDetailService
                 'criticality' => $machine->criticality,
                 'install_date' => $machine->install_date ? Carbon::parse($machine->install_date)->toDateString() : null,
                 'pm_cycle' => $machine->pm_cycle_value ? $machine->pm_cycle_value.' '.strtolower((string) $machine->pm_cycle_unit) : null,
-                'link' => ['label' => 'Buka riwayat mesin', 'url' => route('machine-history.show', $machine->machine_number)],
+                'link' => ['label' => 'Open the machine history', 'url' => route('machine-history.show', $machine->machine_number)],
             ],
             'pm' => [
                 'running' => $running ? $this->pmRow($running) : null,

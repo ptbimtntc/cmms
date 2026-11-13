@@ -11,9 +11,9 @@
         class="badge {{ $schedule['status'] === 'CLOSED' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800' }}">{{ $schedule['status'] }}</span>
     @if ($canOverrideStatus)
         <span data-pm-status-override-tag class="hidden text-xs text-text-muted"
-            title="Tampilan status ini diubah manual, data mesin asli tidak berubah.">(manual)</span>
+            title="This status display was changed by hand; the machine data itself is unchanged.">(manual)</span>
         <button type="button" data-pm-status-toggle
             class="btn btn-ghost btn-sm min-h-11 px-2 lg:min-h-8"
-            title="Override tampilan status (tidak mengubah data mesin asli)">Ubah</button>
+            title="Override the status display (the machine data is unchanged)">Change</button>
     @endif
 </div>

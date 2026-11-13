@@ -155,7 +155,12 @@ class SparepartController extends Controller
      */
     public function create()
     {
-        //
+        $machines = Machine::select('machine_type')
+            ->distinct()
+            ->orderBy('machine_type')
+            ->get();
+
+        return view('spareparts.create', compact('machines'));
     }
 
     /**
