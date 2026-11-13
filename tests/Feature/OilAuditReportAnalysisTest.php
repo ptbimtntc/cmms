@@ -183,6 +183,30 @@ test('the repeat panel counts follow-up events regardless of problem sameness', 
     $response->assertSeeInOrder(['30001', 'Repeat'], false);
 });
 
+test('the repeat panel ignores Oli Keruh and Level Glass Burem audits', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $keruh = analysisMachine(['machine_number' => 'KERUH-1']);
+    $burem = analysisMachine(['machine_number' => 'BUREM-1']);
+    $level = analysisMachine(['machine_number' => 'LEVEL-1']);
+
+    foreach ([1, 2, 3] as $i) {
+        $a = analysisFinding($keruh, [p('Oli Hitam', ['Tangki'])]);
+        $a->update(['condition' => 'OLI_KERUH']);
+        $b = analysisFinding($burem, [p('Glass Buram', ['Tangki'])]);
+        $b->update(['condition' => 'GLASS_BUREM']);
+    }
+
+    foreach (['HAMPIR_GARIS', 'PAS_GARIS'] as $condition) {
+        analysisFinding($level, [p('Level Rendah', ['Tangki'])])->update(['condition' => $condition]);
+    }
+
+    $response = $this->actingAs($admin)->get(route('reports.oil-audit'));
+
+    $rows = $response->viewData('repeatFindingMachines');
+    expect($rows->pluck('machine_number')->all())->toBe(['LEVEL-1']);
+    expect((int) $rows->first()->events)->toBe(2);
+});
+
 // ---------------------------------------------------------------------------
 // Filters drive the analysis, search does not
 // ---------------------------------------------------------------------------

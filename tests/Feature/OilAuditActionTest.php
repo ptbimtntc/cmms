@@ -176,6 +176,36 @@ test('latest condition and pending follow-up are shown for an audit needing acti
     $response->assertSee(route('oil-audits.history', $machine->machine_number), false);
 });
 
+test('open follow-ups card only includes Hampir Garis, Pas Garis, and Kritis', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $criticalMachines = collect(['HAMPIR_GARIS', 'PAS_GARIS', 'KRITIS'])
+        ->map(function (string $condition) {
+            $machine = actionOilAuditMachine(['machine_number' => 'MC-'.$condition]);
+            actionOilAudit($machine, ['condition' => $condition]);
+
+            return $machine;
+        });
+
+    foreach (['OLI_KERUH', 'GLASS_BUREM'] as $condition) {
+        $machine = actionOilAuditMachine(['machine_number' => 'MC-'.$condition]);
+        actionOilAudit($machine, ['condition' => $condition]);
+    }
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report'));
+
+    $response->assertOk()->assertSee('Open follow-ups');
+
+    $pendingAudits = $response->viewData('pendingAudits');
+    expect($response->viewData('summary')['pending'])->toBe(3)
+        ->and($pendingAudits->count())->toBe(3)
+        ->and($pendingAudits->pluck('condition')->all())
+        ->toContain('HAMPIR_GARIS', 'PAS_GARIS', 'KRITIS')
+        ->not->toContain('OLI_KERUH', 'GLASS_BUREM')
+        ->and($pendingAudits->pluck('machine_number')->all())
+        ->toContain(...$criticalMachines->pluck('machine_number')->all())
+        ->not->toContain('MC-OLI_KERUH', 'MC-GLASS_BUREM');
+});
+
 test('completed follow-up no longer shows as pending', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $machine = actionOilAuditMachine();

@@ -28,6 +28,8 @@ class OilAuditController extends Controller
     // so the rest of this controller's code is untouched.
     private const AUDIT_AREA = OilAudit::AREA;
 
+    private const ACTION_CARD_CONDITIONS = ['HAMPIR_GARIS', 'PAS_GARIS', 'KRITIS'];
+
     /**
      * Machine-type whitelist is DB-backed (machine_maintenance_requirements),
      * so it can't be a class constant — use this method wherever the old
@@ -220,7 +222,16 @@ class OilAuditController extends Controller
                 ->with('error', DuplicateOilAuditException::forMachine($machine->machine_number)->getMessage());
         }
 
-        return view('oil-audits.entry', compact('machine'));
+        $recentAudits = $machine->oilAudits()
+            ->where('audited_at', '>=', now()->subWeeks(4))
+            ->orderByDesc('audited_at')
+            ->orderByDesc('id')
+            ->limit(4)
+            ->get(['condition']);
+        $needsOilRefillReminder = $recentAudits->count() === 4
+            && $recentAudits->every(fn (OilAudit $audit) => $audit->condition === 'PANTAU');
+
+        return view('oil-audits.entry', compact('machine', 'needsOilRefillReminder'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -279,7 +290,7 @@ class OilAuditController extends Controller
                 ->diffInDays(Carbon::parse($audit->followUp->actioned_at))));
         $averageActionDuration = $durations->isNotEmpty() ? round($durations->avg(), 1) : null;
 
-        $pending = (clone $query)->requiringFollowUp()->whereDoesntHave('followUp')->count();
+        $pending = (clone $query)->whereIn('condition', self::ACTION_CARD_CONDITIONS)->whereDoesntHave('followUp')->count();
         $critical = (clone $query)->where('condition', 'KRITIS')->whereDoesntHave('followUp')->count();
         $today = (clone $query)->whereDate('audited_at', today())->count();
 
@@ -311,7 +322,7 @@ class OilAuditController extends Controller
         $pendingAudits = OilAudit::query()
             ->where('area', self::AUDIT_AREA)
             ->whereIn('machine_type', self::auditMachineTypes())
-            ->requiringFollowUp()
+            ->whereIn('condition', self::ACTION_CARD_CONDITIONS)
             ->whereDoesntHave('followUp')
             ->with('machine')
             ->latest('audited_at')

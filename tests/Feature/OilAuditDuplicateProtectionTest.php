@@ -161,6 +161,44 @@ test('entry page opens normally for a machine not yet audited today', function (
         ->assertSee('How does the oil look?');
 });
 
+test('entry page reminds only when the four latest audits in the last four weeks are all Pantau', function () {
+    $machine = dupMachine('3001');
+    $pic = dupPic();
+    $startAt = Carbon::parse('2026-10-01 10:00:00', 'Asia/Jakarta');
+    $service = app(OilAuditCreateService::class);
+
+    foreach ([0, 7, 14, 21] as $days) {
+        Carbon::setTestNow($startAt->copy()->addDays($days));
+        $service->create($machine, $pic, 'PANTAU');
+    }
+
+    Carbon::setTestNow(Carbon::parse('2026-10-29 10:00:00', 'Asia/Jakarta'));
+    $this->actingAs($pic)->get(route('oil-audits.entry', $machine->machine_number))
+        ->assertOk()
+        ->assertDontSee('Recent monitoring history')
+        ->assertSee('This machine has been in <strong>PANTAU</strong> status for 4 consecutive weeks. Please refill the oil immediately.', false);
+
+    Carbon::setTestNow(Carbon::parse('2026-10-28 10:00:00', 'Asia/Jakarta'));
+    $service->create($machine, $pic, 'OKE');
+
+    Carbon::setTestNow(Carbon::parse('2026-10-29 10:00:00', 'Asia/Jakarta'));
+    $this->actingAs($pic)->get(route('oil-audits.entry', $machine->machine_number))
+        ->assertOk()
+        ->assertDontSee('Please refill the oil.');
+
+    $oldMachine = dupMachine('3002');
+    $oldStart = Carbon::parse('2026-09-01 10:00:00', 'Asia/Jakarta');
+    foreach ([0, 7, 14, 21] as $days) {
+        Carbon::setTestNow($oldStart->copy()->addDays($days));
+        $service->create($oldMachine, $pic, 'PANTAU');
+    }
+
+    Carbon::setTestNow(Carbon::parse('2026-10-29 10:00:00', 'Asia/Jakarta'));
+    $this->get(route('oil-audits.entry', $oldMachine->machine_number))
+        ->assertOk()
+        ->assertDontSee('Please refill the oil.');
+});
+
 test('sync: duplicate from a second device returns duplicate_audit 409 and stores nothing extra', function () {
     $machine = dupMachine('3001');
     dupSync(dupPic('Device1'), $machine)->assertOk()->assertJson(['status' => 'processed']);

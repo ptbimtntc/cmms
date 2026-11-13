@@ -30,6 +30,13 @@ class OilAuditReportController extends Controller
     private const REPEAT_FINDING_THRESHOLD = 3;
 
     /**
+     * Only these conditions count towards "Machines with Repeat Findings".
+     * Oli Keruh and Level Glass Burem are left out on purpose: they recur
+     * on the same machine routinely and are not a level problem.
+     */
+    private const REPEAT_FINDING_CONDITIONS = ['HAMPIR_GARIS', 'PAS_GARIS', 'KRITIS'];
+
+    /**
      * Placeholder shown for legacy follow-up problems recorded before the
      * Problem → Finding structure existed (they have no finding rows). They
      * still count towards the analysis; the finding is just unknown.
@@ -328,8 +335,9 @@ class OilAuditReportController extends Controller
      * "Mesin dengan Temuan Berulang" — top 10 machines whose findings
      * actually recurred: at least REPEAT_FINDING_MIN follow-up events
      * (audits that produced a follow-up) inside the current report scope.
-     * Problem/Finding content is irrelevant here — this answers "which
-     * machine keeps coming back", not "with the same problem".
+     * Only Hampir Garis, Pas Garis and Kritis audits count; Oli Keruh and
+     * Level Glass Burem are excluded. Problem/Finding content is irrelevant
+     * here — this answers "which machine keeps coming back".
      * oil_audit_follow_ups.oil_audit_id is unique, so one row here == one
      * audit-with-follow-up.
      *
@@ -341,6 +349,7 @@ class OilAuditReportController extends Controller
             ->join('oil_audits', 'oil_audits.id', '=', 'oil_audit_follow_ups.oil_audit_id')
             ->where('oil_audits.area', self::AUDIT_AREA)
             ->whereIn('oil_audits.machine_type', self::auditMachineTypes())
+            ->whereIn('oil_audits.condition', self::REPEAT_FINDING_CONDITIONS)
             ->when($area, fn (Builder $q) => $q->where('oil_audits.area', $area))
             ->when($machineType, fn (Builder $q) => $q->where('oil_audits.machine_type', $machineType))
             ->when($year, fn (Builder $q) => $q->whereYear('oil_audits.audited_at', $year))
