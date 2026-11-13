@@ -225,6 +225,20 @@ test('completed follow-up no longer shows as pending', function () {
     expect($response->viewData('audits')->pluck('id'))->not->toContain($audit->id);
 });
 
+test('See all of the open follow-ups lists only Hampir Garis, Pas Garis and Kritis', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $ids = [];
+    foreach (['HAMPIR_GARIS', 'PAS_GARIS', 'KRITIS', 'OLI_KERUH', 'GLASS_BUREM', 'PANTAU', 'OKE'] as $condition) {
+        $ids[$condition] = actionOilAudit(actionOilAuditMachine(), ['condition' => $condition, 'audited_at' => now()])->id;
+    }
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['follow_up' => 1]));
+
+    $response->assertOk();
+    expect($response->viewData('audits')->pluck('id')->all())
+        ->toEqualCanonicalizing([$ids['HAMPIR_GARIS'], $ids['PAS_GARIS'], $ids['KRITIS']]);
+});
+
 test('search finds an audit by its finding text', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $machine = actionOilAuditMachine();

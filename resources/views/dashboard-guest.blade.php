@@ -13,22 +13,27 @@
                 <x-ui.badge tone="primary" class="mt-3">Period: {{ $periodLabel }} (current month)</x-ui.badge>
             </header>
 
-            <dl class="card grid grid-cols-2 gap-px overflow-hidden bg-border lg:grid-cols-4">
-                @foreach ([
-                    ['PM This Month', $pmThisMonth, 'PMs scheduled this month', 'text-text'],
-                    ['Overdue PM', $overduePm, 'PMs past their date', $overduePm > 0 ? 'text-danger' : 'text-text'],
-                    ['Problems', $problems, 'Machine problems', 'text-text'],
-                    ['Sparepart Usage', $sparepartUsage, 'Spareparts used', 'text-text'],
-                ] as [$label, $value, $hint, $color])
-                    <div class="flex flex-col-reverse justify-end gap-1 bg-surface p-5">
-                        <dt class="text-sm text-text-muted">
-                            <span class="font-semibold text-text">{{ $label }}</span>
-                            <span class="block text-xs">{{ $hint }}</span>
-                        </dt>
-                        <dd class="font-signage text-4xl font-semibold tabular-nums {{ $color }}">{{ number_format($value) }}</dd>
-                    </div>
-                @endforeach
-            </dl>
+            @if ($overviewFailed)
+                <x-ui.empty-state tone="error" title="Figures could not be loaded"
+                    description="The overview query failed. Reload the page in a moment." />
+            @else
+                <dl class="card grid grid-cols-2 gap-px overflow-hidden bg-border lg:grid-cols-4">
+                    @foreach ([
+                        ['PM This Month', $pmThisMonth, 'PMs scheduled this month', 'text-text'],
+                        ['Overdue PM', $overduePm, 'PMs past their date', $overduePm > 0 ? 'text-danger' : 'text-text'],
+                        ['Problems', $problems, 'Machine problems', 'text-text'],
+                        ['Sparepart Usage', $sparepartUsage, 'Spareparts used', 'text-text'],
+                    ] as [$label, $value, $hint, $color])
+                        <div class="flex flex-col-reverse justify-end gap-1 bg-surface p-5">
+                            <dt class="text-sm text-text-muted">
+                                <span class="font-semibold text-text">{{ $label }}</span>
+                                <span class="block text-xs">{{ $hint }}</span>
+                            </dt>
+                            <dd class="font-signage text-4xl font-semibold tabular-nums {{ $color }}">{{ number_format($value) }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
+            @endif
 
             <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
                 <section class="card p-6 lg:col-span-2" aria-labelledby="dg-guide">

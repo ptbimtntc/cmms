@@ -83,6 +83,24 @@ describe('validatePayloadLocally', () => {
         expect(() => validatePayloadLocally({ oilAuditId: 1, problems: validProblems, actionTaken: 'Ganti seal.' })).not.toThrow();
     });
 
+    it('accepts a PANTAU refill-only action without problems or action text', () => {
+        expect(() => validatePayloadLocally({
+            oilAuditId: 1, problems: [], actionTaken: '', refillOil: true, fullCheck: false, hasActionChoice: true,
+        })).not.toThrow();
+    });
+
+    it('rejects a PANTAU action with neither box ticked', () => {
+        expect(() => validatePayloadLocally({
+            oilAuditId: 1, problems: [], actionTaken: '', refillOil: false, fullCheck: false, hasActionChoice: true,
+        })).toThrow(OilAuditFollowUpValidationError);
+    });
+
+    it('still requires the full-check fields when Full check is ticked', () => {
+        expect(() => validatePayloadLocally({
+            oilAuditId: 1, problems: [], actionTaken: '', refillOil: true, fullCheck: true, hasActionChoice: true,
+        })).toThrow(OilAuditFollowUpValidationError);
+    });
+
     it('rejects a missing oil_audit_id', () => {
         expect(() => validatePayloadLocally({ oilAuditId: null, problems: validProblems, actionTaken: 'x' }))
             .toThrow(OilAuditFollowUpValidationError);

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * OIL_AUDIT_FOLLOW_UP_SAVE — extracted verbatim from
@@ -46,8 +47,25 @@ class OilAuditFollowUpService
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    public function validate(array $data): array
+    public function validate(array $data, ?OilAudit $oilAudit = null): array
     {
+        $isPantau = $oilAudit?->condition === 'PANTAU';
+
+        // Only a PANTAU audit has a choice of action. Every other condition is
+        // always a full check (problem, finding and action are required).
+        $refillOil = $isPantau && filter_var($data['refill_oil'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $fullCheck = ! $isPantau || filter_var($data['full_check'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if ($isPantau && ! $refillOil && ! $fullCheck) {
+            throw ValidationException::withMessages([
+                'refill_oil' => 'Pick at least one action: refill the oil or run a full check.',
+            ]);
+        }
+
+        if (! $fullCheck) {
+            return ['refill_oil' => true, 'full_check' => false];
+        }
+
         $validator = Validator::make($data, self::rules());
 
         $validator->after(function ($validator) use ($data) {
@@ -91,7 +109,7 @@ class OilAuditFollowUpService
             }
         });
 
-        return $validator->validate();
+        return $validator->validate() + ['refill_oil' => $refillOil, 'full_check' => true];
     }
 
     /**
@@ -104,23 +122,27 @@ class OilAuditFollowUpService
         return DB::transaction(function () use ($oilAudit, $validated, $user) {
             $followUp = OilAuditFollowUp::create([
                 'oil_audit_id' => $oilAudit->id,
+                'refill_oil' => (bool) ($validated['refill_oil'] ?? false),
+                'full_check' => (bool) ($validated['full_check'] ?? true),
                 // Keep the legacy column populated for backward compatibility.
-                'problem' => $validated['problems'][0]['problem'],
-                'action_taken' => $validated['action_taken'],
+                'problem' => $validated['problems'][0]['problem'] ?? null,
+                'action_taken' => $validated['action_taken'] ?? null,
                 'pic_user_id' => $user->id,
                 'pic_name' => $user->name,
                 'actioned_at' => now(),
             ]);
 
-            $this->syncFollowUpProblems($followUp, $validated['problems']);
+            $this->syncFollowUpProblems($followUp, $validated['problems'] ?? []);
 
             // Repeating low-priority findings (Oli Keruh / Level Glass
-            // Burem): the same follow-up closes the older open ones too,
+            // Burem / Pantau): the same follow-up closes the older open ones too,
             // inside the same transaction. Only on first save — later edits
             // do not rewrite the older copies.
             foreach ($oilAudit->olderOpenRepeats()->get() as $older) {
                 $copy = OilAuditFollowUp::create([
                     'oil_audit_id' => $older->id,
+                    'refill_oil' => $followUp->refill_oil,
+                    'full_check' => $followUp->full_check,
                     'problem' => $followUp->problem,
                     'action_taken' => $followUp->action_taken,
                     'pic_user_id' => $followUp->pic_user_id,
@@ -128,7 +150,7 @@ class OilAuditFollowUpService
                     'actioned_at' => $followUp->actioned_at,
                 ]);
 
-                $this->syncFollowUpProblems($copy, $validated['problems']);
+                $this->syncFollowUpProblems($copy, $validated['problems'] ?? []);
             }
 
             return $followUp;
@@ -146,11 +168,13 @@ class OilAuditFollowUpService
             // pic_* / actioned_at are intentionally left untouched: they record
             // who first actioned the finding and when, not who last edited it.
             $followUp->update([
-                'problem' => $validated['problems'][0]['problem'],
-                'action_taken' => $validated['action_taken'],
+                'refill_oil' => (bool) ($validated['refill_oil'] ?? false),
+                'full_check' => (bool) ($validated['full_check'] ?? true),
+                'problem' => $validated['problems'][0]['problem'] ?? null,
+                'action_taken' => $validated['action_taken'] ?? null,
             ]);
 
-            $this->syncFollowUpProblems($followUp, $validated['problems']);
+            $this->syncFollowUpProblems($followUp, $validated['problems'] ?? []);
         });
     }
 

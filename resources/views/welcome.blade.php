@@ -1,6 +1,6 @@
 @extends('layouts.guest')
 
-@section('lang', 'id')
+@section('lang', 'en')
 @section('title', 'FreeDOMS | Digital Preventive Maintenance')
 
 @section('content')
@@ -13,19 +13,11 @@
 
         <x-landing.hero />
 
-        <x-landing.social-proof />
+        <x-landing.pm-overview />
 
-        <x-landing.problem-solution />
-
-        <x-landing.features />
+        <x-landing.public-access />
 
         <x-landing.how-it-works />
-
-        <x-landing.qr-demo />
-
-        <x-landing.statistics />
-
-        <x-landing.testimonial />
 
         <x-landing.final-cta />
 

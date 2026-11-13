@@ -161,8 +161,10 @@ class OilAudit extends Model
     /**
      * Low-priority findings that tend to repeat on the same machine: one
      * follow-up on the newest of them also closes the older open ones.
+     * PANTAU is included: one action on the newest PANTAU (oil refill and/or
+     * full check) closes the older PANTAU audits still waiting.
      */
-    public const LOW_PRIORITY_CONDITIONS = ['OLI_KERUH', 'GLASS_BUREM'];
+    public const LOW_PRIORITY_CONDITIONS = ['OLI_KERUH', 'GLASS_BUREM', 'PANTAU'];
 
     /**
      * Older, still-open audits of the same machine with the same
@@ -190,6 +192,77 @@ class OilAudit extends Model
     {
         return in_array($this->condition, self::followUpConditions(), true);
     }
+
+    /**
+     * PANTAU is monitoring, not a pending finding: it never counts as
+     * needing follow-up, but the PIC may still record an action on it
+     * (oil refill and/or a full check).
+     */
+    public function canReceiveAction(): bool
+    {
+        return $this->needsFollowUp() || $this->condition === 'PANTAU';
+    }
+
+    /**
+     * Who may correct the recorded condition (a wrong button at audit time):
+     * an Admin, or the PIC who made this audit.
+     */
+    public function canEditConditionBy(User $user): bool
+    {
+        return $user->isAdmin()
+            || ($user->isPic() && $this->audited_by_user_id !== null && $this->audited_by_user_id === $user->id);
+    }
+
+    /**
+     * Whether switching to $newCondition leaves the saved follow-up without a
+     * valid home: Oke needs none, and an oil-refill-only action (no problem or
+     * action text) is only valid on PANTAU.
+     */
+    public function conditionChangeRemovesFollowUp(string $newCondition): bool
+    {
+        $followUp = $this->followUp;
+
+        if (! $followUp) {
+            return false;
+        }
+
+        if ($newCondition === 'PANTAU') {
+            return false;
+        }
+
+        return ! in_array($newCondition, self::followUpConditions(), true) || ! $followUp->full_check;
+    }
+
+    /**
+     * Consecutive PANTAU audits for a machine, newest first. The count stops
+     * at the first audit that is not PANTAU, or at a PANTAU audit that already
+     * has an action recorded (the oil was topped up or checked, so the streak
+     * starts over).
+     */
+    public static function pantauStreak(int $machineId): int
+    {
+        $streak = 0;
+
+        $audits = self::query()
+            ->where('machine_id', $machineId)
+            ->withExists('followUp')
+            ->orderByDesc('audited_at')
+            ->orderByDesc('id')
+            ->get(['id', 'condition']);
+
+        foreach ($audits as $audit) {
+            if ($audit->condition !== 'PANTAU' || $audit->follow_up_exists) {
+                break;
+            }
+
+            $streak++;
+        }
+
+        return $streak;
+    }
+
+    /** Streak length at which the entry page asks for an oil refill. */
+    public const PANTAU_REFILL_REMINDER_AT = 4;
 
     /**
      * Extracted verbatim from OilAuditController::assertFollowUpAllowed()'s

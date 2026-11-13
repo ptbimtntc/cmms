@@ -96,3 +96,21 @@ Semua komponen meneruskan atribut tambahan (`wire:*`, `x-*`, `data-*`, `id`, `na
 ## Mode gelap
 
 Belum diaktifkan. Token `.dark` sudah disiapkan di `theme.css` (dikomentari). Kalau diaktifkan, kedua mode harus diverifikasi di setiap halaman.
+
+## Landing page
+
+> Pintu depan publik FreeDOMS untuk tim produksi dan manajemen PT BIM yang tidak punya akun, dalam bahasa visual pelat industri terang turunan dokumen ini, dial **ENERGY 2 / RHYTHM 2 / MOTION 1**, dengan satu pengecualian tertulis: hero (lihat di bawah).
+
+Dirombak 2026-11-13 dari arah sinematik lama (ENERGY 3 / RHYTHM 3 / MOTION 1, lihat `anti-slop/audit-001-*.md`) karena tidak lagi sinkron dengan app di balik login, dan empat tombol sejajar di hero/CTA tidak punya fokus konversi. Bahasa Inggris penuh, menyamai app (keputusan user 2026-11-13; sebelumnya landing sengaja dibiarkan Indonesia).
+
+- **ENERGY 2 (kecuali hero):** satu fokus per layar di sebagian besar section.
+- **RHYTHM 2:** pola section konsisten (terang), dengan dua patahan gelap: hero (atas, lihat pengecualian) dan "How it works" (`bg-blue-950` solid).
+- **MOTION 1 (kecuali hero):** sisa halaman hanya hover, fokus, dan transisi state. Section "How it works" tanpa reveal saat scroll.
+
+**Pengecualian tertulis untuk hero (R-37):** pada revisi kedua yang sama (2026-11-13), user eksplisit minta hero dikembalikan ke versi sinematik lama setelah melihat hasil ENERGY 2/MOTION 1/satu-CTA: animasi ilustrasi (lampu menyala berurutan, capstan berputar, parallax, tombol jeda) dan empat aksi sejajar (Scan a Machine, View Dashboard, View Monitor, Sign in). Ditanya dulu ("mending balikin lagi" setelah ditunjukkan konsekuensinya terhadap dial MOTION dan fokus konversi), dijawab "balikin penuh". Jadi khusus section hero: **ENERGY 3 / MOTION 3**, bukan 2/1. Konsekuensinya:
+- `<x-landing.factory-scene uid="hero">` dipanggil tanpa `:still`/`:toggle` (default aktif penuh), dengan `pause-label="Pause animation" play-label="Play animation"` (prop baru di `factory-scene.blade.php`, default Indonesia dipertahankan untuk auth, landing pakai Inggris).
+- `.cine-in` + `@keyframes cine-rise` di `landing.css` aktif lagi untuk hero.
+- Sisa halaman (pm-overview, public-access, how-it-works, final-cta, footer) **tidak ikut berubah**, tetap satu fokus dan MOTION 1. Final CTA tetap satu tombol per area, bukan empat tombol; ini bukan revert penuh ke arah lama, hanya hero.
+- Teks hero diterjemahkan ke Inggris (bukan dikembalikan ke Indonesia aslinya), supaya bahasa tetap konsisten satu halaman; ini keputusan sepihak yang diambil saat eksekusi, bukan ditanyakan user secara eksplisit.
+
+Landing memakai komponen `x-ui.*` yang sama dengan app (`.card`, `x-ui.button`, `x-ui.progress`, `x-ui.empty-state`, `x-ui.field`) di luar hero, bukan anchor buatan tangan atau bayangan keras seperti versi lama. Angka di section "Preventive maintenance, bulan berjalan" (`<x-landing.pm-overview>`) dibaca langsung dari `App\Services\PublicPmOverview`, sumber yang sama dipakai `/dashboard-guest`, supaya kedua halaman tidak pernah menampilkan angka berbeda untuk bulan yang sama.

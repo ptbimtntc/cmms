@@ -28,26 +28,6 @@
     outline-color: var(--brand-secondary-400);
 }
 
-/* Hazard band: maintenance signage, used once above the closing call to action. */
-.landing .hazard {
-    background: repeating-linear-gradient(
-        -45deg,
-        var(--brand-secondary-500) 0 14px,
-        var(--brand-primary-950) 14px 28px
-    );
-}
-
-/* Hard offset shadow on the hero preview only; it is the single lifted element. */
-.landing .plate-lift {
-    box-shadow: 5px 5px 0 var(--brand-primary-950);
-}
-
-@media (min-width: 1024px) {
-    .landing .plate-lift {
-        box-shadow: 10px 10px 0 var(--brand-primary-950);
-    }
-}
-
 .landing .tabular {
     font-variant-numeric: tabular-nums;
 }
@@ -61,7 +41,7 @@
     }
 }
 
-/* Factory scene: shared by the landing hero, the closing CTA, and the auth pages. */
+/* Factory scene: shared by the landing hero and the auth pages. */
 
 .factory-scene [data-depth] {
     will-change: transform;
@@ -103,16 +83,13 @@
     animation-play-state: paused !important;
 }
 
+/* Used by the landing hero and the auth illustration panel. */
 .scene-scrim {
     background: linear-gradient(90deg, #061c3f 0%, rgb(6 28 63 / 0.92) 38%, rgb(6 28 63 / 0.35) 62%, rgb(6 28 63 / 0) 78%);
 }
 
 .scene-fade {
     background: linear-gradient(180deg, rgb(6 28 63 / 0) 0%, #061c3f 100%);
-}
-
-.scene-veil {
-    background: rgb(6 28 63 / 0.82);
 }
 
 @keyframes scene-spin {
@@ -146,29 +123,6 @@
     100% { opacity: 0; transform: translateY(138px); }
 }
 
-/* Hero copy enters after the lamps are on. */
-.cine-in {
-    animation: cine-rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both;
-}
-
-@keyframes cine-rise {
-    from { opacity: 0; transform: translateY(18px); }
-    to { opacity: 1; transform: none; }
-}
-
-/* Storyboard frames open like a shutter, one after another, when scrolled into view. */
-.js-reveal [data-reveal] .frame {
-    clip-path: inset(0 100% 0 0);
-}
-
-.js-reveal [data-reveal].is-shown .frame {
-    animation: frame-open 0.9s cubic-bezier(0.6, 0, 0.2, 1) var(--d, 0s) forwards;
-}
-
-@keyframes frame-open {
-    to { clip-path: inset(0 0 0 0); }
-}
-
 /* Scenes without a pause control render as a still frame. */
 .factory-scene.is-still * {
     animation: none !important;
@@ -180,10 +134,19 @@
     stroke-dashoffset: 0;
 }
 
+/* Hero copy enters after the lamps are on. */
+.cine-in {
+    animation: cine-rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both;
+}
+
+@keyframes cine-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .factory-scene *,
-    .cine-in,
-    .js-reveal [data-reveal] .frame {
+    .cine-in {
         animation: none !important;
     }
 
@@ -191,10 +154,6 @@
     .factory-scene .reticle {
         opacity: 1;
         stroke-dashoffset: 0;
-    }
-
-    .js-reveal [data-reveal] .frame {
-        clip-path: none;
     }
 
     .scene-toggle {

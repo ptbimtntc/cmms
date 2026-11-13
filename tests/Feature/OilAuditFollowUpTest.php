@@ -239,6 +239,194 @@ test('an audit that does not need a follow-up rejects the write', function () {
 });
 
 // ---------------------------------------------------------------------------
+// PANTAU actions (refill oil and/or full check)
+// ---------------------------------------------------------------------------
+
+test('PANTAU: refill oil alone is enough and stores no problems', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $audit = fuAudit(fuMachine(), ['condition' => 'PANTAU']);
+
+    $this->actingAs($admin)
+        ->post(route('oil-audits.follow-up.store', $audit), ['refill_oil' => '1'])
+        ->assertSessionHasNoErrors();
+
+    $followUp = $audit->fresh()->followUp;
+    expect($followUp->refill_oil)->toBeTrue()
+        ->and($followUp->full_check)->toBeFalse()
+        ->and($followUp->action_taken)->toBeNull()
+        ->and($followUp->problems)->toHaveCount(0);
+});
+
+test('PANTAU: full check needs the same problem, finding and action fields', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $audit = fuAudit(fuMachine(), ['condition' => 'PANTAU']);
+
+    $this->actingAs($admin)
+        ->post(route('oil-audits.follow-up.store', $audit), ['full_check' => '1'])
+        ->assertSessionHasErrors(['problems', 'action_taken']);
+
+    $this->actingAs($admin)
+        ->post(route('oil-audits.follow-up.store', $audit), ['full_check' => '1', 'refill_oil' => '1'] + fuPayload([['Bocor Oli', ['Kapstan 1']]]))
+        ->assertSessionHasNoErrors();
+
+    $followUp = $audit->fresh()->followUp;
+    expect($followUp->refill_oil)->toBeTrue()
+        ->and($followUp->full_check)->toBeTrue()
+        ->and($followUp->problems)->toHaveCount(1);
+});
+
+test('PANTAU: picking neither action is rejected', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $audit = fuAudit(fuMachine(), ['condition' => 'PANTAU']);
+
+    $this->actingAs($admin)
+        ->post(route('oil-audits.follow-up.store', $audit), [])
+        ->assertSessionHasErrors('refill_oil');
+
+    expect($audit->fresh()->followUp)->toBeNull();
+});
+
+test('PANTAU: an action never makes the audit a pending finding', function () {
+    $audit = fuAudit(fuMachine(), ['condition' => 'PANTAU']);
+
+    expect($audit->needsFollowUp())->toBeFalse()
+        ->and($audit->canReceiveAction())->toBeTrue()
+        ->and(OilAudit::requiringFollowUp()->whereKey($audit->id)->exists())->toBeFalse();
+});
+
+test('PANTAU: an action on the newest audit closes the older open PANTAU audits the same way', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = fuMachine();
+    $oldest = fuAudit($machine, ['condition' => 'PANTAU', 'audited_at' => now()->subDays(14)]);
+    $older = fuAudit($machine, ['condition' => 'PANTAU', 'audited_at' => now()->subDays(7)]);
+    $newest = fuAudit($machine, ['condition' => 'PANTAU']);
+    $otherCondition = fuAudit($machine, ['condition' => 'OKE', 'audited_at' => now()->subDays(10)]);
+
+    $this->actingAs($admin)
+        ->post(route('oil-audits.follow-up.store', $newest), ['refill_oil' => '1'])
+        ->assertSessionHasNoErrors();
+
+    foreach ([$oldest, $older, $newest] as $audit) {
+        $followUp = $audit->fresh()->followUp;
+        expect($followUp)->not->toBeNull()
+            ->and($followUp->refill_oil)->toBeTrue()
+            ->and($followUp->full_check)->toBeFalse();
+    }
+    expect($otherCondition->fresh()->followUp)->toBeNull();
+});
+
+test('PANTAU: a full check on the newest audit copies its findings to the older open ones', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = fuMachine();
+    $older = fuAudit($machine, ['condition' => 'PANTAU', 'audited_at' => now()->subDays(7)]);
+    $newest = fuAudit($machine, ['condition' => 'PANTAU']);
+
+    $this->actingAs($admin)
+        ->post(route('oil-audits.follow-up.store', $newest), ['full_check' => '1'] + fuPayload([['Bocor Oli', ['Kapstan 1']]]))
+        ->assertSessionHasNoErrors();
+
+    $copy = $older->fresh()->followUp;
+    expect($copy->full_check)->toBeTrue()
+        ->and($copy->problems->pluck('problem')->all())->toBe(['Bocor Oli']);
+});
+
+test('PANTAU: the history page shows the action choices and the recorded refill', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = fuMachine();
+    $audit = fuAudit($machine, ['condition' => 'PANTAU']);
+
+    $this->actingAs($admin)->get(route('oil-audits.history', $machine->machine_number))
+        ->assertOk()
+        ->assertSee('Refill oil')
+        ->assertSee('Full check')
+        ->assertDontSee('Action recorded');
+
+    $audit->followUp()->create(['refill_oil' => true, 'full_check' => false, 'pic_name' => 'PIC', 'actioned_at' => now()]);
+
+    $this->actingAs($admin)->get(route('oil-audits.history', $machine->machine_number))
+        ->assertOk()
+        ->assertSee('Action recorded')
+        ->assertSee('Oil refilled');
+});
+
+// ---------------------------------------------------------------------------
+// Edit the finding (audit condition)
+// ---------------------------------------------------------------------------
+
+function fuPic(string $name = 'PIC'): User
+{
+    return User::factory()->create([...roleAttributes('PIC WWD'), 'name' => $name]);
+}
+
+test('condition edit: the PIC who made the audit can change it, another PIC cannot', function () {
+    $owner = fuPic('Owner');
+    $other = fuPic('Other');
+    $audit = fuAudit(fuMachine(), ['audited_by_user_id' => $owner->id]);
+
+    $this->actingAs($other)->put(route('oil-audits.condition.update', $audit), ['condition' => 'PANTAU'])->assertForbidden();
+    expect($audit->fresh()->condition)->toBe('KRITIS');
+
+    $this->actingAs($owner)->put(route('oil-audits.condition.update', $audit), ['condition' => 'PANTAU'])
+        ->assertSessionHasNoErrors();
+    expect($audit->fresh()->condition)->toBe('PANTAU');
+});
+
+test('condition edit: an admin can change any audit, a supervisor cannot', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $supervisor = User::factory()->create(['role' => User::ROLE_SUPERVISOR]);
+    $audit = fuAudit(fuMachine());
+
+    $this->actingAs($supervisor)->put(route('oil-audits.condition.update', $audit), ['condition' => 'OKE'])->assertForbidden();
+    $this->actingAs($admin)->put(route('oil-audits.condition.update', $audit), ['condition' => 'OKE'])->assertSessionHasNoErrors();
+    expect($audit->fresh()->condition)->toBe('OKE');
+});
+
+test('condition edit: an invalid condition is rejected', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $audit = fuAudit(fuMachine());
+
+    $this->actingAs($admin)->put(route('oil-audits.condition.update', $audit), ['condition' => 'NOPE'])
+        ->assertSessionHasErrors('condition');
+});
+
+test('condition edit: the follow-up survives a change between conditions that need one', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $audit = fuAudit(fuMachine());
+    seedFollowUp($audit, [['Bocor Oli', ['Kapstan 1']]]);
+
+    $this->actingAs($admin)->put(route('oil-audits.condition.update', $audit), ['condition' => 'PAS_GARIS']);
+    expect($audit->fresh()->followUp)->not->toBeNull();
+
+    $this->actingAs($admin)->put(route('oil-audits.condition.update', $audit), ['condition' => 'PANTAU']);
+    expect($audit->fresh()->followUp)->not->toBeNull();
+});
+
+test('condition edit: changing to Oke removes the follow-up, and refill-only is removed outside PANTAU', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $audit = fuAudit(fuMachine());
+    seedFollowUp($audit, [['Bocor Oli', ['Kapstan 1']]]);
+    $this->actingAs($admin)->put(route('oil-audits.condition.update', $audit), ['condition' => 'OKE']);
+    expect($audit->fresh()->followUp)->toBeNull();
+
+    $pantau = fuAudit(fuMachine(), ['condition' => 'PANTAU']);
+    $pantau->followUp()->create(['refill_oil' => true, 'full_check' => false, 'pic_name' => 'PIC', 'actioned_at' => now()]);
+    $this->actingAs($admin)->put(route('oil-audits.condition.update', $pantau), ['condition' => 'KRITIS']);
+    expect($pantau->fresh()->followUp)->toBeNull()
+        ->and($pantau->fresh()->condition)->toBe('KRITIS');
+});
+
+test('condition edit: the history page shows Edit finding only to people who may use it', function () {
+    $owner = fuPic('Owner');
+    $other = fuPic('Other');
+    $machine = fuMachine();
+    fuAudit($machine, ['audited_by_user_id' => $owner->id]);
+
+    $this->actingAs($owner)->get(route('oil-audits.history', $machine->machine_number))->assertSee('Edit finding');
+    $this->actingAs($other)->get(route('oil-audits.history', $machine->machine_number))->assertDontSee('Edit finding');
+});
+
+// ---------------------------------------------------------------------------
 // Edit page
 // ---------------------------------------------------------------------------
 

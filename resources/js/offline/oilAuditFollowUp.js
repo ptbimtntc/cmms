@@ -70,7 +70,13 @@ export function buildFollowUpFromForm(form) {
         findings: denseObjectToArray(row?.findings).map((f) => ({ finding: f?.finding ?? '' })),
     }));
 
-    return { problems, actionTaken: parsed.action_taken ?? '' };
+    // PANTAU forms carry two action checkboxes; every other condition is always a
+    // full check, so a form without them reports fullCheck = true.
+    const hasActionChoice = form.querySelector('input[name="full_check"]') !== null;
+    const refillOil = Boolean(form.querySelector('input[name="refill_oil"]')?.checked);
+    const fullCheck = hasActionChoice ? Boolean(form.querySelector('input[name="full_check"]')?.checked) : true;
+
+    return { problems, actionTaken: parsed.action_taken ?? '', refillOil, fullCheck, hasActionChoice };
 }
 
 function isBlank(value) {
@@ -88,14 +94,22 @@ function isBlank(value) {
  * client-side, and the server unconditionally re-validates it in full via
  * OilAuditFollowUpService::validate() regardless.
  */
-export function validatePayloadLocally({ oilAuditId, problems, actionTaken }) {
+export function validatePayloadLocally({
+    oilAuditId, problems, actionTaken, refillOil = false, fullCheck = true, hasActionChoice = false,
+}) {
     const errors = {};
 
     if (oilAuditId === undefined || oilAuditId === null || oilAuditId === '') {
         errors.oil_audit_id = 'Oil Audit tidak diketahui.';
     }
 
-    if (!Array.isArray(problems) || problems.length === 0) {
+    if (hasActionChoice && !refillOil && !fullCheck) {
+        errors.refill_oil = 'Pilih minimal satu tindakan: isi oli atau pengecekan full.';
+    }
+
+    if (!fullCheck) {
+        // Refill-only: nothing else to validate.
+    } else if (!Array.isArray(problems) || problems.length === 0) {
         errors.problems = 'Minimal satu problem wajib diisi.';
     } else {
         problems.forEach((problem, index) => {
@@ -109,7 +123,7 @@ export function validatePayloadLocally({ oilAuditId, problems, actionTaken }) {
         });
     }
 
-    if (isBlank(actionTaken)) {
+    if (fullCheck && isBlank(actionTaken)) {
         errors.action_taken = 'Tindakan yang dilakukan wajib diisi.';
     }
 
@@ -153,8 +167,12 @@ async function findBlockingLocalOperation(userId, oilAuditId) {
  *   page loaded, or the edit form because one did) — sent as
  *   expected_state so the server can detect if that has changed since.
  */
-export async function saveOffline({ oilAuditId, problems, actionTaken, followUpExists }) {
-    validatePayloadLocally({ oilAuditId, problems, actionTaken });
+export async function saveOffline({
+    oilAuditId, problems, actionTaken, followUpExists, refillOil = false, fullCheck = true, hasActionChoice = false,
+}) {
+    validatePayloadLocally({
+        oilAuditId, problems, actionTaken, refillOil, fullCheck, hasActionChoice,
+    });
 
     const userId = currentUserId();
     const blocking = await findBlockingLocalOperation(userId, oilAuditId);
@@ -170,7 +188,9 @@ export async function saveOffline({ oilAuditId, problems, actionTaken, followUpE
     const record = await SyncQueue.enqueue({
         operationUuid,
         transactionType: TRANSACTION_TYPE,
-        payload: { oil_audit_id: oilAuditId, problems, action_taken: actionTaken },
+        payload: fullCheck
+            ? { oil_audit_id: oilAuditId, problems, action_taken: actionTaken, refill_oil: refillOil, full_check: true }
+            : { oil_audit_id: oilAuditId, refill_oil: refillOil, full_check: false },
         expectedState: { follow_up_exists: Boolean(followUpExists) },
         userId,
     });

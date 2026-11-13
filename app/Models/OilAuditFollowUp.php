@@ -10,6 +10,8 @@ class OilAuditFollowUp extends Model
 {
     protected $fillable = [
         'oil_audit_id',
+        'refill_oil',
+        'full_check',
         'problem',
         'action_taken',
         'pic_user_id',
@@ -21,6 +23,8 @@ class OilAuditFollowUp extends Model
     {
         return [
             'actioned_at' => 'datetime',
+            'refill_oil' => 'boolean',
+            'full_check' => 'boolean',
         ];
     }
 

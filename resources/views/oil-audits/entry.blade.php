@@ -62,9 +62,12 @@
                         <span class="text-xs opacity-80">{{ $last->machine_type }} · {{ $last->area }}</span>
                     </div>
                 </div>
-                @if ($needsOilRefillReminder)
+                @if ($pantauStreak >= 1)
                     <p class="mt-4 border-t border-current/20 pt-3 text-sm font-semibold text-text">
-                        This machine has been in <strong>PANTAU</strong> status for 4 consecutive weeks. Please refill the oil immediately.
+                        PANTAU {{ $pantauStreak }} {{ $pantauStreak === 1 ? 'time' : 'times' }} in a row.
+                        @if ($needsOilRefillReminder)
+                            Refill the oil before the next check.
+                        @endif
                     </p>
                 @endif
             </section>

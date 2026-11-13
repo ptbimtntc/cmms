@@ -17,6 +17,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OilAuditController extends Controller
@@ -222,16 +224,10 @@ class OilAuditController extends Controller
                 ->with('error', DuplicateOilAuditException::forMachine($machine->machine_number)->getMessage());
         }
 
-        $recentAudits = $machine->oilAudits()
-            ->where('audited_at', '>=', now()->subWeeks(4))
-            ->orderByDesc('audited_at')
-            ->orderByDesc('id')
-            ->limit(4)
-            ->get(['condition']);
-        $needsOilRefillReminder = $recentAudits->count() === 4
-            && $recentAudits->every(fn (OilAudit $audit) => $audit->condition === 'PANTAU');
+        $pantauStreak = OilAudit::pantauStreak($machine->id);
+        $needsOilRefillReminder = $pantauStreak >= OilAudit::PANTAU_REFILL_REMINDER_AT;
 
-        return view('oil-audits.entry', compact('machine', 'needsOilRefillReminder'));
+        return view('oil-audits.entry', compact('machine', 'pantauStreak', 'needsOilRefillReminder'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -502,8 +498,11 @@ class OilAuditController extends Controller
                     $query->whereIn('condition', OilAudit::followUpConditions())->whereHas('followUp');
                 }
             })
+            // "See all" of the Open follow-ups card: the same three conditions
+            // the card counts (Hampir Garis, Pas Garis, Kritis), not Oli Keruh
+            // or Level Glass Burem.
             ->when($request->boolean('follow_up'), function (Builder $query) {
-                $query->requiringFollowUp()->whereDoesntHave('followUp');
+                $query->whereIn('condition', self::ACTION_CARD_CONDITIONS)->whereDoesntHave('followUp');
             });
     }
 
@@ -586,7 +585,7 @@ class OilAuditController extends Controller
             return back()->with('warning', 'The follow-up for this audit is already saved.');
         }
 
-        $validated = $this->validateFollowUp($request);
+        $validated = $this->validateFollowUp($request, $oilAudit);
         $user = $request->user();
 
         $alsoClosed = $oilAudit->olderOpenRepeats()->count();
@@ -604,7 +603,7 @@ class OilAuditController extends Controller
         $followUp = $oilAudit->followUp;
         abort_unless($followUp !== null, 404);
 
-        $validated = $this->validateFollowUp($request);
+        $validated = $this->validateFollowUp($request, $oilAudit);
 
         app(OilAuditFollowUpService::class)->update($followUp, $validated);
 
@@ -631,6 +630,45 @@ class OilAuditController extends Controller
         return back()->with('success', 'Oil audit record deleted.');
     }
 
+    /**
+     * Corrects the condition of one audit. Admin, or the PIC who made it.
+     * The follow-up is kept unless the new condition cannot carry it (see
+     * OilAudit::conditionChangeRemovesFollowUp()), in which case it is deleted
+     * together with its problems and findings.
+     */
+    public function updateCondition(Request $request, OilAudit $oilAudit): RedirectResponse
+    {
+        abort_unless($oilAudit->isInAuditScope(), 404);
+        abort_unless(
+            $oilAudit->canEditConditionBy($request->user()),
+            403,
+            'Only an Admin or the PIC who made this audit can edit its condition.'
+        );
+
+        $validated = $request->validate([
+            'condition' => ['required', Rule::in(array_keys(OilAudit::CONDITION_LABELS))],
+        ]);
+
+        $newCondition = $validated['condition'];
+
+        if ($newCondition === $oilAudit->condition) {
+            return back()->with('warning', 'The condition is already '.$oilAudit->conditionLabel().'.');
+        }
+
+        $removesFollowUp = $oilAudit->conditionChangeRemovesFollowUp($newCondition);
+
+        DB::transaction(function () use ($oilAudit, $newCondition, $removesFollowUp) {
+            if ($removesFollowUp) {
+                $oilAudit->followUp->delete();
+            }
+
+            $oilAudit->update(['condition' => $newCondition]);
+        });
+
+        return back()->with('success', 'Condition changed to '.$oilAudit->conditionLabel().'.'
+            .($removesFollowUp ? ' The follow-up no longer applies and was removed.' : ''));
+    }
+
     public function destroyFollowUp(Request $request, OilAudit $oilAudit): RedirectResponse
     {
         // Area (WWD) is already guaranteed by this route's 'area:WWD'
@@ -655,7 +693,7 @@ class OilAuditController extends Controller
     {
         abort_unless($oilAudit->isInAuditScope(), 404);
         abort_unless(
-            $oilAudit->needsFollowUp(),
+            $oilAudit->canReceiveAction(),
             422,
             'A follow-up is only needed when the oil condition is not OK.'
         );
@@ -668,8 +706,8 @@ class OilAuditController extends Controller
      * Throws ValidationException on failure, so the caller gets the same
      * redirect-back-with-errors behaviour as $request->validate().
      */
-    private function validateFollowUp(Request $request): array
+    private function validateFollowUp(Request $request, OilAudit $oilAudit): array
     {
-        return app(OilAuditFollowUpService::class)->validate($request->all());
+        return app(OilAuditFollowUpService::class)->validate($request->all(), $oilAudit);
     }
 }

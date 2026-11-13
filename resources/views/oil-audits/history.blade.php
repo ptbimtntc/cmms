@@ -108,8 +108,36 @@
                                         <time class="text-sm font-semibold text-text">{{ $audit->audited_at->format('d M Y, H:i') }}</time>
                                     </div>
                                     <p class="mt-2 text-sm text-text-muted">Checked by <span class="font-semibold text-text">{{ $audit->audited_by_name }}</span></p>
+                                    @if ($audit->canEditConditionBy(auth()->user()))
+                                        @php($removingConditions = collect(array_keys(\App\Models\OilAudit::CONDITION_LABELS))->filter(fn ($c) => $audit->conditionChangeRemovesFollowUp($c))->values())
+                                        <details class="mt-3 text-sm" @if ($errors->has('condition') && (int) old('_condition_audit') === $audit->id) open @endif>
+                                            <summary class="btn btn-outline btn-sm inline-flex min-h-11 cursor-pointer lg:min-h-9">Edit finding</summary>
+                                            <form method="POST" action="{{ route('oil-audits.condition.update', $audit) }}"
+                                                class="mt-3 flex flex-col gap-3 rounded-control border border-border bg-surface p-3 sm:flex-row sm:items-end"
+                                                data-removes='@json($removingConditions)'
+                                                onsubmit="return !JSON.parse(this.dataset.removes).includes(this.elements.condition.value) || confirm('This condition has no use for the saved follow-up. Save the change and delete the follow-up?')">
+                                                @csrf
+                                                @method('PUT')
+                                                <input type="hidden" name="_condition_audit" value="{{ $audit->id }}">
+                                                <label class="grid min-w-0 flex-1 gap-1.5">
+                                                    <span class="text-xs font-semibold text-text">Condition</span>
+                                                    <select name="condition" class="select" required>
+                                                        @foreach (\App\Models\OilAudit::CONDITION_LABELS as $key => $label)
+                                                            <option value="{{ $key }}" @selected($audit->condition === $key)>{{ $label }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @if ($errors->has('condition') && (int) old('_condition_audit') === $audit->id)
+                                                        <span class="form-error">{{ $errors->first('condition') }}</span>
+                                                    @endif
+                                                </label>
+                                                <button type="submit" class="btn btn-primary min-h-11">Save condition</button>
+                                            </form>
+                                        </details>
+                                    @endif
                                 </div>
-                                @if (! $audit->needsFollowUp())
+                                @if ($audit->condition === 'PANTAU' && $audit->followUp)
+                                    <x-ui.badge tone="success">Action recorded</x-ui.badge>
+                                @elseif (! $audit->needsFollowUp())
                                     <x-ui.badge>No follow-up needed</x-ui.badge>
                                 @elseif ($audit->followUp)
                                     <x-ui.badge tone="success">Follow-up done</x-ui.badge>
@@ -118,12 +146,23 @@
                                 @endif
                             </div>
 
-                            @if ($audit->needsFollowUp())
+                            @if ($audit->canReceiveAction())
                                 @php($fu = $audit->followUp)
                                 @php($fuIsOld = old('_followup_audit') !== null && (int) old('_followup_audit') === $audit->id)
 
                                 @if ($fu)
                                     <div class="mt-4 rounded-control border border-success/30 bg-success-light p-4" data-followup-view="{{ $audit->id }}">
+                                        @if ($audit->condition === 'PANTAU')
+                                            <ul class="mb-3 flex flex-wrap gap-2 text-sm font-semibold text-text">
+                                                @if ($fu->refill_oil)
+                                                    <li class="rounded-control border border-success/30 bg-surface px-2.5 py-1">Oil refilled</li>
+                                                @endif
+                                                @if ($fu->full_check)
+                                                    <li class="rounded-control border border-success/30 bg-surface px-2.5 py-1">Full check</li>
+                                                @endif
+                                            </ul>
+                                        @endif
+                                        @if ($fu->full_check)
                                         <div class="grid gap-4 text-sm sm:grid-cols-2">
                                             <div>
                                                 <p class="text-xs font-semibold text-success-hover">Problem &amp; finding</p>
@@ -149,6 +188,7 @@
                                                 <p class="mt-1 whitespace-pre-line text-text">{{ $fu->action_taken }}</p>
                                             </div>
                                         </div>
+                                        @endif
                                         <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-success/20 pt-3">
                                             <p class="text-sm text-text-muted">Followed up by <span class="font-semibold text-text">{{ $fu->pic_name }}</span> · {{ $fu->actioned_at->format('d M Y, H:i') }}</p>
                                             <div class="flex flex-wrap gap-2">

@@ -161,42 +161,61 @@ test('entry page opens normally for a machine not yet audited today', function (
         ->assertSee('How does the oil look?');
 });
 
-test('entry page reminds only when the four latest audits in the last four weeks are all Pantau', function () {
+test('entry page counts the PANTAU streak and reminds from the fourth time', function () {
     $machine = dupMachine('3001');
     $pic = dupPic();
     $startAt = Carbon::parse('2026-10-01 10:00:00', 'Asia/Jakarta');
     $service = app(OilAuditCreateService::class);
 
-    foreach ([0, 7, 14, 21] as $days) {
+    foreach ([0, 7, 14] as $days) {
         Carbon::setTestNow($startAt->copy()->addDays($days));
         $service->create($machine, $pic, 'PANTAU');
     }
 
-    Carbon::setTestNow(Carbon::parse('2026-10-29 10:00:00', 'Asia/Jakarta'));
+    Carbon::setTestNow($startAt->copy()->addDays(15));
     $this->actingAs($pic)->get(route('oil-audits.entry', $machine->machine_number))
         ->assertOk()
-        ->assertDontSee('Recent monitoring history')
-        ->assertSee('This machine has been in <strong>PANTAU</strong> status for 4 consecutive weeks. Please refill the oil immediately.', false);
+        ->assertSee('PANTAU 3 times in a row.')
+        ->assertDontSee('Refill the oil before the next check.');
 
-    Carbon::setTestNow(Carbon::parse('2026-10-28 10:00:00', 'Asia/Jakarta'));
-    $service->create($machine, $pic, 'OKE');
+    // The streak has no time window: the fourth Pantau two months later still counts.
+    Carbon::setTestNow($startAt->copy()->addDays(70));
+    $service->create($machine, $pic, 'PANTAU');
 
-    Carbon::setTestNow(Carbon::parse('2026-10-29 10:00:00', 'Asia/Jakarta'));
+    Carbon::setTestNow($startAt->copy()->addDays(71));
     $this->actingAs($pic)->get(route('oil-audits.entry', $machine->machine_number))
         ->assertOk()
-        ->assertDontSee('Please refill the oil.');
+        ->assertSee('PANTAU 4 times in a row.')
+        ->assertSee('Refill the oil before the next check.');
+});
 
-    $oldMachine = dupMachine('3002');
-    $oldStart = Carbon::parse('2026-09-01 10:00:00', 'Asia/Jakarta');
-    foreach ([0, 7, 14, 21] as $days) {
-        Carbon::setTestNow($oldStart->copy()->addDays($days));
-        $service->create($oldMachine, $pic, 'PANTAU');
+test('the PANTAU streak restarts after a different condition or a recorded action', function () {
+    $pic = dupPic();
+    $service = app(OilAuditCreateService::class);
+    $start = Carbon::parse('2026-10-01 10:00:00', 'Asia/Jakarta');
+
+    $okeMachine = dupMachine('3002');
+    foreach (['PANTAU', 'PANTAU', 'OKE', 'PANTAU'] as $i => $condition) {
+        Carbon::setTestNow($start->copy()->addDays($i));
+        $service->create($okeMachine, $pic, $condition);
     }
+    expect(OilAudit::pantauStreak($okeMachine->id))->toBe(1);
 
-    Carbon::setTestNow(Carbon::parse('2026-10-29 10:00:00', 'Asia/Jakarta'));
-    $this->get(route('oil-audits.entry', $oldMachine->machine_number))
-        ->assertOk()
-        ->assertDontSee('Please refill the oil.');
+    $actionMachine = dupMachine('3003');
+    $audits = [];
+    foreach ([0, 1, 2, 3] as $i) {
+        Carbon::setTestNow($start->copy()->addDays($i));
+        $audits[] = $service->create($actionMachine, $pic, 'PANTAU');
+    }
+    expect(OilAudit::pantauStreak($actionMachine->id))->toBe(4);
+
+    $audits[1]->followUp()->create([
+        'refill_oil' => true,
+        'full_check' => false,
+        'pic_name' => 'PIC',
+        'actioned_at' => now(),
+    ]);
+    expect(OilAudit::pantauStreak($actionMachine->id))->toBe(2);
 });
 
 test('sync: duplicate from a second device returns duplicate_audit 409 and stores nothing extra', function () {

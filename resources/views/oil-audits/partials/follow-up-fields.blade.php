@@ -26,6 +26,10 @@
     if (empty($fuProblems)) {
         $fuProblems = [['problem' => '', 'findings' => [['finding' => '']]]];
     }
+    // PANTAU is monitoring, so its action is a choice: refill the oil and/or run a full check.
+    $isPantau = $audit->condition === 'PANTAU';
+    $fuRefill = $fuIsOld ? (bool) old('refill_oil') : (bool) ($fu?->refill_oil ?? false);
+    $fuFullCheck = $fuIsOld ? (bool) old('full_check') : ($fu ? (bool) $fu->full_check : false);
     $fuActionTaken = $fuIsOld ? old('action_taken', '') : ($fu?->action_taken ?? '');
     $removeBtn = 'btn btn-ghost min-h-11 shrink-0 text-danger hover:bg-danger-light hover:text-danger-hover lg:min-h-9';
 @endphp
@@ -35,9 +39,19 @@
 <div class="js-followup-banner alert alert-info mb-3 hidden" role="status"></div>
 
 <div class="mb-4">
-    <h3 class="font-semibold text-text">{{ $mode === 'edit' ? 'Edit follow-up' : 'Record follow-up' }}</h3>
+    <h3 class="font-semibold text-text">
+        @if ($isPantau)
+            {{ $mode === 'edit' ? 'Edit action' : 'Record action' }}
+        @else
+            {{ $mode === 'edit' ? 'Edit follow-up' : 'Record follow-up' }}
+        @endif
+    </h3>
     <p class="mt-0.5 text-sm text-text-muted">
-        Each problem can be picked once, needs at least one finding, and no finding may repeat within the same problem.
+        @if ($isPantau)
+            PANTAU does not need an action. If one was taken, tick what was done.
+        @else
+            Each problem can be picked once, needs at least one finding, and no finding may repeat within the same problem.
+        @endif
         @if ($mode === 'create')
             The PIC is recorded automatically as {{ auth()->user()->name }}.
         @endif
@@ -55,6 +69,20 @@
     </div>
 @endif
 
+@if ($isPantau)
+    <div class="mb-4 grid gap-2 sm:grid-cols-2">
+        <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-control border border-border bg-surface px-3 py-2">
+            <input type="checkbox" name="refill_oil" value="1" class="checkbox h-5 w-5" @checked($fuRefill)>
+            <span class="text-sm font-semibold text-text">Refill oil</span>
+        </label>
+        <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-control border border-border bg-surface px-3 py-2">
+            <input type="checkbox" name="full_check" value="1" class="checkbox h-5 w-5" @checked($fuFullCheck)>
+            <span class="text-sm font-semibold text-text">Full check</span>
+        </label>
+    </div>
+@endif
+
+<fieldset class="js-fullcheck-fields m-0 min-w-0 border-0 p-0" @if ($isPantau && ! $fuFullCheck) disabled hidden @endif>
 <div class="js-problem-list space-y-3">
     @foreach ($fuProblems as $pi => $problem)
         @php($rowFindingOptions = \App\Models\OilAudit::findingOptionsFor($problem['problem'] ?? ''))
@@ -104,6 +132,7 @@
     <textarea name="action_taken" required rows="3" maxlength="2000"
         placeholder="Example: replaced the seal and repaired the bearing." class="textarea">{{ $fuActionTaken }}</textarea>
 </label>
+</fieldset>
 
 <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
     @if ($mode === 'edit')
@@ -119,6 +148,6 @@
         </button>
     @endif
     <button type="submit" class="js-followup-submit btn btn-primary min-h-11">
-        {{ $mode === 'edit' ? 'Save changes' : 'Save and mark done' }}
+        {{ $mode === 'edit' ? 'Save changes' : ($isPantau ? 'Save action' : 'Save and mark done') }}
     </button>
 </div>

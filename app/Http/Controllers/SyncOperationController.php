@@ -574,7 +574,7 @@ class SyncOperationController extends Controller
             ]);
         }
 
-        if (! $oilAudit->needsFollowUp()) {
+        if (! $oilAudit->canReceiveAction()) {
             throw ValidationException::withMessages([
                 'oil_audit_id' => ['A follow-up is only needed when the oil condition is not OK.'],
             ]);
@@ -585,7 +585,7 @@ class SyncOperationController extends Controller
 
         $this->assertNoStateConflict($expectedState, ['follow_up_exists' => $actualExists]);
 
-        $validated = app(OilAuditFollowUpService::class)->validate($payload);
+        $validated = app(OilAuditFollowUpService::class)->validate($payload, $oilAudit);
 
         if ($actualExists) {
             app(OilAuditFollowUpService::class)->update($existingFollowUp, $validated);

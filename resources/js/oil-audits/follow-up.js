@@ -231,6 +231,33 @@ export function initFollowUpForms() {
     }
 
     /**
+     * PANTAU forms: show the full-check fields only while "Full check" is ticked.
+     * The fields sit in a disabled fieldset otherwise, so the browser skips their
+     * required checks and FormData leaves them out.
+     */
+    function syncActionChoice(form) {
+        const fullCheck = form.querySelector('input[name="full_check"]');
+        const fields = form.querySelector('.js-fullcheck-fields');
+
+        if (!fullCheck || !fields) {
+            return;
+        }
+
+        fields.disabled = !fullCheck.checked;
+        fields.hidden = !fullCheck.checked;
+    }
+
+    function restoreActionChoice(form, { refillOil, fullCheck } = {}) {
+        const refill = form.querySelector('input[name="refill_oil"]');
+        const full = form.querySelector('input[name="full_check"]');
+
+        if (refill && refillOil !== undefined) refill.checked = Boolean(refillOil);
+        if (full && fullCheck !== undefined) full.checked = Boolean(fullCheck);
+
+        syncActionChoice(form);
+    }
+
+    /**
      * Rebuilds a form's problem/finding rows from draft data using the
      * SAME row generator (newProblemRow/newFindingRow) and the SAME
      * renumbering pass (reindex) the manual Add Problem/Add Finding
@@ -238,7 +265,9 @@ export function initFollowUpForms() {
      * problem row with at least one finding row (never zero rows), exactly
      * like every other entry point into this form.
      */
-    function restoreFollowUpIntoForm(form, problems, actionTaken) {
+    function restoreFollowUpIntoForm(form, problems, actionTaken, action = {}) {
+        restoreActionChoice(form, action);
+
         const list = form.querySelector('.js-problem-list');
 
         if (!list) {
@@ -327,7 +356,10 @@ export function initFollowUpForms() {
         );
 
         getBanner(form)?.querySelector('.js-followup-draft-restore')?.addEventListener('click', () => {
-            restoreFollowUpIntoForm(form, draft.payload?.problems ?? [], draft.payload?.action_taken ?? '');
+            restoreFollowUpIntoForm(form, draft.payload?.problems ?? [], draft.payload?.action_taken ?? '', {
+                refillOil: draft.payload?.refill_oil,
+                fullCheck: draft.payload?.full_check,
+            });
             hideBanner(form);
         });
         getBanner(form)?.querySelector('.js-followup-draft-dismiss')?.addEventListener('click', () => hideBanner(form));
@@ -335,6 +367,7 @@ export function initFollowUpForms() {
 
     function wireForm(form) {
         reindex(form);
+        syncActionChoice(form);
 
         form.addEventListener('click', (event) => {
             const target = event.target;
@@ -359,6 +392,10 @@ export function initFollowUpForms() {
         });
 
         form.addEventListener('change', (event) => {
+            if (event.target.matches?.('input[name="full_check"]')) {
+                syncActionChoice(form);
+            }
+
             const problemRow = event.target.closest?.('.js-problem-row');
 
             if (problemRow && event.target === problemRow.querySelector('select')) {
@@ -370,12 +407,16 @@ export function initFollowUpForms() {
 
         const autosaveDraft = debounce(() => {
             const oilAuditId = oilAuditIdFor(form);
-            const { problems, actionTaken } = OilAuditFollowUp.buildFollowUpFromForm(form);
+            const {
+                problems, actionTaken, refillOil, fullCheck,
+            } = OilAuditFollowUp.buildFollowUpFromForm(form);
 
             Drafts.saveDraft({
                 draftType: OilAuditFollowUp.DRAFT_TYPE,
                 referenceId: oilAuditId,
-                payload: { oil_audit_id: oilAuditId, problems, action_taken: actionTaken },
+                payload: {
+                    oil_audit_id: oilAuditId, problems, action_taken: actionTaken, refill_oil: refillOil, full_check: fullCheck,
+                },
                 userId: currentUserId(),
             }).catch((error) => {
                 console.warn('[oil-audits/follow-up] autosave draft failed', error);
@@ -430,12 +471,17 @@ export function initFollowUpForms() {
                     return;
                 }
 
-                const { problems, actionTaken } = OilAuditFollowUp.buildFollowUpFromForm(form);
+                const {
+                    problems, actionTaken, refillOil, fullCheck, hasActionChoice,
+                } = OilAuditFollowUp.buildFollowUpFromForm(form);
 
                 await OilAuditFollowUp.saveOffline({
                     oilAuditId,
                     problems,
                     actionTaken,
+                    refillOil,
+                    fullCheck,
+                    hasActionChoice,
                     followUpExists: followUpExistsFor(form),
                 });
 

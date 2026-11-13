@@ -3,6 +3,11 @@
     'fit' => 'xMaxYMid slice',
     'toggle' => true,
     'still' => false,
+    // Auth (layouts/auth/freedoms.blade.php) keeps the original Indonesian
+    // labels unchanged; the landing hero passes English ones instead so the
+    // page stays one language throughout.
+    'pauseLabel' => 'Jeda animasi',
+    'playLabel' => 'Putar animasi',
 ])
 
 @php
@@ -35,7 +40,7 @@
 <div {{ $attributes->merge(['class' => 'factory-scene overflow-hidden bg-blue-950' . ($positioned ? '' : ' relative') . ($still ? ' is-still' : '')]) }} data-scene>
 
     <svg viewBox="0 0 1600 900" preserveAspectRatio="{{ $fit }}" class="absolute inset-0 h-full w-full" role="img"
-        aria-label="Ilustrasi lini mesin wet wire drawing di bawah lampu kerja, dengan tag QR terpasang di mesin terdepan">
+        aria-label="Illustration of a wet wire drawing machine line under work lamps, with a QR tag mounted on the nearest machine">
 
         <defs>
             <linearGradient id="{{ $uid }}-hall" x1="0" y1="0" x2="0" y2="1">
@@ -177,12 +182,13 @@
     @if ($toggle)
         {{-- Ambient motion runs past 5 seconds, so it gets a pause control (R-39). --}}
         <button type="button" data-scene-toggle aria-pressed="false"
+            data-pause-label="{{ $pauseLabel }}" data-play-label="{{ $playLabel }}"
             class="scene-toggle absolute bottom-3 right-3 z-20 inline-flex min-h-11 items-center gap-2 rounded-md border border-blue-300/70 bg-blue-950/85 px-3 text-sm font-semibold text-white hover:bg-blue-900">
             <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
                 <path data-icon-pause d="M6 5h4v14H6zM14 5h4v14h-4z" />
                 <path data-icon-play d="M7 5l12 7-12 7z" style="display:none" />
             </svg>
-            <span data-scene-label>Jeda animasi</span>
+            <span data-scene-label>{{ $pauseLabel }}</span>
         </button>
     @endif
 
@@ -200,15 +206,18 @@
                 document.querySelectorAll('[data-scene]').forEach((s) => s.classList.toggle('is-paused', paused));
                 document.querySelectorAll('[data-scene-toggle]').forEach((b) => {
                     b.setAttribute('aria-pressed', String(paused));
-                    b.querySelector('[data-scene-label]').textContent = paused ? 'Putar animasi' : 'Jeda animasi';
+                    b.querySelector('[data-scene-label]').textContent = paused ? b.dataset.playLabel : b.dataset.pauseLabel;
                     b.querySelector('[data-icon-pause]').style.display = paused ? 'none' : '';
                     b.querySelector('[data-icon-play]').style.display = paused ? '' : 'none';
                 });
             };
 
+            // A still scene (no pause control, uid="cta" style usage) declares
+            // zero motion; scroll-linked parallax would contradict that, so
+            // only scenes that can be paused ever get a transform here.
             const parallax = () => {
                 if (reduce.matches) return;
-                document.querySelectorAll('[data-scene]').forEach((s) => {
+                document.querySelectorAll('[data-scene]:not(.is-still)').forEach((s) => {
                     const top = s.getBoundingClientRect().top;
                     if (top > window.innerHeight || top < -s.offsetHeight) return;
                     s.querySelectorAll('[data-depth]').forEach((g) => {
@@ -217,20 +226,7 @@
                 });
             };
 
-            const reveal = () => {
-                const items = document.querySelectorAll('[data-reveal]:not(.is-shown)');
-                if (reduce.matches || !('IntersectionObserver' in window)) {
-                    items.forEach((el) => el.classList.add('is-shown'));
-                    return;
-                }
-                const io = new IntersectionObserver((entries) => entries.forEach((e) => {
-                    if (e.isIntersecting) { e.target.classList.add('is-shown'); io.unobserve(e.target); }
-                }), { threshold: 0.25 });
-                items.forEach((el) => io.observe(el));
-            };
-
             const init = () => {
-                document.documentElement.classList.add('js-reveal');
                 document.querySelectorAll('[data-scene-toggle]:not([data-ready])').forEach((b) => {
                     b.dataset.ready = '1';
                     b.addEventListener('click', () => {
@@ -241,7 +237,6 @@
                 });
                 apply();
                 parallax();
-                reveal();
             };
 
             let ticking = false;
