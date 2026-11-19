@@ -57,6 +57,7 @@ async function loadNextMonth(button) {
             button.disabled = false;
         } else {
             button.remove();
+            document.querySelector('[data-pm-month-done]')?.classList.remove('hidden');
         }
     } catch (e) {
         button.textContent = label;

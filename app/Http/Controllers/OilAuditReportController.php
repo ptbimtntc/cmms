@@ -88,8 +88,41 @@ class OilAuditReportController extends Controller
             ->values()
             ->all();
         $search = trim((string) $request->input('search', ''));
+        $notAuditedWeek = $request->boolean('not_audited_week');
+
+        // Monday-Sunday, Asia/Jakarta — same week-boundary convention as
+        // WeeklyPlanController/SmallPmScheduler. audit_date (not audited_at)
+        // is the plain 'Y-m-d' business date, so string range comparison is
+        // correct and matches how OilAuditCreateService writes it.
+        $weekStart = Carbon::now('Asia/Jakarta')->startOfWeek();
+        $weekEnd = Carbon::now('Asia/Jakarta')->endOfWeek();
+        $weekRange = [$weekStart->toDateString(), $weekEnd->toDateString()];
 
         $query = $this->filteredQuery($area, $machineType, $conditions, $year, $months, $search);
+
+        // Drill-down from the "Audited This Week" card below: on top of
+        // whatever table filters are active, narrow to machines with no
+        // oil_audits row in the current week.
+        if ($notAuditedWeek) {
+            $query->whereDoesntHave('oilAudits', fn (Builder $q) => $q->whereBetween('audit_date', $weekRange));
+        }
+
+        // --- Week summary — ALWAYS full oil-audit scope, deliberately
+        // ignoring every table filter above (area/type/condition/year/
+        // month/search): this is a standing sanity check ("did everyone
+        // get audited this week"), not another filtered view. ---
+        $weekScope = $this->baseScope();
+        $weekTotal = (clone $weekScope)->count();
+        $weekAudited = (clone $weekScope)
+            ->whereHas('oilAudits', fn (Builder $q) => $q->whereBetween('audit_date', $weekRange))
+            ->count();
+        $weekAudit = [
+            'start' => $weekStart,
+            'end' => $weekEnd,
+            'audited' => $weekAudited,
+            'total' => $weekTotal,
+            'missing' => $weekTotal - $weekAudited,
+        ];
 
         // --- Summary — machine-centric, same filtered scope as the table.
         // Never counts audits as if they were machines. ---
@@ -141,6 +174,8 @@ class OilAuditReportController extends Controller
 
         return view('reports.oil-audit.index', [
             'summary' => $summary,
+            'weekAudit' => $weekAudit,
+            'notAuditedWeek' => $notAuditedWeek,
             'machines' => $machines,
             'machineTypes' => $machineTypes,
             'conditions' => OilAudit::CONDITION_LABELS,

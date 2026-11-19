@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  *  - generate: put rows without an OPEN schedule into consecutive weeks,
  *    rows_per_week at a time, in row order;
  *  - next cycle: once a schedule is executed, plan the same row again
- *    `cycle` weeks after the action date.
+ *    `cycle` weeks after the schedule's own plan date.
  */
 class SmallPmScheduler
 {
@@ -89,9 +89,10 @@ class SmallPmScheduler
     }
 
     /**
-     * Plans (or, when the action date was edited, re-plans) the next cycle of
-     * an executed schedule. A next schedule that was already started or
-     * executed is left alone.
+     * Plans the next cycle of an executed schedule, `cycle` weeks after this
+     * schedule's own plan_date (not the action_date it was executed on, and
+     * not snapped to Monday — used exactly as computed). A next schedule
+     * that was already started or executed is left alone.
      */
     public function planNext(SmallPmSchedule $schedule): ?SmallPmSchedule
     {
@@ -99,8 +100,8 @@ class SmallPmScheduler
             return null;
         }
 
-        $planDate = self::monday(CarbonImmutable::parse($schedule->action_date->toDateString(), self::TZ)
-            ->addWeeks(SmallPmSchedule::cycleWeeks($schedule->cycle)));
+        $planDate = CarbonImmutable::parse($schedule->plan_date->toDateString(), self::TZ)
+            ->addWeeks(SmallPmSchedule::cycleWeeks($schedule->cycle));
 
         $next = SmallPmSchedule::where('generated_from_id', $schedule->id)->first();
 

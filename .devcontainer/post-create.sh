@@ -35,6 +35,12 @@ if [ ! -f .env ]; then
         -e 's/^# DB_USERNAME=.*/DB_USERNAME=root/' \
         -e 's/^# DB_PASSWORD=.*/DB_PASSWORD=cmms_secret/' \
         .env
+
+    if [ "$CODESPACES" = "true" ] && [ -n "$CODESPACE_NAME" ]; then
+        codespace_url="https://${CODESPACE_NAME}-8000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
+        sed -i "s#^APP_URL=.*#APP_URL=${codespace_url}#" .env
+    fi
+
     php artisan key:generate --ansi
 fi
 

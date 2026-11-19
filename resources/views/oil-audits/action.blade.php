@@ -14,6 +14,7 @@
     <div class="space-y-5">
         <x-ui.page-header title="Oil Audit Action" description="Every WWD oil audit record, one row per audit, for follow-up monitoring.">
             <x-slot:actions>
+                <x-ui.button variant="outline" href="{{ route('reports.oil-audit') }}">View Report</x-ui.button>
                 <x-ui.button href="{{ route('oil-audits.scan') }}">Start an audit with QR</x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>

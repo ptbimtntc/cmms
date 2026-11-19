@@ -1,35 +1,10 @@
 services:
-    mysql:
-        image: 'mysql:8.0'
-        ports:
-            - '3306:3306'
-        environment:
-            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_DATABASE: '${DB_DATABASE}'
-        volumes:
-            - 'cmms-mysql:/var/lib/mysql'
-        healthcheck:
-            test:
-                - CMD
-                - mysqladmin
-                - ping
-                - '-proot'
-            retries: 3
-            timeout: 5s
-
     phpmyadmin:
         image: 'phpmyadmin:latest'
-        ports:
-            - '0.0.0.0:8081:80'
+        network_mode: host
         environment:
-            PMA_HOST: host.docker.internal
+            PMA_HOST: 127.0.0.1
+            PMA_PORT: 3306
             PMA_USER: root
             PMA_PASSWORD: '${DB_PASSWORD}'
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        depends_on:
-            - mysql
-
-volumes:
-    cmms-mysql:
-        driver: local
+            APACHE_PORT: 8081

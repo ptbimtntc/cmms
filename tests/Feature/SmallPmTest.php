@@ -178,16 +178,20 @@ test('import reads order_number, plan_date, row, cycle, pic, remarks like the gr
         ',2026-11-09,Row 02,26W,,',
         'WO-1,2026-11-09,Row 01,26W,,',      // duplicate
         'WO-3,2026-11-09,Row 99,26W,,',      // unknown row
-        'WO-4,09/11/2026,Row 02,26W,,',      // bad date
+        'WO-4,bukan-tanggal,Row 02,26W,,',   // bad date
+        'WO-5,09-11-26,Row 02,26W,,',        // dd-mm-yy, as produced by the template
     ]);
 
     $this->actingAs($koord)
         ->post('/small-pm/import', ['tab' => 'cleaning-motor', 'file' => UploadedFile::fake()->createWithContent('small-pm.csv', $csv)])
-        ->assertSessionHas('small_pm_import_result', ['imported' => 2, 'duplicate' => 1, 'skipped' => 2]);
+        ->assertSessionHas('small_pm_import_result', ['imported' => 3, 'duplicate' => 1, 'skipped' => 2]);
 
     $first = SmallPmSchedule::where('order_number', 'WO-1')->sole();
     expect($first->pic_user_id)->toBe($pic->id);
     expect($first->due_date->toDateString())->toBe('2026-11-23');
+
+    $fifth = SmallPmSchedule::where('order_number', 'WO-5')->sole();
+    expect($fifth->plan_date->toDateString())->toBe('2026-11-09');
 });
 
 test('generate puts rows with machines into weeks, 4 a week, in row order', function () {
@@ -299,17 +303,18 @@ test('execute sets the status from action date vs due date and plans the next cy
     expect($s->fresh()->status)->toBe('FINISH ON TIME');
     expect(app(ActiveActivityResolver::class)->currentFor($pic))->toBeNull();
 
-    // 11 Nov 2026 + 26 weeks = Wed 12 May 2027 -> Monday 10 May.
+    // plan_date (9 Nov 2026) + 26 weeks = 10 May 2027, used exactly, no Monday snap.
     $next = SmallPmSchedule::where('generated_from_id', $s->id)->sole();
     expect($next->plan_date->toDateString())->toBe('2027-05-10');
     expect($next->due_date->toDateString())->toBe('2027-05-24');
     expect($next->status)->toBe('OPEN');
 
-    // Correcting the action date moves the untouched next schedule instead of adding another.
+    // Correcting the action date does NOT move the untouched next schedule: the anchor is
+    // the original schedule's plan_date (unchanged here), not the action_date it was executed on.
     $this->actingAs($pic)->post("/small-pm/{$s->id}/execute", ['action_date' => '2026-11-30']);
     expect($s->fresh()->status)->toBe('FINISH');
     expect(SmallPmSchedule::where('generated_from_id', $s->id)->count())->toBe(1);
-    expect($next->fresh()->plan_date->toDateString())->toBe('2027-05-31');
+    expect($next->fresh()->plan_date->toDateString())->toBe('2027-05-10');
 });
 
 test('a supervisor can list but not execute or plan', function () {

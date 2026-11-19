@@ -19,12 +19,16 @@
         ['key' => 'GLASS_BUREM', 'number' => '7', 'label' => 'LG Burem', 'detail' => 'Needs follow-up', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300'],
     ];
 
+    // Border stays per-condition so severity is still identifiable at a glance; the background
+    // gradient (red -> green) is shared by every unresolved condition to read as "heading
+    // toward Oke" once followed up. Oke itself is excluded: it is already the resolved state,
+    // so it keeps its flat green card instead of implying it still needs to improve.
     $lastTone = $last ? match ($last->condition) {
         'OKE' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
-        'PANTAU', 'OLI_KERUH' => 'border-amber-200 bg-amber-50 text-amber-800',
-        'HAMPIR_GARIS' => 'border-orange-200 bg-orange-50 text-orange-800',
-        'PAS_GARIS', 'GLASS_BUREM' => 'border-rose-200 bg-rose-50 text-rose-800',
-        'KRITIS' => 'border-red-300 bg-red-50 text-red-900',
+        'PANTAU', 'OLI_KERUH' => 'border-amber-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
+        'HAMPIR_GARIS' => 'border-orange-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
+        'PAS_GARIS', 'GLASS_BUREM' => 'border-rose-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
+        'KRITIS' => 'border-red-300 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
         default => 'border-border bg-surface text-text',
     } : null;
 @endphp
@@ -56,6 +60,7 @@
                     <div class="flex flex-col items-start gap-2 sm:items-end">
                         @if ($last->needsFollowUp() && $last->followUp)
                             <x-ui.badge tone="success">Followed up</x-ui.badge>
+                            <span class="text-xs opacity-80">by {{ $last->followUp->pic_name }}</span>
                         @elseif ($last->needsFollowUp())
                             <x-ui.badge tone="warning">Awaiting follow-up</x-ui.badge>
                         @endif

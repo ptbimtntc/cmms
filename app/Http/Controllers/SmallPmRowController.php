@@ -64,7 +64,11 @@ class SmallPmRowController extends Controller
             return back()->withErrors(['file' => 'Import failed. Check the column format and the file contents.']);
         }
 
-        return back()->with('small_pm_row_import_result', $import->result);
+        // Land back on the list sorted A-Z on the Row column, not whatever
+        // sort/order it happened to be on before the import, so the newly
+        // imported rows are easy to find right away.
+        return redirect()->route('small-pm-rows.index', ['sort' => 'name_asc'])
+            ->with('small_pm_row_import_result', $import->result);
     }
 
     public function show(SmallPmRow $smallPmRow)

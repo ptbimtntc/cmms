@@ -13,6 +13,8 @@
         $findingPalette = ['Kapstan 1' => '#2a78d6', 'Kapstan 2' => '#eb6834', 'Kapstan 3' => '#1baf7a', 'Kapstan 4' => '#eda100', 'Mainshaft' => '#e87ba4', 'Innershaft' => '#008300'];
         $findingColor = fn ($name) => $findingPalette[$name] ?? ($name === 'Lainnya' ? '#8a94a6' : '#c3cad5');
         $findingChart = $findingFrequency->map(fn ($row) => ['finding' => $row->finding, 'total' => $row->total, 'percent' => $row->percent, 'color' => $findingColor($row->finding)])->values();
+        $weekRangeLabel = $weekAudit['start']->format('d M').' - '.$weekAudit['end']->format('d M Y');
+        $weekComplete = $weekAudit['missing'] === 0;
     @endphp
 
     <div class="space-y-5">
@@ -57,6 +59,23 @@
                 <x-ui.button variant="ghost" href="{{ route('reports.oil-audit') }}" class="lg:min-h-9">Reset</x-ui.button>
             </div>
         </form>
+
+        {{-- Standing sanity check: always full oil-audit scope, independent of the filters above. --}}
+        <section class="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="ro-week-audit">
+            <div>
+                <h2 id="ro-week-audit" class="font-semibold text-text">Audited This Week</h2>
+                <p class="mt-0.5 text-xs text-text-muted">{{ $weekRangeLabel }} &middot; every machine in Oil Audit scope</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                @if ($weekComplete)
+                    <x-ui.badge tone="success">All machines audited</x-ui.badge>
+                @else
+                    <x-ui.badge tone="warning">{{ $weekAudit['missing'] }} not yet audited</x-ui.badge>
+                    <a href="{{ route('reports.oil-audit', ['not_audited_week' => 1]) }}" class="text-sm font-medium text-primary hover:text-primary-hover hover:underline">View them</a>
+                @endif
+                <span class="font-signage text-2xl font-semibold tabular-nums text-text">{{ $weekAudit['audited'] }}<span class="text-base font-normal text-text-muted">/{{ $weekAudit['total'] }}</span></span>
+            </div>
+        </section>
 
         @include('reports.partials.stats', ['cols' => 'grid-cols-1 sm:grid-cols-3', 'items' => [
             ['label' => 'Total Machines in Oil Audit Scope', 'value' => $summary['total_machines']],
@@ -144,6 +163,10 @@
                 </section>
             </div>
         </section>
+
+        @if ($notAuditedWeek)
+            <x-ui.alert tone="info">Showing only machines not yet audited this week ({{ $weekRangeLabel }}). <a href="{{ route('reports.oil-audit') }}" class="font-medium underline">Clear</a></x-ui.alert>
+        @endif
 
         @if ($machines->isEmpty())
             <x-ui.empty-state title="No machines found." description="Change the filters, or reset them to see every machine in scope." />
