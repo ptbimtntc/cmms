@@ -183,6 +183,7 @@ export function initWeeklyPlan(root) {
         boardError: root.querySelector('[data-board-error]'),
         saveStatus: root.querySelector('[data-save-status]'),
         autofill: root.querySelector('[data-autofill]'),
+        autofillMode: root.querySelector('[data-autofill-mode]'),
         reset: root.querySelector('[data-reset]'),
         picSync: root.querySelector('[data-pic-sync]'),
         picSyncStatus: root.querySelector('[data-pic-sync-status]'),
@@ -728,7 +729,7 @@ export function initWeeklyPlan(root) {
                         attr: 'data-copy="email"',
                     })}
                     <div class="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                        <button type="button" class="btn btn-outline min-h-11 lg:min-h-0" data-mark-sent>${sentAt ? 'Mark sent again' : 'Mark as senm'}</button>
+                        <button type="button" class="btn btn-outline min-h-11 lg:min-h-0" data-mark-sent>${sentAt ? 'Mark sent again' : 'Mark as sent'}</button>
                         <p class="text-sm text-text-muted">${sentLine}</p>
                     </div>
                     ${revisionHtml}
@@ -839,14 +840,16 @@ export function initWeeklyPlan(root) {
         setStatus('Filling the schedule...');
         try {
             await flush();
-            const result = await request(root.dataset.autofillUrl, 'POST');
+            const mode = els.autofillMode.value;
+            const result = await request(root.dataset.autofillUrl, 'POST', { mode });
             state = result.state;
             outputs = result;
             showError(null);
             const left = result.left > 0 ? `, ${result.left} did not fit because the daily limits are full` : '';
+            const emptyText = mode === 'nearest' ? 'No machine left in the pool to schedule' : 'No machine due this week is still unscheduled';
             setStatus(result.placed > 0 || result.left > 0
                 ? `${result.placed} machines placed${left}`
-                : 'No machine due this week is still unscheduled');
+                : emptyText);
             renderBoard();
             renderEmail();
         } catch (error) {

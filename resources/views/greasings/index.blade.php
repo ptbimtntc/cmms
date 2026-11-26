@@ -11,12 +11,13 @@
 @section('content')
     <div class="space-y-5">
         <x-ui.page-header title="Greasing Schedule" description="Greasing per machine group: start it, execute it, or assign a PIC.">
-            @if ($canManage)
-                <x-slot:actions>
+            <x-slot:actions>
+                <x-ui.button variant="outline" href="{{ route('reports.greasing') }}">View Report</x-ui.button>
+                @if ($canManage)
                     <x-ui.button variant="outline" id="greasing-import-open">Import CSV</x-ui.button>
                     <x-ui.button href="{{ route('greasings.create') }}">Add Schedule</x-ui.button>
-                </x-slot:actions>
-            @endif
+                @endif
+            </x-slot:actions>
         </x-ui.page-header>
 
         @if ($errors->has('file'))

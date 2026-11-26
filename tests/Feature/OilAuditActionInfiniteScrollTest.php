@@ -215,7 +215,7 @@ test('load more does not recompute or ship the dashboard summary at all', functi
 
     $after = $this->actingAs($admin)->get(route('oil-audits.report'))->viewData('summary');
 
-    expect($after)->toBe($before);
+    expect($after)->toEqual($before);
 });
 
 test('view and delete actions still work from a load-more rendered card', function () {

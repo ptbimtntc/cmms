@@ -303,7 +303,7 @@ test('finding status filter separates open from completed findings', function ()
         ->and($noFindingResponse->viewData('audits')->pluck('id')->all())->toBe([$noFinding->id]);
 });
 
-test('average action duration only counts findings with an action date', function () {
+test('action duration breakdown only counts findings with an action date', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $machine = actionOilAuditMachine();
 
@@ -322,10 +322,64 @@ test('average action duration only counts findings with an action date', functio
 
     $response->assertOk();
     $summary = $response->viewData('summary');
+    $byCondition = $summary['action_duration_by_condition']->keyBy('code');
 
     expect($summary['total_finding'])->toBe(2)
         ->and($summary['findings_with_action'])->toBe(1)
-        ->and($summary['average_action_duration'])->toBe(3.0);
+        ->and($byCondition['KRITIS']['value'])->toBe(3.0);
+});
+
+test('pantau is included in the action duration breakdown even though it is not a required follow-up condition', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = actionOilAuditMachine();
+
+    $audit = actionOilAudit($machine, ['condition' => 'PANTAU', 'audited_at' => '2026-08-01']);
+    OilAuditFollowUp::create([
+        'oil_audit_id' => $audit->id,
+        'refill_oil' => true,
+        'full_check' => false,
+        'pic_name' => 'Andi',
+        'actioned_at' => '2026-08-03',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report'));
+
+    $response->assertOk();
+    $byCondition = $response->viewData('summary')['action_duration_by_condition']->keyBy('code');
+
+    expect($byCondition->has('PANTAU'))->toBeTrue()
+        ->and($byCondition['PANTAU']['value'])->toBe(2.0);
+});
+
+test('conditions without any completed action are hidden from the duration breakdown', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = actionOilAuditMachine();
+    actionOilAudit($machine, ['condition' => 'KRITIS', 'audited_at' => '2026-08-01']); // no follow-up
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report'));
+
+    $response->assertOk();
+    $codes = $response->viewData('summary')['action_duration_by_condition']->pluck('code');
+
+    expect($codes)->not->toContain('KRITIS');
+});
+
+test('condition filter narrows the action duration breakdown too', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = actionOilAuditMachine();
+
+    $kritis = actionOilAudit($machine, ['condition' => 'KRITIS', 'audited_at' => '2026-08-01']);
+    OilAuditFollowUp::create(['oil_audit_id' => $kritis->id, 'problem' => 'Kapstan 1', 'action_taken' => 'Fixed', 'pic_name' => 'Andi', 'actioned_at' => '2026-08-03']);
+
+    $pantau = actionOilAudit($machine, ['condition' => 'PANTAU', 'audited_at' => '2026-08-01']);
+    OilAuditFollowUp::create(['oil_audit_id' => $pantau->id, 'refill_oil' => true, 'full_check' => false, 'pic_name' => 'Andi', 'actioned_at' => '2026-08-02']);
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report', ['condition' => ['KRITIS']]));
+
+    $response->assertOk();
+    $codes = $response->viewData('summary')['action_duration_by_condition']->pluck('code');
+
+    expect($codes->all())->toBe(['KRITIS']);
 });
 
 test('area and machine type filters are no longer offered on the action page', function () {

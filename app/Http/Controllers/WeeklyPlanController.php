@@ -120,7 +120,11 @@ class WeeklyPlanController extends Controller
     {
         $this->authorizePlan($request->user(), $plan);
 
-        $result = $autofill->fill($plan, $request->user());
+        $mode = $request->input('mode') === AutoFillService::MODE_NEAREST
+            ? AutoFillService::MODE_NEAREST
+            : AutoFillService::MODE_DUE_THIS_WEEK;
+
+        $result = $autofill->fill($plan, $request->user(), $mode);
 
         return response()->json($result + $this->payload($plan->fresh()));
     }

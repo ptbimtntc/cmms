@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    @include('partials.appearance-init')
+
     <title>FreeDOMS</title>
 
     <link rel="icon" href="{{ asset('FreeDOMS.ico') }}" sizes="any">
@@ -118,11 +120,9 @@
 
     </div>
 
-    {{-- Only the Livewire pages rendered through $slot use Flux components, so
-         its runtime is loaded for those and skipped on every Blade page. --}}
-    @isset($slot)
-        @fluxScripts
-    @endisset
+    {{-- Always loaded now (not just for $slot/Livewire pages): the topbar's
+         dark-mode toggle needs the $flux Alpine magic on every page. --}}
+    @fluxScripts
 </body>
 
 </html>

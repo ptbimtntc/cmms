@@ -17,8 +17,8 @@
 
         <x-ui.page-header title="Weekly PM Plan {{ $areaModel->name }}" description="Week {{ $weekLabel }}. This plan is separate from PM Schedule: the plan date and PIC there do not change.">
             <x-slot:actions>
-                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $prevWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Previous webelumnya</x-ui.button>
-                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $nextWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Next werikutnya</x-ui.button>
+                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $prevWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Previous</x-ui.button>
+                <x-ui.button variant="outline" href="{{ route('weekly-plan.show', ['area' => $areaModel->slug, 'week' => $nextWeek]) }}" class="flex-1 sm:flex-none lg:min-h-9">Next</x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>
 
@@ -54,7 +54,14 @@
                 <div class="grid gap-2 sm:flex sm:shrink-0 sm:flex-wrap sm:items-center sm:gap-3 xl:justify-end">
                     <button type="button" class="btn btn-outline min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-pic-sync>Apply the PIC to PM Schedule</button>
                     <button type="button" class="btn btn-outline min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-reset>Clear every day</button>
-                    <button type="button" class="btn btn-primary min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-autofill>Auto fill machines due this week</button>
+                    <div class="flex min-h-11 items-center gap-2 lg:min-h-9">
+                        <label for="wp-autofill-mode" class="sr-only">Auto fill source</label>
+                        <select id="wp-autofill-mode" data-autofill-mode class="select min-h-11 py-1 text-sm lg:min-h-9">
+                            <option value="due_this_week">Due this week</option>
+                            <option value="nearest">Nearest schedule</option>
+                        </select>
+                        <button type="button" class="btn btn-primary min-h-11 whitespace-normal sm:whitespace-nowrap lg:min-h-9" data-autofill>Auto fill</button>
+                    </div>
                 </div>
             </div>
 

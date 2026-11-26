@@ -11,7 +11,9 @@ use App\Models\SmallPmRow;
 use App\Models\SmallPmSchedule;
 use App\Models\User;
 use App\Services\SmallPm\SmallPmScheduler;
+use App\Services\SmallPmKpiCalculator;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,19 +41,30 @@ class SmallPmController extends Controller
     /** Every dead-blower finding of every Ganti Filter Panel schedule, in one list. */
     public const FINDINGS_TAB = 'temuan-blower';
 
+    /** Completion KPI per task type, plus the all-time dead-blower ranking. */
+    public const DASHBOARD_TAB = 'dashboard';
+
+    /** A machine only makes the "repeat offender" ranking past this many dead-blower findings. */
+    private const BLOWER_REPEAT_THRESHOLD = 2;
+
     public function __construct(private readonly SmallPmScheduler $scheduler) {}
 
     public function index(Request $request)
     {
         $user = $request->user();
         $tab = self::resolveTab($request->query('tab'));
-        $tabs = collect(self::TABS)->map(fn (array $t) => ['label' => SmallPmRow::TASK_TYPES[$t['task']], 'available' => $t['available'], 'count' => null])->all();
+        $tabs = [self::DASHBOARD_TAB => ['label' => 'Dashboard', 'available' => true, 'count' => null]];
+        $tabs += collect(self::TABS)->map(fn (array $t) => ['label' => SmallPmRow::TASK_TYPES[$t['task']], 'available' => $t['available'], 'count' => null])->all();
         $tabs[self::FINDINGS_TAB] = [
             'label' => 'Dead Blower Findings',
             'available' => true,
             'count' => SmallPmFinding::where('status', 'OPEN')->whereHas('schedule', fn ($q) => $q->visibleToUser($user))->count(),
         ];
         $canManage = $user->isAdmin() || $user->isKoordinator();
+
+        if ($tab === self::DASHBOARD_TAB) {
+            return $this->dashboardTab($request, compact('tab', 'tabs', 'canManage'));
+        }
 
         if ($tab === self::FINDINGS_TAB) {
             return $this->findingsTab($request, compact('tab', 'tabs', 'canManage'));
@@ -351,6 +364,147 @@ class SmallPmController extends Controller
             ->with('success', 'Execution saved.'.($next ? ' Next schedule: '.$next->plan_date->format('d M Y').'.' : ''));
     }
 
+    /**
+     * Completion KPI (closing %, completion %) per task type for the
+     * selected year, plus the all-time top 10 machines by dead-blower
+     * finding count (every finding counts, OPEN or COMPLETED, since the
+     * question is "which machine keeps failing", not "what's still open").
+     *
+     * @param  array<string, mixed>  $shared
+     */
+    private function dashboardTab(Request $request, array $shared)
+    {
+        $user = $request->user();
+        $periodType = $request->input('period_type') === 'yearly' ? 'yearly' : 'monthly';
+        $year = (int) $request->input('year', now()->year);
+        // Multi-select month, only meaningful in 'monthly' period type: empty
+        // selection means "every month of the year", same rule as the
+        // Greasing Report (see GreasingReportController::index()).
+        $selectedMonths = collect((array) $request->input('month', []))
+            ->map(fn ($m) => (int) $m)
+            ->filter(fn ($m) => $m >= 1 && $m <= 12)
+            ->values()
+            ->all();
+        $area = $user->seesAllAreas() && $user->selectableAreaNames()->contains($request->input('area'))
+            ? $request->input('area')
+            : null;
+
+        $kpis = collect(SmallPmRow::TASK_TYPES)->mapWithKeys(function (string $label, string $taskType) use ($user, $periodType, $year, $selectedMonths, $area) {
+            $statusCounts = $this->dashboardPeriodQuery($user, $periodType, $year, $selectedMonths, $area, $taskType)
+                ->select('status')->selectRaw('count(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status');
+
+            return [$taskType => ['label' => $label, 'tab' => $this->tabKeyFor($taskType)] + SmallPmKpiCalculator::fromStatusCounts($statusCounts)];
+        });
+
+        // Yearly Jan-Dec trend per task type, only built in yearly view.
+        $monthlyTrend = $periodType === 'yearly'
+            ? collect(SmallPmRow::TASK_TYPES)->mapWithKeys(fn (string $label, string $taskType) => [
+                $taskType => $this->monthlyTrendFor($user, $year, $area, $taskType),
+            ])
+            : null;
+
+        $openCounts = collect(SmallPmRow::TASK_TYPES)->mapWithKeys(fn (string $label, string $taskType) => [
+            $taskType => $this->dashboardScope($user, $area)->where('task_type', $taskType)->where('status', 'OPEN')->count(),
+        ]);
+
+        $openFindings = SmallPmFinding::where('status', 'OPEN')
+            ->whereHas('schedule', fn (Builder $q) => $this->applyDashboardVisibility($q, $user, $area)->where('task_type', SmallPmRow::TASK_FILTER_PANEL))
+            ->count();
+
+        $topBlowerRows = SmallPmFinding::query()
+            ->whereHas('schedule', fn (Builder $q) => $this->applyDashboardVisibility($q, $user, $area)->where('task_type', SmallPmRow::TASK_FILTER_PANEL))
+            ->join('machines', 'machines.id', '=', 'small_pm_findings.machine_id')
+            ->selectRaw('machines.machine_number as label, count(*) as total')
+            ->groupBy('machines.id', 'machines.machine_number')
+            ->having('total', '>', self::BLOWER_REPEAT_THRESHOLD)
+            ->orderByDesc('total')->orderBy('label')
+            ->limit(10)
+            ->get();
+
+        $maxBlower = (float) ($topBlowerRows->max('total') ?: 0);
+        $topBlowerMachines = $topBlowerRows->map(fn ($row) => [
+            'label' => $row->label,
+            'value' => (int) $row->total,
+            'percent' => $maxBlower > 0 ? round(((float) $row->total / $maxBlower) * 100) : 0,
+        ]);
+
+        $yearScope = $this->dashboardScope($user, $area);
+        $minPlanDate = (clone $yearScope)->min('plan_date');
+        $maxPlanDate = (clone $yearScope)->max('plan_date');
+        $years = $minPlanDate
+            ? range((int) Carbon::parse($maxPlanDate)->format('Y'), (int) Carbon::parse($minPlanDate)->format('Y'))
+            : [];
+        if (! in_array($year, $years, true)) {
+            $years[] = $year;
+        }
+        rsort($years);
+
+        return view('small-pm.index', $shared + [
+            'available' => true,
+            'kpis' => $kpis,
+            'monthlyTrend' => $monthlyTrend,
+            'openCounts' => $openCounts,
+            'openFindings' => $openFindings,
+            'topBlowerMachines' => $topBlowerMachines,
+            'periodType' => $periodType,
+            'year' => $year,
+            'years' => $years,
+            'selectedMonths' => $selectedMonths,
+            'months' => collect(range(1, 12))->mapWithKeys(fn (int $m) => [$m => Carbon::create(null, $m, 1)->format('F')]),
+            'area' => $area,
+            'areas' => $user->selectableAreaNames(),
+            'isAdmin' => $user->seesAllAreas(),
+        ]);
+    }
+
+    private function dashboardScope(User $user, ?string $area): Builder
+    {
+        return $this->applyDashboardVisibility(SmallPmSchedule::query(), $user, $area);
+    }
+
+    private function applyDashboardVisibility(Builder $query, User $user, ?string $area): Builder
+    {
+        $query->visibleToUser($user);
+
+        if ($area) {
+            $query->whereHas('row.area', fn ($q) => $q->where('name', $area));
+        }
+
+        return $query;
+    }
+
+    /** @param  list<int>  $months */
+    private function dashboardPeriodQuery(User $user, string $periodType, int $year, array $months, ?string $area, string $taskType): Builder
+    {
+        $query = $this->dashboardScope($user, $area)->where('task_type', $taskType)->whereYear('plan_date', $year);
+
+        if ($periodType === 'monthly' && ! empty($months)) {
+            $query->where(function (Builder $q) use ($months) {
+                foreach ($months as $m) {
+                    $q->orWhereMonth('plan_date', $m);
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    private function monthlyTrendFor(User $user, int $year, ?string $area, string $taskType): Collection
+    {
+        $yearRecords = $this->dashboardPeriodQuery($user, 'yearly', $year, [], $area, $taskType)->get(['plan_date', 'status']);
+
+        return collect(range(1, 12))->map(function (int $m) use ($yearRecords) {
+            $counts = $yearRecords->filter(fn ($s) => $s->plan_date->month === $m)->countBy('status');
+
+            return array_merge(SmallPmKpiCalculator::fromStatusCounts($counts), [
+                'month' => $m,
+                'label' => Carbon::create(null, $m, 1)->format('M'),
+            ]);
+        });
+    }
+
     /** @param  array<string, mixed>  $shared */
     private function findingsTab(Request $request, array $shared)
     {
@@ -451,7 +605,7 @@ class SmallPmController extends Controller
 
     public static function resolveTab(?string $tab): string
     {
-        return array_key_exists((string) $tab, self::TABS) || $tab === self::FINDINGS_TAB
+        return array_key_exists((string) $tab, self::TABS) || $tab === self::FINDINGS_TAB || $tab === self::DASHBOARD_TAB
             ? (string) $tab
             : array_key_first(self::TABS);
     }
@@ -467,7 +621,12 @@ class SmallPmController extends Controller
 
     private function tabFor(SmallPmSchedule $schedule): string
     {
-        return (string) collect(self::TABS)->search(fn (array $t) => $t['task'] === $schedule->task_type) ?: array_key_first(self::TABS);
+        return $this->tabKeyFor($schedule->task_type);
+    }
+
+    private function tabKeyFor(string $taskType): string
+    {
+        return (string) collect(self::TABS)->search(fn (array $t) => $t['task'] === $taskType) ?: array_key_first(self::TABS);
     }
 
     /** @return array<string, mixed> */

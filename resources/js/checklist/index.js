@@ -37,12 +37,12 @@ function initChecklistRemarks() {
         const button = document.querySelector(`.remark-btn[data-index="${currentRemarkIndex}"]`);
 
         if (textarea.value.trim() !== '') {
-            button?.classList.remove('text-gray-500');
-            button?.classList.add('text-green-600');
+            button?.classList.remove('text-text-muted');
+            button?.classList.add('text-success');
             button.textContent = 'Edit note';
         } else {
-            button?.classList.remove('text-green-600');
-            button?.classList.add('text-gray-500');
+            button?.classList.remove('text-success');
+            button?.classList.add('text-text-muted');
             button.textContent = 'Add note';
         }
 

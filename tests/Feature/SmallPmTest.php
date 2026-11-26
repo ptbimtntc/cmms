@@ -2,11 +2,13 @@
 
 use App\Models\Area;
 use App\Models\Machine;
+use App\Models\SmallPmFinding;
 use App\Models\SmallPmRow;
 use App\Models\SmallPmSchedule;
 use App\Models\User;
 use App\Services\ActiveActivityResolver;
 use App\Services\SmallPm\SmallPmScheduler;
+use App\Services\SmallPmKpiCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 
@@ -570,4 +572,94 @@ test('a PIC or supervisor cannot import rows', function () {
 
 test('the row import template downloads', function () {
     $this->actingAs(spmUser(User::ROLE_ADMIN, null))->get(route('import-templates.download', 'small-pm-row'))->assertOk();
+});
+
+// --- Dashboard tab -----------------------------------------------------
+
+function spmFinding(Machine $machine, SmallPmRow $row, string $status = 'OPEN'): SmallPmFinding
+{
+    $schedule = spmSchedule($row, ['task_type' => SmallPmRow::TASK_FILTER_PANEL]);
+
+    return SmallPmFinding::create(['small_pm_schedule_id' => $schedule->id, 'machine_id' => $machine->id, 'status' => $status]);
+}
+
+test('the dashboard tab shows closing and completion percent per task type for the selected year', function () {
+    $admin = spmUser(User::ROLE_ADMIN, null);
+    $row = spmRow(1);
+
+    spmSchedule($row, ['task_type' => SmallPmRow::TASK_CLEANING_MOTOR, 'status' => 'FINISH ON TIME', 'plan_date' => '2026-03-01']);
+    spmSchedule($row, ['task_type' => SmallPmRow::TASK_CLEANING_MOTOR, 'status' => 'FINISH', 'plan_date' => '2026-04-01']);
+    spmSchedule($row, ['task_type' => SmallPmRow::TASK_CLEANING_MOTOR, 'status' => 'OPEN', 'plan_date' => '2026-05-01']);
+    spmSchedule($row, ['task_type' => SmallPmRow::TASK_CLEANING_MOTOR, 'status' => 'OPEN', 'plan_date' => '2026-06-01']);
+    // A different year must not leak into the 2026 numbers.
+    spmSchedule($row, ['task_type' => SmallPmRow::TASK_CLEANING_MOTOR, 'status' => 'FINISH ON TIME', 'plan_date' => '2025-06-01']);
+
+    $expected = SmallPmKpiCalculator::fromCounts(1, 1, 2);
+
+    $response = $this->actingAs($admin)->get('/small-pm?tab=dashboard&year=2026')->assertOk();
+    $response->assertSee($expected['closing_percent'].'%');
+    $response->assertSee($expected['completion_percent'].'%');
+});
+
+test('the dashboard tab completion can be viewed yearly (with a Jan-Dec trend) or narrowed to one month, like the Greasing Report', function () {
+    $admin = spmUser(User::ROLE_ADMIN, null);
+    $row = spmRow(1);
+
+    spmSchedule($row, ['task_type' => SmallPmRow::TASK_CLEANING_MOTOR, 'status' => 'FINISH ON TIME', 'plan_date' => '2026-01-10']);
+    spmSchedule($row, ['task_type' => SmallPmRow::TASK_CLEANING_MOTOR, 'status' => 'OPEN', 'plan_date' => '2026-08-10']);
+
+    // Yearly: both schedules combine into one KPI, with a trend bar per month.
+    $yearly = SmallPmKpiCalculator::fromCounts(1, 0, 1);
+    $yearlyResponse = $this->actingAs($admin)->get('/small-pm?tab=dashboard&period_type=yearly&year=2026')->assertOk();
+    $yearlyResponse->assertSee($yearly['closing_percent'].'%');
+    $yearlyResponse->assertSeeInOrder(['Jan', 'Aug']);
+
+    // Monthly, narrowed to January only: just the January schedule counts.
+    $january = SmallPmKpiCalculator::fromCounts(1, 0, 0);
+    $janResponse = $this->actingAs($admin)->get('/small-pm?tab=dashboard&period_type=monthly&year=2026&month[]=1')->assertOk();
+    $janResponse->assertSee($january['closing_percent'].'%');
+
+    // Monthly, narrowed to August only: the still-open schedule, 0% closing.
+    $august = SmallPmKpiCalculator::fromCounts(0, 0, 1);
+    $augResponse = $this->actingAs($admin)->get('/small-pm?tab=dashboard&period_type=monthly&year=2026&month[]=8')->assertOk();
+    $augResponse->assertSee($august['closing_percent'].'%');
+});
+
+test('the dashboard tab ranks machines by all-time dead-blower finding count, open and completed alike, above the repeat threshold', function () {
+    $admin = spmUser(User::ROLE_ADMIN, null);
+    $row = spmRow(1, ['WORST', 'MID', 'ONCE']);
+    $worst = Machine::where('machine_number', 'WORST')->first();
+    $mid = Machine::where('machine_number', 'MID')->first();
+    $once = Machine::where('machine_number', 'ONCE')->first();
+
+    spmFinding($worst, $row, 'OPEN');
+    spmFinding($worst, $row, 'COMPLETED');
+    spmFinding($worst, $row, 'COMPLETED');
+    spmFinding($worst, $row, 'COMPLETED');
+    spmFinding($mid, $row, 'COMPLETED');
+    spmFinding($mid, $row, 'OPEN');
+    spmFinding($mid, $row, 'OPEN');
+    // Only once: stays off the "repeat offender" ranking entirely.
+    spmFinding($once, $row, 'OPEN');
+
+    $response = $this->actingAs($admin)->get('/small-pm?tab=dashboard')->assertOk();
+    $response->assertSeeInOrder(['WORST', 'MID']);
+    $response->assertDontSee('ONCE');
+});
+
+test('a koordinator only sees their own area on the dashboard tab', function () {
+    $wwdKoord = spmUser(User::ROLE_KOORDINATOR, 'WWD');
+    $wwdRow = spmRow(1, ['WM1'], 'WWD');
+    $bulRow = spmRow(2, ['BM1'], 'BUL');
+
+    $wm1 = Machine::where('machine_number', 'WM1')->first();
+    $bm1 = Machine::where('machine_number', 'BM1')->first();
+    foreach (range(1, 3) as $i) {
+        spmFinding($wm1, $wwdRow, 'OPEN');
+        spmFinding($bm1, $bulRow, 'OPEN');
+    }
+
+    $response = $this->actingAs($wwdKoord)->get('/small-pm?tab=dashboard')->assertOk();
+    $response->assertSee('WM1');
+    $response->assertDontSee('BM1');
 });

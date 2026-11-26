@@ -5,13 +5,14 @@
 @php
     $fullWidth = true;
     $isFindingsTab = $tab === \App\Http\Controllers\SmallPmController::FINDINGS_TAB;
+    $isDashboardTab = $tab === \App\Http\Controllers\SmallPmController::DASHBOARD_TAB;
     $hasFilters = request()->hasAny(['search', 'row_id', 'status']);
 @endphp
 
 @section('content')
     <div class="space-y-5">
         <x-ui.page-header title="Small PM" description="PM schedules per machine row. Rows are set up in Master Data, Small PM Rows.">
-            @if ($canManage && $available && ! $isFindingsTab)
+            @if ($canManage && $available && ! $isFindingsTab && ! $isDashboardTab)
                 <x-slot:actions>
                     <x-ui.button variant="outline" id="small-pm-import-open">Import</x-ui.button>
                     <x-ui.button href="{{ route('small-pm.create', ['tab' => $tab]) }}">Add Schedule</x-ui.button>
@@ -59,7 +60,9 @@
             </x-ui.alert>
         @endif
 
-        @if ($isFindingsTab)
+        @if ($isDashboardTab)
+            @include('small-pm._dashboard-tab')
+        @elseif ($isFindingsTab)
             @include('small-pm._findings-tab')
         @elseif (! $available)
             <x-ui.empty-state :title="$tabs[$tab]['label'] . ' is not available yet.'"
@@ -300,7 +303,7 @@
         @endif
     </div>
 
-    @if ($canManage && $available && ! $isFindingsTab)
+    @if ($canManage && $available && ! $isFindingsTab && ! $isDashboardTab)
         <x-ui.modal id="small-pm-import-modal" title="Import Small PM schedules" description="Upload a .csv, .xlsx, or .xls file matching the Small PM import template for this tab.">
             <form action="{{ route('small-pm.import') }}" method="POST" enctype="multipart/form-data" class="mt-5 space-y-4">
                 @csrf

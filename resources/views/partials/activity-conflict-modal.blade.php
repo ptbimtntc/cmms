@@ -10,37 +10,36 @@
     @php($conflict = session('activity_conflict'))
     <div id="activity-conflict-modal"
         class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 class="text-lg font-semibold text-slate-800">Active Activity Conflict</h3>
+        <div class="card w-full max-w-md p-6 shadow-popover">
+            <h3 class="text-lg font-semibold text-text">Active Activity Conflict</h3>
 
             <dl class="mt-4 space-y-1.5 text-sm">
                 <div class="flex justify-between gap-4">
-                    <dt class="font-medium text-slate-500">PIC</dt>
-                    <dd class="text-slate-800">{{ $conflict['pic'] }}</dd>
+                    <dt class="font-medium text-text-muted">PIC</dt>
+                    <dd class="text-text">{{ $conflict['pic'] }}</dd>
                 </div>
                 <div class="flex justify-between gap-4">
-                    <dt class="font-medium text-slate-500">Current Activity</dt>
-                    <dd class="text-slate-800">{{ $conflict['current'] }}</dd>
+                    <dt class="font-medium text-text-muted">Current Activity</dt>
+                    <dd class="text-text">{{ $conflict['current'] }}</dd>
                 </div>
                 @if (! empty($conflict['machine']))
                     <div class="flex justify-between gap-4">
-                        <dt class="font-medium text-slate-500">Machine</dt>
-                        <dd class="text-slate-800">{{ $conflict['machine'] }}</dd>
+                        <dt class="font-medium text-text-muted">Machine</dt>
+                        <dd class="text-text">{{ $conflict['machine'] }}</dd>
                     </div>
                 @endif
                 <div class="flex justify-between gap-4">
-                    <dt class="font-medium text-slate-500">Start Time</dt>
-                    <dd class="text-slate-800">{{ $conflict['started_at'] }}</dd>
+                    <dt class="font-medium text-text-muted">Start Time</dt>
+                    <dd class="text-text">{{ $conflict['started_at'] }}</dd>
                 </div>
             </dl>
 
-            <p class="mt-4 text-sm text-slate-700">
+            <p class="mt-4 text-sm text-text-muted">
                 You already have an active activity. Do you want to end the current activity and start this one?
             </p>
 
             <div class="mt-5 flex justify-end gap-2">
-                <button type="button" id="activity-conflict-cancel"
-                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                <button type="button" id="activity-conflict-cancel" class="btn btn-outline">
                     CANCEL
                 </button>
                 <form method="POST" action="{{ $conflict['action'] }}">
@@ -51,8 +50,7 @@
                     @foreach (($conflict['extra_fields'] ?? []) as $field => $value)
                         <input type="hidden" name="{{ $field }}" value="{{ $value }}">
                     @endforeach
-                    <button type="submit"
-                        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                    <button type="submit" class="btn btn-danger">
                         END &amp; START
                     </button>
                 </form>

@@ -23,6 +23,29 @@
         <div class="flex shrink-0 items-center justify-end gap-1 sm:gap-3">
             @include('partials.sync-status')
 
+            {{-- $flux.dark is the getter/setter Flux's own flux.js registers
+                 (partials/appearance-init.blade.php primes window.Flux before
+                 that script loads). Settings > Appearance reads/writes the
+                 same localStorage key, so both stay in sync. --}}
+            <button
+                type="button"
+                x-data
+                @click="$flux.dark = !$flux.dark"
+                :aria-pressed="$flux.dark.toString()"
+                aria-label="Toggle dark mode"
+                class="flex h-11 w-11 items-center justify-center rounded-full text-text-muted transition hover:bg-surface-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+                <svg x-show="!$flux.dark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                </svg>
+                <svg x-show="$flux.dark" x-cloak xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5" aria-hidden="true">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+            </button>
+
             <div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false">
                 <button
                     type="button"

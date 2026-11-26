@@ -8,15 +8,18 @@
     $last = $machine->latestOilAudit;
 
     // Condition scale, mildest to worst. Colours carry the severity (they are status, not
-    // decoration) and match the "last check" card so a result reads at a glance.
+    // decoration) and match the "last check" card so a result reads at a glance. Five raw hue
+    // families (emerald/amber/orange/rose/red) give finer severity steps than the app's four
+    // semantic status tokens, so dark mode gets its own dark: variant per family here instead
+    // of collapsing through the semantic layer and losing that distinction.
     $conditions = [
-        ['key' => 'OKE', 'number' => '1', 'label' => 'Oke', 'detail' => 'Safe', 'class' => 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-500 hover:bg-emerald-100 focus-visible:ring-emerald-300'],
-        ['key' => 'PANTAU', 'number' => '2', 'label' => 'Pantau', 'detail' => 'Check regularly', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300'],
-        ['key' => 'HAMPIR_GARIS', 'number' => '3', 'label' => 'Hampir Garis', 'detail' => 'Needs action', 'class' => 'border-orange-200 bg-orange-50 text-orange-800 hover:border-orange-500 hover:bg-orange-100 focus-visible:ring-orange-300'],
-        ['key' => 'PAS_GARIS', 'number' => '4', 'label' => 'Pas Garis', 'detail' => 'Needs action', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300'],
-        ['key' => 'KRITIS', 'number' => '5', 'label' => 'Kritis', 'detail' => 'Action now', 'class' => 'border-red-300 bg-red-50 text-red-900 hover:border-red-600 hover:bg-red-100 focus-visible:ring-red-300'],
-        ['key' => 'OLI_KERUH', 'number' => '6', 'label' => 'Oli Hitam', 'detail' => 'Check oil quality', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300'],
-        ['key' => 'GLASS_BUREM', 'number' => '7', 'label' => 'LG Burem', 'detail' => 'Needs follow-up', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300'],
+        ['key' => 'OKE', 'number' => '1', 'label' => 'Oke', 'detail' => 'Safe', 'class' => 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-500 hover:bg-emerald-100 focus-visible:ring-emerald-300 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:border-emerald-500 dark:hover:bg-emerald-900 dark:focus-visible:ring-emerald-600'],
+        ['key' => 'PANTAU', 'number' => '2', 'label' => 'Pantau', 'detail' => 'Check regularly', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:border-amber-500 dark:hover:bg-amber-900 dark:focus-visible:ring-amber-600'],
+        ['key' => 'HAMPIR_GARIS', 'number' => '3', 'label' => 'Hampir Garis', 'detail' => 'Needs action', 'class' => 'border-orange-200 bg-orange-50 text-orange-800 hover:border-orange-500 hover:bg-orange-100 focus-visible:ring-orange-300 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200 dark:hover:border-orange-500 dark:hover:bg-orange-900 dark:focus-visible:ring-orange-600'],
+        ['key' => 'PAS_GARIS', 'number' => '4', 'label' => 'Pas Garis', 'detail' => 'Needs action', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:border-rose-500 dark:hover:bg-rose-900 dark:focus-visible:ring-rose-600'],
+        ['key' => 'KRITIS', 'number' => '5', 'label' => 'Kritis', 'detail' => 'Action now', 'class' => 'border-red-300 bg-red-50 text-red-900 hover:border-red-600 hover:bg-red-100 focus-visible:ring-red-300 dark:border-red-700 dark:bg-red-950 dark:text-red-100 dark:hover:border-red-500 dark:hover:bg-red-900 dark:focus-visible:ring-red-600'],
+        ['key' => 'OLI_KERUH', 'number' => '6', 'label' => 'Oli Hitam', 'detail' => 'Check oil quality', 'class' => 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-500 hover:bg-amber-100 focus-visible:ring-amber-300 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:hover:border-amber-500 dark:hover:bg-amber-900 dark:focus-visible:ring-amber-600'],
+        ['key' => 'GLASS_BUREM', 'number' => '7', 'label' => 'LG Burem', 'detail' => 'Needs follow-up', 'class' => 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-500 hover:bg-rose-100 focus-visible:ring-rose-300 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-200 dark:hover:border-rose-500 dark:hover:bg-rose-900 dark:focus-visible:ring-rose-600'],
     ];
 
     // Border stays per-condition so severity is still identifiable at a glance; the background
@@ -24,11 +27,11 @@
     // toward Oke" once followed up. Oke itself is excluded: it is already the resolved state,
     // so it keeps its flat green card instead of implying it still needs to improve.
     $lastTone = $last ? match ($last->condition) {
-        'OKE' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
-        'PANTAU', 'OLI_KERUH' => 'border-amber-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
-        'HAMPIR_GARIS' => 'border-orange-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
-        'PAS_GARIS', 'GLASS_BUREM' => 'border-rose-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
-        'KRITIS' => 'border-red-300 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900',
+        'OKE' => 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+        'PANTAU', 'OLI_KERUH' => 'border-amber-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900 dark:border-amber-800 dark:from-red-900 dark:to-emerald-900 dark:text-slate-100',
+        'HAMPIR_GARIS' => 'border-orange-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900 dark:border-orange-800 dark:from-red-900 dark:to-emerald-900 dark:text-slate-100',
+        'PAS_GARIS', 'GLASS_BUREM' => 'border-rose-200 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900 dark:border-rose-800 dark:from-red-900 dark:to-emerald-900 dark:text-slate-100',
+        'KRITIS' => 'border-red-300 bg-linear-to-r from-red-200 to-emerald-200 text-slate-900 dark:border-red-700 dark:from-red-900 dark:to-emerald-900 dark:text-slate-100',
         default => 'border-border bg-surface text-text',
     } : null;
 @endphp
@@ -103,7 +106,7 @@
                         <button type="submit" @disabled($viewOnly)
                             aria-keyshortcuts="{{ $condition['number'] }}"
                             class="flex h-full min-h-28 w-full flex-col items-start rounded-card border-2 p-4 text-left transition-colors focus:outline-none focus-visible:ring-4 {{ $condition['class'] }}">
-                            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-xs font-bold shadow-card" aria-hidden="true">{{ $condition['number'] }}</span>
+                            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-xs font-bold text-current shadow-card dark:bg-white/10" aria-hidden="true">{{ $condition['number'] }}</span>
                             <span class="mt-3 text-base font-bold">{{ $condition['label'] }}</span>
                             <span class="mt-1 text-xs font-medium opacity-80">{{ $condition['detail'] }}</span>
                         </button>

@@ -6,7 +6,11 @@ use App\Models\User;
 use App\Models\WeeklyPmPlan;
 
 /**
- * Places the machines that are due by Friday onto Monday..Friday.
+ * Places machines from the pool onto Monday..Friday, in one of two modes:
+ *  - "due_this_week" (default): only machines due by Friday or carried over
+ *    from last week.
+ *  - "nearest": the whole pool, so a week with few machines due still gets
+ *    the day limits filled, starting with the soonest due date.
  *
  * Rules, in order:
  *  1. Machines already placed by hand stay where they are.
@@ -24,13 +28,17 @@ use App\Models\WeeklyPmPlan;
  */
 class AutoFillService
 {
+    public const MODE_DUE_THIS_WEEK = 'due_this_week';
+
+    public const MODE_NEAREST = 'nearest';
+
     public function __construct(
         private readonly PlanBoardService $board,
         private readonly PlanSaveService $saver,
     ) {}
 
     /** @return array{placed: int, left: int} */
-    public function fill(WeeklyPmPlan $plan, User $user): array
+    public function fill(WeeklyPmPlan $plan, User $user, string $mode = self::MODE_DUE_THIS_WEEK): array
     {
         $state = $this->board->state($plan);
         $days = array_column($state['days'], 'date');
@@ -38,7 +46,7 @@ class AutoFillService
 
         $placed = collect($state['items'])->filter(fn ($i) => $i['pm_schedule_id'] !== null)->values();
         $todo = collect($state['pool'])
-            ->filter(fn ($c) => $c['carried_over'] || $c['due_this_week'])
+            ->filter(fn ($c) => $mode === self::MODE_NEAREST || $c['carried_over'] || $c['due_this_week'])
             ->values();
 
         if ($todo->isEmpty()) {

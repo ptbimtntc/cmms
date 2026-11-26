@@ -17,12 +17,13 @@
 @section('content')
     <div class="space-y-5">
         <x-ui.page-header title="PM Schedule" description="Find a machine's PM, then start it, fill it, or assign a PIC.">
-            @if ($canImport)
-                <x-slot:actions>
+            <x-slot:actions>
+                <x-ui.button variant="outline" href="{{ route('reports.pm') }}">View Report</x-ui.button>
+                @if ($canImport)
                     <x-ui.button variant="outline" id="pm-import-open">Import CSV</x-ui.button>
                     <x-ui.button href="{{ route('pm-schedules.create') }}">Add Schedule</x-ui.button>
-                </x-slot:actions>
-            @endif
+                @endif
+            </x-slot:actions>
         </x-ui.page-header>
 
         @if ($errors->has('file'))

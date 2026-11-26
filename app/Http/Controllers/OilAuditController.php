@@ -278,13 +278,33 @@ class OilAuditController extends Controller
         $totalFinding = (clone $findingsQuery)->count();
         $findingsWithAction = (clone $findingsQuery)->whereHas('followUp')->count();
 
-        $durations = (clone $findingsQuery)
+        // Avg. Action Duration per condition. Its own query, not $findingsQuery:
+        // the breakdown includes PANTAU (oil-refill-only action), while
+        // followUpConditions()/$findingsQuery above stay scoped to conditions
+        // that require follow-up, for Total Finding / Findings With Action Date.
+        $breakdownConditions = array_diff(array_keys(OilAudit::CONDITION_LABELS), ['OKE']);
+
+        $durationsByCondition = (clone $query)
+            ->whereIn('condition', $breakdownConditions)
             ->whereHas('followUp')
             ->with('followUp')
             ->get()
-            ->map(fn (OilAudit $audit) => abs(Carbon::parse($audit->audited_at)
-                ->diffInDays(Carbon::parse($audit->followUp->actioned_at))));
-        $averageActionDuration = $durations->isNotEmpty() ? round($durations->avg(), 1) : null;
+            ->groupBy('condition');
+
+        $actionDurationByCondition = collect($breakdownConditions)
+            ->filter(fn ($code) => $durationsByCondition->has($code))
+            ->map(fn ($code) => [
+                'code' => $code,
+                'label' => OilAudit::CONDITION_LABELS[$code],
+                'value' => round(
+                    $durationsByCondition[$code]
+                        ->map(fn (OilAudit $audit) => abs(Carbon::parse($audit->audited_at)
+                            ->diffInDays(Carbon::parse($audit->followUp->actioned_at))))
+                        ->avg(),
+                    1
+                ),
+            ])
+            ->values();
 
         $pending = (clone $query)->whereIn('condition', self::ACTION_CARD_CONDITIONS)->whereDoesntHave('followUp')->count();
         $critical = (clone $query)->where('condition', 'KRITIS')->whereDoesntHave('followUp')->count();
@@ -294,7 +314,7 @@ class OilAuditController extends Controller
             'total_audit' => $totalAudit,
             'total_finding' => $totalFinding,
             'findings_with_action' => $findingsWithAction,
-            'average_action_duration' => $averageActionDuration,
+            'action_duration_by_condition' => $actionDurationByCondition,
             'pending' => $pending,
             'critical' => $critical,
             'today' => $today,

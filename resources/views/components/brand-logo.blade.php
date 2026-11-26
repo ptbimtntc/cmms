@@ -12,7 +12,7 @@
 
 @php
     $uid = 'bl' . substr(md5(uniqid('', true)), 0, 8);
-    $ink = $mono ? 'currentColor' : '#1E293B';
+    $ink = $mono ? 'currentColor' : 'var(--color-logo-ink)';
     $viewBox = $framed ? '37 47 1006 406' : '103 97 834 306';
     $fill = fn (string $name) => $mono ? 'currentColor' : "url(#{$uid}-{$name})";
 @endphp
@@ -39,7 +39,7 @@
 
     @if ($framed)
         <rect x="40" y="50" width="1000" height="400" rx="68"
-              fill="{{ $mono ? 'none' : '#F8FAFC' }}" stroke="{{ $mono ? 'currentColor' : '#CBD5E1' }}" stroke-width="6" />
+              fill="{{ $mono ? 'none' : 'var(--color-logo-frame-fill)' }}" stroke="{{ $mono ? 'currentColor' : 'var(--color-logo-frame-stroke)' }}" stroke-width="6" />
     @endif
 
     <g stroke="{{ $ink }}" stroke-width="63" stroke-linecap="round" stroke-linejoin="round">

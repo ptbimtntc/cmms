@@ -44,6 +44,9 @@
         <x-ui.empty-state title="No machines found." />
     @endif
 
+    {{-- QR thumbnails below keep bg-white on purpose in both themes: a QR
+         code needs a real white quiet zone to stay scannable, independent of
+         theme. --}}
     {{-- Desktop table. Keep this list first: infinite scroll matches lists by key and position. --}}
     <div @class(['card hidden overflow-hidden', 'md:block' => $machines->isNotEmpty()])>
         <div class="relative overflow-x-auto">

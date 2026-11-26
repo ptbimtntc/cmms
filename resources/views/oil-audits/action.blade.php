@@ -49,7 +49,7 @@
         @endif
 
         {{-- Summary of the filtered records. --}}
-        <dl class="card grid grid-cols-2 divide-border p-4 sm:grid-cols-4 sm:divide-x">
+        <dl class="card grid grid-cols-3 divide-border p-4 sm:divide-x">
             <div class="px-1 py-2 sm:px-4">
                 <dt class="text-xs text-text-muted">Total Audit Records</dt>
                 <dd class="font-signage text-2xl font-semibold text-text">{{ $summary['total_audit'] }}</dd>
@@ -62,11 +62,30 @@
                 <dt class="text-xs text-text-muted">Findings With Action Date</dt>
                 <dd class="font-signage text-2xl font-semibold text-success">{{ $summary['findings_with_action'] }}</dd>
             </div>
-            <div class="px-1 py-2 sm:px-4">
-                <dt class="text-xs text-text-muted">Avg. Action Duration</dt>
-                <dd class="font-signage text-2xl font-semibold text-text">{{ $summary['average_action_duration'] !== null ? $summary['average_action_duration'].' days' : '-' }}</dd>
-            </div>
         </dl>
+
+        {{-- Avg. Action Duration per condition. Includes PANTAU (oil-refill-only
+             actions), unlike the Total Finding / Findings With Action Date stats
+             above. Conditions with no completed action yet are omitted, not
+             shown as '-'. --}}
+        <section class="card p-4 sm:p-5" aria-labelledby="oa-duration-heading">
+            <div class="mb-3">
+                <h2 id="oa-duration-heading" class="font-semibold text-text">Avg. Action Duration by Condition</h2>
+                <p class="mt-0.5 text-xs text-text-muted">Average days between the audit and its recorded action.</p>
+            </div>
+            @if ($summary['action_duration_by_condition']->isEmpty())
+                <p class="text-sm text-text-muted">No completed action in this filter scope yet.</p>
+            @else
+                <dl class="flex gap-3 overflow-x-auto pb-1">
+                    @foreach ($summary['action_duration_by_condition'] as $row)
+                        <div class="min-w-[140px] flex-1 rounded-control border border-border px-3 py-2">
+                            <dt class="text-xs text-text-muted">{{ $row['label'] }}</dt>
+                            <dd class="font-signage text-xl font-semibold text-text">{{ $row['value'] }} days</dd>
+                        </div>
+                    @endforeach
+                </dl>
+            @endif
+        </section>
 
         {{-- Filters: plain GET, same parameter names. Multi-selects on the last row.
              On phones the eight fields fold away behind a toggle (open when a filter is active),

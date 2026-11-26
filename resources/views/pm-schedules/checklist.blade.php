@@ -175,15 +175,15 @@
                                             <input type="hidden" name="checklists[{{ $i }}][replace]" value="NO">
                                             <input type="checkbox" name="checklists[{{ $i }}][replace]" value="YES"
                                                 {{ $oldChecklist?->replace == 'YES' ? 'checked' : '' }}
-                                                @class(['h-6 w-6 shrink-0', 'accent-danger outline-2 outline-offset-2 outline-danger' => $isReplace, 'accent-success' => ! $isReplace])>
+                                                @class(['h-6 w-6 shrink-0', 'accent-danger outline-2 outline-offset-2 outline-danger' => $isReplace, 'accent-success opacity-20 checked:opacity-100' => ! $isReplace])>
                                         </label>
                                     </td>
 
                                     {{-- Remarks --}}
                                     <td class="block border-t border-border pt-1 md:table-cell md:border-t-0 md:border-b md:px-2 md:py-1 md:text-center">
-                                        {{-- text-gray-500 / text-green-600 are toggled by resources/js/checklist/index.js and pm/checklist.js. --}}
+                                        {{-- text-text-muted / text-success are toggled by resources/js/checklist/index.js and pm/checklist.js. --}}
                                         <button type="button"
-                                            class="remark-btn inline-flex min-h-11 w-full items-center justify-center rounded-control px-2 text-sm font-medium hover:bg-surface-muted md:w-auto {{ $oldChecklist?->remarks ? 'text-green-600' : 'text-gray-500' }}"
+                                            class="remark-btn inline-flex min-h-11 w-full items-center justify-center rounded-control px-2 text-sm font-medium hover:bg-surface-muted md:w-auto {{ $oldChecklist?->remarks ? 'text-success' : 'text-text-muted' }}"
                                             data-index="{{ $i }}" data-item="{{ $item->checklist_item }}"
                                             aria-label="Remarks for {{ $item->checklist_item }}">{{ $oldChecklist?->remarks ? 'Edit note' : 'Add note' }}</button>
                                         <input type="hidden" id="remark-{{ $i }}" name="checklists[{{ $i }}][remarks]"

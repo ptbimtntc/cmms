@@ -134,7 +134,10 @@
                                 @php($has = $m['total'] > 0)
                                 <div class="flex min-w-0 flex-1 flex-col items-center gap-1" title="{{ $m['label'] }}: {{ $has ? $m[$ring['key']].'%' : 'No schedule' }}">
                                     <span @class(['hidden text-[10px] font-semibold tabular-nums sm:block', 'text-text' => $has, 'text-text-muted' => ! $has])>{{ $has ? $m[$ring['key']].'%' : '-' }}</span>
-                                    {{-- Fixed-height track so the percentage bar has a definite height to resolve against. bg-slate-100 marks a month with no schedule. --}}
+                                    {{-- Fixed-height track so the percentage bar has a definite height to resolve against.
+                                         bg-slate-100 marks a month with no schedule; tests/Feature/GreasingReportTest.php
+                                         asserts this exact class, so it stays static in both themes (a muted grey sliver,
+                                         not paired with text, reads fine floating on a dark card). --}}
                                     <div class="relative h-20 w-full">
                                         <div class="absolute bottom-0 w-full rounded-t {{ $has ? $ring['bar'] : 'bg-slate-100' }}" style="height: {{ $has ? max($m[$ring['key']], 4) : 4 }}%"></div>
                                     </div>

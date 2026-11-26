@@ -84,7 +84,7 @@ function restoreChecklistsIntoForm(form, checklists) {
 
                 if (remarkButton) {
                     remarkButton.textContent = item.remarks ? 'Edit note' : 'Add note';
-                    remarkButton.classList.toggle('text-green-600', Boolean(item.remarks));
+                    remarkButton.classList.toggle('text-success', Boolean(item.remarks));
                 }
             }
 

@@ -121,26 +121,106 @@
 }
 
 /* ------------------------------------------------------------------------
-   DARK MODE — extension point.
-   The token architecture is dark-ready: redefine ONLY the semantic tokens
-   below (never the components) to ship a dark theme. Left commented so this
-   refactor does not silently change behaviour for apps without dark mode.
+   DARK MODE
+   Redefines ONLY the semantic tokens below (never the components, never the
+   :root raw ramps, never the stock-Tailwind remap further down) so .btn,
+   .card, .input, .badge, .alert, .data-table and every bg-primary/text-text
+   style pick this up automatically. Toggled by the appearance mechanism in
+   partials/appearance-init.blade.php, scoped to the app layout only (see
+   DESIGN.md "Mode gelap").
+
+   Direction per family: base moves to ramp step 400 (light-mode's 500/600
+   loses AA against a near-black surface), *-contrast flips to a dark ink
+   (the lighter base needs dark text, not white), *-hover/*-active move
+   LIGHTER (interactive states "light up" on a dark surface, the opposite of
+   light mode's "darken"), and *-light tints flip from ramp step 50 to 900
+   (a dark tint, not a bright one, under dark text/icons).
    ---------------------------------------------------------------------- */
-/*
 .dark {
     --color-background:     var(--brand-neutral-950);
     --color-surface:        var(--brand-neutral-900);
     --color-surface-muted:  var(--brand-neutral-800);
     --color-surface-sunken: var(--brand-neutral-950);
+
     --color-text:           var(--brand-neutral-50);
     --color-text-muted:     var(--brand-neutral-400);
     --color-text-disabled:  var(--brand-neutral-600);
+    --color-text-inverse:   var(--brand-neutral-900);
+
     --color-border:         var(--brand-neutral-800);
     --color-border-strong:  var(--brand-neutral-700);
-    --color-primary:        var(--brand-primary-400);
-    --color-primary-hover:  var(--brand-primary-300);
+
+    --color-logo-ink:          var(--brand-neutral-50);
+    --color-logo-frame-fill:   var(--brand-neutral-800);
+    --color-logo-frame-stroke: var(--brand-neutral-600);
+
+    --color-primary:          var(--brand-primary-400);
+    --color-primary-hover:     var(--brand-primary-300);
+    --color-primary-active:    var(--brand-primary-200);
+    --color-primary-light:     var(--brand-primary-900);
+    --color-primary-contrast:  var(--brand-neutral-950);
+
+    --color-secondary:          var(--brand-secondary-400);
+    --color-secondary-hover:    var(--brand-secondary-300);
+    --color-secondary-light:    var(--brand-secondary-900);
+    /* secondary-contrast (#3a2a05) stays: still dark enough on the lighter
+       secondary-400 base used here. */
+
+    --color-success:          var(--brand-success-400);
+    --color-success-hover:     var(--brand-success-300);
+    --color-success-light:     var(--brand-success-900);
+    --color-success-contrast:  var(--brand-neutral-950);
+
+    --color-warning:          var(--brand-warning-400);
+    --color-warning-hover:     var(--brand-warning-300);
+    --color-warning-light:     var(--brand-warning-900);
+    --color-warning-text:      var(--brand-warning-200);
+    --color-warning-contrast:  var(--brand-neutral-950);
+
+    /* Danger stops one step short of the 400 pattern: danger-400 only reaches
+       4.59:1 on the dark surface, too close to the AA floor. 300 carries the
+       base color; danger-text drops further to 200 because 300 itself is not
+       readable as text on the danger-light (900) tint. */
+    --color-danger:          var(--brand-danger-300);
+    --color-danger-hover:     var(--brand-danger-200);
+    --color-danger-light:     var(--brand-danger-900);
+    --color-danger-text:      var(--brand-danger-200);
+    --color-danger-contrast:  var(--brand-neutral-950);
+
+    --color-info:          var(--brand-info-400);
+    --color-info-hover:     var(--brand-info-300);
+    --color-info-light:     var(--brand-info-900);
+    --color-info-contrast:  var(--brand-neutral-950);
+
+    /* Sidebar goes dark along with the rest of the app (product decision:
+       one consistent dark surface, not a fixed light brand island). The
+       brand logo switches to its own dark ink/frame tokens above, which is
+       exactly what brand-logo.blade.php's `framed` mode was documented for
+       ("for dark or busy backgrounds"). */
+    --color-sidebar:                   var(--brand-neutral-900);
+    --color-sidebar-elevated:          var(--brand-neutral-950);
+    --color-sidebar-foreground:        var(--brand-neutral-50);
+    --color-sidebar-muted:             var(--brand-neutral-400);
+    --color-sidebar-border:            var(--brand-neutral-800);
+    --color-sidebar-hover:             var(--brand-neutral-800);
+    --color-sidebar-active:            var(--brand-primary-900);
+    --color-sidebar-active-foreground: var(--brand-primary-300);
+
+    --color-accent:            var(--brand-primary-400);
+    --color-accent-content:    var(--brand-primary-300);
+    --color-accent-foreground: var(--brand-neutral-950);
+
+    --color-chart-1:        var(--brand-primary-400);
+    --color-chart-1-strong: var(--brand-primary-200);
+
+    /* Shadows: a near-black surface swallows the light-mode shadow's low
+       opacity entirely, so dark mode raises it instead of dropping shadow
+       for border-only. Still paired with the --color-border already set
+       above on every .card etc. */
+    --shadow-card:    0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.4);
+    --shadow-raised:  0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-popover: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
 }
-*/
 
 /* ========================================================================
    2. TAILWIND v4 REGISTRATION
@@ -179,6 +259,10 @@
     --color-danger:          var(--brand-danger-600);
     --color-danger-hover:     var(--brand-danger-700);
     --color-danger-light:     var(--brand-danger-50);
+    /* Same split as warning-text: badges/alerts need their own text token so
+       a future dark-mode danger base can move without dragging the tinted
+       text along with it. */
+    --color-danger-text:      var(--brand-danger-700);
     --color-danger-contrast:  #ffffff;
 
     --color-info:          var(--brand-info-600);
@@ -201,6 +285,13 @@
     /* Borders */
     --color-border:         var(--brand-neutral-200);
     --color-border-strong:  var(--brand-neutral-300);
+
+    /* Logo ink & frame — tokenised so <x-brand-logo> stays legible on both
+       themes without the Blade component knowing which one is active. Values
+       match the hex the SVG used to hardcode exactly. */
+    --color-logo-ink:          var(--brand-neutral-800);
+    --color-logo-frame-fill:   var(--brand-neutral-50);
+    --color-logo-frame-stroke: var(--brand-neutral-300);
 
     /* Sidebar: a light surface so the full-colour logo reads on it and the
        app feels lighter than a dark control-room rail. Active = tinted row

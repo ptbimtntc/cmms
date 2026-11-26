@@ -76,7 +76,7 @@
                 data-offset="1"
                 class="btn btn-outline min-h-11 w-full whitespace-normal text-center sm:w-auto">Click here to load machines for {{ $nextMonthLabel }}</button>
             <p data-pm-month-error class="form-error hidden" role="alert">Could not load the data, try again.</p>
-            <p data-pm-month-done class="hidden text-sm text-text-muted" role="status">Semua jadwal sudah dimuat.</p>
+            <p data-pm-month-done class="hidden text-sm text-text-muted" role="status">All schedules have been loaded.</p>
         </div>
     </div>
 @endsection
