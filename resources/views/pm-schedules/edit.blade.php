@@ -3,6 +3,7 @@
 @php
     $fullWidth = true;
     $canEditPic = auth()->user()->isAdmin() || auth()->user()->isKoordinator();
+    $isLocked = $pmSchedule->isLocked();
     $sessions = $pmSchedule->workSessions ?? collect();
 
     // Row and button classes shared with the rows resources/js/pm/edit.js adds at runtime;
@@ -44,6 +45,17 @@
             </x-ui.alert>
         @endif
 
+        @if ($isLocked)
+            <x-ui.alert tone="info" title="Read-only">
+                This PM is finished and locked for editing.
+                @if ($canEditPic)
+                    Click "Reopen Edit" below to edit it again.
+                @else
+                    Ask a koordinator to reopen edit.
+                @endif
+            </x-ui.alert>
+        @endif
+
         {{-- Offline-first PM Save: hidden by default; resources/js/pm/save.js shows it only when a
              local draft or "saved offline" state exists for this PM. --}}
         <div id="pm-draft-banner" class="alert alert-info hidden" role="status"></div>
@@ -59,6 +71,7 @@
             @method('PUT')
             <input type="hidden" name="return_page" value="{{ request('page') }}">
 
+            <fieldset @disabled($isLocked) class="space-y-5 border-0 p-0 m-0">
             {{-- Machine: the context a technician checks first before touching anything. --}}
             <section class="card p-5" aria-labelledby="machine-heading">
                 <h2 id="machine-heading" class="sr-only">Machine Information</h2>
@@ -388,14 +401,28 @@
                     <x-ui.button variant="outline" size="sm" onclick="addSparepart()" class="mt-3">Add sparepart</x-ui.button>
                 </div>
             </x-ui.card>
+            </fieldset>
 
             {{-- Sticky on every screen so the next step is always one tap away. --}}
             <div class="sticky bottom-0 z-10 -mx-4 border-t border-border bg-surface/95 px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    {{-- Hidden on phones to keep the sticky bar short. --}}
-                    <p class="hidden text-xs text-text-muted sm:block">Saving takes you to the checklist for this PM.</p>
-                    <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Open checklist</x-ui.button>
-                </div>
+                @if ($isLocked)
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm text-text-muted">This PM is finished and cannot be edited.</p>
+                        @if ($canEditPic)
+                            <form action="{{ route('pm-schedules.reopen-edit', $pmSchedule) }}" method="POST"
+                                onsubmit="return confirm('Reopen this PM for editing?')">
+                                @csrf
+                                <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Reopen Edit</x-ui.button>
+                            </form>
+                        @endif
+                    </div>
+                @else
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        {{-- Hidden on phones to keep the sticky bar short. --}}
+                        <p class="hidden text-xs text-text-muted sm:block">Saving takes you to the checklist for this PM.</p>
+                        <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Open checklist</x-ui.button>
+                    </div>
+                @endif
             </div>
         </form>
     </div>

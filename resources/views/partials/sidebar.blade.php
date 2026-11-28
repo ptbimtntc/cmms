@@ -98,6 +98,7 @@
         $reportsMachineActive = request()->routeIs('reports.machine') || $cameFromReportMachine;
         $reportsProblemActive = request()->routeIs('reports.problem');
         $reportsCostActive = request()->routeIs('reports.cost');
+        $reportsPicDisciplineActive = request()->routeIs('reports.pic-discipline');
 
         // Oil Audit is a WWD-only module (same rule as its own route
         // middleware), hide its report link for roles that could never
@@ -309,6 +310,12 @@
             'route' => route('reports.cost'),
             'label' => 'Maintenance Cost Report',
             'active' => $reportsCostActive,
+            ],
+            [
+            'route' => route('reports.pic-discipline'),
+            'label' => 'PIC Discipline Report',
+            'active' => $reportsPicDisciplineActive,
+            'visible' => $isAdmin || $isKoordinator || $isSupervisor,
             ],
             ],
             ],

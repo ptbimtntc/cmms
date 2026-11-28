@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\PMScheduleExport;
 use App\Http\Controllers\Concerns\HandlesActivityConflict;
 use App\Imports\PMScheduleImport;
 use App\Models\Area;
@@ -41,25 +42,15 @@ class PMScheduleController extends Controller
 
     public function index(Request $request)
     {
-        $query = PMSchedule::query();
-
         $user = auth()->user();
-
-        // FILTER AREA — ADMIN may pass an explicit ?area=, everyone else is
-        // scoped to their own area/pic by AreaAuthorizationScope (ADMIN,
-        // KOORDINATOR, PIC — see App\Support\AreaAuthorizationScope).
-        $adminAreaFilter = $user->seesAllAreas() && $request->filled('area')
-            ? $request->area
-            : null;
-
-        AreaAuthorizationScope::apply($query, $user, 'area', 'pic', $adminAreaFilter);
 
         // PIC filter — ADMIN / KOORDINATOR / SUPERVISOR only (a PIC is already
         // limited to their own rows). Options are the PICs actually assigned
         // within the user's area scope (and the selected Area filter).
         $canFilterPic = ! $user->isPic();
         $picFilterOptions = $canFilterPic
-            ? (clone $query)->whereNotNull('pic')->where('pic', '!=', '')
+            ? (clone $this->filteredSchedulesQuery($request, $user))
+                ->whereNotNull('pic')->where('pic', '!=', '')
                 ->distinct()->orderBy('pic')->pluck('pic')
             : collect();
 
@@ -71,46 +62,7 @@ class PMScheduleController extends Controller
                     ->get(),
             ]);
 
-        // SEARCH
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('machine_number', 'like', '%'.$request->search.'%')
-                    ->orWhere('machine_type', 'like', '%'.$request->search.'%')
-                    ->orWhere('order_number', 'like', '%'.$request->search.'%');
-            });
-        }
-
-        // FILTER MACHINE TYPE
-        if ($request->filled('machine_type')) {
-            $query->where('machine_type', $request->machine_type);
-        }
-
-        // FILTER PIC — a specific PIC name, or UNASSIGNED for schedules that
-        // have no PIC yet. Ignored for the PIC role.
-        if ($canFilterPic && $request->filled('pic') && is_string($request->pic)) {
-            $request->pic === self::PIC_FILTER_UNASSIGNED
-                ? $query->where(fn ($q) => $q->whereNull('pic')->orWhere('pic', ''))
-                : $query->where('pic', $request->pic);
-        }
-
-        // FILTER STATUS — status[] / plan_month[] arrive as arrays from the
-        // checkbox-dropdown filter (multi-select), but a plain single value
-        // (e.g. an old bookmarked link) still works via the (array) cast.
-        if ($request->filled('status')) {
-            $query->whereIn('status', (array) $request->status);
-        }
-
-        // FILTER MONTH
-        if ($request->filled('plan_month')) {
-            $query->whereIn('plan_month', (array) $request->plan_month);
-        }
-
-        // FILTER YEAR
-        if ($request->filled('plan_year')) {
-            $query->where('plan_year', $request->plan_year);
-        }
-
-        $schedules = $query
+        $schedules = $this->filteredSchedulesQuery($request, $user)
             ->orderBy('plan_date', 'asc')
             ->orderBy('machine_number', 'asc')
             ->paginate(20)
@@ -153,6 +105,84 @@ class PMScheduleController extends Controller
             'canFilterPic',
             'picFilterOptions'
         ));
+    }
+
+    /**
+     * Filtered PM Schedule query shared by index() and export(), so both
+     * stay on the same set of rows for a given set of query params.
+     */
+    private function filteredSchedulesQuery(Request $request, User $user)
+    {
+        $query = PMSchedule::query();
+
+        // FILTER AREA — ADMIN may pass an explicit ?area=, everyone else is
+        // scoped to their own area/pic by AreaAuthorizationScope (ADMIN,
+        // KOORDINATOR, PIC — see App\Support\AreaAuthorizationScope).
+        $adminAreaFilter = $user->seesAllAreas() && $request->filled('area')
+            ? $request->area
+            : null;
+
+        AreaAuthorizationScope::apply($query, $user, 'area', 'pic', $adminAreaFilter);
+
+        // SEARCH
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('machine_number', 'like', '%'.$request->search.'%')
+                    ->orWhere('machine_type', 'like', '%'.$request->search.'%')
+                    ->orWhere('order_number', 'like', '%'.$request->search.'%');
+            });
+        }
+
+        // FILTER MACHINE TYPE — machine_type[] arrives as an array from the
+        // checkbox-dropdown filter (multi-select), but a plain single value
+        // (e.g. an old bookmarked link) still works via the (array) cast.
+        if ($request->filled('machine_type')) {
+            $query->whereIn('machine_type', (array) $request->machine_type);
+        }
+
+        // FILTER PIC — a specific PIC name, or UNASSIGNED for schedules that
+        // have no PIC yet. Ignored for the PIC role.
+        if (! $user->isPic() && $request->filled('pic') && is_string($request->pic)) {
+            $request->pic === self::PIC_FILTER_UNASSIGNED
+                ? $query->where(fn ($q) => $q->whereNull('pic')->orWhere('pic', ''))
+                : $query->where('pic', $request->pic);
+        }
+
+        // FILTER STATUS — status[] / plan_month[] arrive as arrays from the
+        // checkbox-dropdown filter (multi-select), but a plain single value
+        // (e.g. an old bookmarked link) still works via the (array) cast.
+        if ($request->filled('status')) {
+            $query->whereIn('status', (array) $request->status);
+        }
+
+        // FILTER MONTH
+        if ($request->filled('plan_month')) {
+            $query->whereIn('plan_month', (array) $request->plan_month);
+        }
+
+        // FILTER YEAR
+        if ($request->filled('plan_year')) {
+            $query->where('plan_year', $request->plan_year);
+        }
+
+        return $query;
+    }
+
+    public function export(Request $request)
+    {
+        $user = auth()->user();
+
+        abort_unless($user->isAdmin() || $user->isKoordinator(), 403);
+
+        $schedules = $this->filteredSchedulesQuery($request, $user)
+            ->orderBy('plan_date', 'asc')
+            ->orderBy('machine_number', 'asc')
+            ->get();
+
+        return Excel::download(
+            new PMScheduleExport($schedules),
+            'pm-schedules-'.now()->format('Y-m-d_His').'.xlsx'
+        );
     }
 
     public function import(Request $request)
@@ -333,6 +363,12 @@ class PMScheduleController extends Controller
             abort(403);
         }
 
+        if ($pmSchedule->isLocked()) {
+            return redirect()
+                ->route('pm-schedules.edit', ['pm_schedule' => $pmSchedule->id, 'page' => $request->input('return_page')])
+                ->with('warning', 'This PM is finished and locked. Ask a koordinator to reopen edit.');
+        }
+
         if (! $user->isAdmin() && ! $user->isKoordinator()) {
             $request->merge([
                 'pic' => $pmSchedule->pic,
@@ -454,6 +490,12 @@ class PMScheduleController extends Controller
     public function saveChecklist(Request $request, PMSchedule $pmSchedule)
     {
         $this->authorizeScheduleAccess($pmSchedule);
+
+        if ($pmSchedule->isLocked()) {
+            return redirect()
+                ->route('pm-schedules.checklist', ['pmSchedule' => $pmSchedule->id])
+                ->with('warning', 'This PM is finished and locked. Ask a koordinator to reopen edit.');
+        }
 
         $checklistService = app(PMChecklistSaveService::class);
         $completionErrors = $checklistService->completionErrors($pmSchedule);
@@ -586,6 +628,8 @@ class PMScheduleController extends Controller
             $this->authorizeScheduleAccess($pmSchedule);
         }
 
+        abort_unless(! $pmSchedule->isLocked(), 403);
+
         $scheduleArea = Area::where('name', $pmSchedule->area)->first();
 
         abort_unless($scheduleArea, 403);
@@ -677,6 +721,32 @@ class PMScheduleController extends Controller
         });
 
         return back()->with('success', 'PM Schedule reverted to Open.');
+    }
+
+    /**
+     * Reopen Edit — unlocks a finished PM (FINISHED / FINISHED_ON_TIME) so
+     * it can be edited again. Unlike revertToOpen() above, this does NOT
+     * wipe start_time/actual_date/work sessions or any checklist/
+     * measurement/problem/sparepart data: it only moves the status back to
+     * IN_PROGRESS so Fill PM / Save Checklist accept writes again. ADMIN/
+     * KOORDINATOR only (enforced by the route's role middleware too).
+     */
+    public function reopenEdit(PMSchedule $pmSchedule)
+    {
+        $this->authorizeScheduleAccess($pmSchedule);
+        $user = auth()->user();
+
+        abort_unless($user->isAdmin() || $user->isKoordinator(), 403);
+
+        if (! $pmSchedule->isLocked()) {
+            return back()->with('warning', 'This PM is not finished yet, no need to reopen it.');
+        }
+
+        $pmSchedule->update(['status' => 'IN_PROGRESS']);
+
+        return redirect()
+            ->route('pm-schedules.edit', ['pm_schedule' => $pmSchedule->id])
+            ->with('success', 'PM edit reopened.');
     }
 
     private function authorizeScheduleAccess(PMSchedule $pmSchedule): void

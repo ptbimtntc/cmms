@@ -41,7 +41,7 @@ class PMStatusBoardController extends Controller
         $schedules = $this->rows(
             PMSchedule::query()
                 ->where('area', $areaCode)
-                ->whereNotIn('status', PMSchedule::DONE_STATUSES)
+                ->whereIn('status', PMSchedule::PLANNABLE_STATUSES)
                 ->where('plan_date', '<', $now->copy()->startOfMonth()->addMonth()->toDateString()),
             $now
         );
@@ -89,7 +89,7 @@ class PMStatusBoardController extends Controller
         $schedules = $this->rows(
             PMSchedule::query()
                 ->where('area', $areaModel->name)
-                ->whereNotIn('status', PMSchedule::DONE_STATUSES)
+                ->whereIn('status', PMSchedule::PLANNABLE_STATUSES)
                 ->where('plan_date', '>=', $start->toDateString())
                 ->where('plan_date', '<', $start->copy()->addMonth()->toDateString()),
             $now

@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\HandlesActivityConflict;
 use App\Models\ActivityMonitorClosure;
 use App\Models\Machine;
 use App\Models\OilAudit;
+use App\Models\OilAuditFollowUp;
 use App\Models\User;
 use App\Services\ActiveActivityResolver;
 use App\Services\OilAuditCreateService;
@@ -335,6 +336,15 @@ class OilAuditController extends Controller
             ->orderBy('audited_by_name')
             ->pluck('audited_by_name');
 
+        $actionPics = OilAuditFollowUp::query()
+            ->whereHas('oilAudit', fn (Builder $q) => $q
+                ->where('area', self::AUDIT_AREA)
+                ->whereIn('machine_type', self::auditMachineTypes()))
+            ->whereNotNull('pic_name')
+            ->distinct()
+            ->orderBy('pic_name')
+            ->pluck('pic_name');
+
         $pendingAudits = OilAudit::query()
             ->where('area', self::AUDIT_AREA)
             ->whereIn('machine_type', self::auditMachineTypes())
@@ -344,6 +354,11 @@ class OilAuditController extends Controller
             ->latest('audited_at')
             ->limit(8)
             ->get();
+
+        // Same scope as the Open follow-ups card: not narrowed by the filter form.
+        $refillDue = OilAudit::refillDueMachines(OilAudit::query()
+            ->where('area', self::AUDIT_AREA)
+            ->whereIn('machine_type', self::auditMachineTypes()));
 
         // Daily Start prompt — PIC-only, mirrors the Oil Audit scan menu:
         // reflects whether Oil Audit Action is CURRENT right now, not just
@@ -355,8 +370,10 @@ class OilAuditController extends Controller
         return view('oil-audits.action', compact(
             'audits',
             'pics',
+            'actionPics',
             'summary',
             'pendingAudits',
+            'refillDue',
             'promptStart'
         ));
     }
@@ -411,9 +428,9 @@ class OilAuditController extends Controller
      *
      * @return list<int>
      */
-    private function selectedMonths(Request $request): array
+    private function selectedMonths(Request $request, string $key = 'month'): array
     {
-        return collect((array) $request->input('month'))
+        return collect((array) $request->input($key))
             ->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && (int) $m >= 1 && (int) $m <= 12)
             ->map(fn ($m) => (int) $m)
             ->unique()
@@ -488,6 +505,14 @@ class OilAuditController extends Controller
                 fn (Builder $query, string $date) => $query->whereDate('audited_at', '<=', $date)
             )
             ->when(
+                $this->validDate($request->input('action_date_from')),
+                fn (Builder $query, string $date) => $query->whereHas('followUp', fn (Builder $q) => $q->whereDate('actioned_at', '>=', $date))
+            )
+            ->when(
+                $this->validDate($request->input('action_date_to')),
+                fn (Builder $query, string $date) => $query->whereHas('followUp', fn (Builder $q) => $q->whereDate('actioned_at', '<=', $date))
+            )
+            ->when(
                 $request->filled('year'),
                 fn (Builder $query) => $query->whereYear('audited_at', (int) $request->input('year'))
             )
@@ -506,6 +531,24 @@ class OilAuditController extends Controller
             ->when(
                 $request->filled('pic'),
                 fn (Builder $query) => $query->where('audited_by_name', $request->input('pic'))
+            )
+            ->when(
+                $request->filled('action_pic'),
+                fn (Builder $query) => $query->whereHas('followUp', fn (Builder $q) => $q->where('pic_name', $request->input('action_pic')))
+            )
+            ->when(
+                $request->filled('action_year'),
+                fn (Builder $query) => $query->whereHas('followUp', fn (Builder $q) => $q->whereYear('actioned_at', (int) $request->input('action_year')))
+            )
+            ->when(
+                $this->selectedMonths($request, 'action_month') !== [],
+                fn (Builder $query) => $query->whereHas('followUp', function (Builder $q) use ($request) {
+                    $q->where(function (Builder $months) use ($request) {
+                        foreach ($this->selectedMonths($request, 'action_month') as $month) {
+                            $months->orWhereMonth('actioned_at', $month);
+                        }
+                    });
+                })
             )
             ->when($request->filled('finding_status'), function (Builder $query) use ($request) {
                 $status = $request->input('finding_status');
@@ -587,7 +630,7 @@ class OilAuditController extends Controller
         parse_str((string) $request->query('return', ''), $returnParams);
 
         if ($from === 'action') {
-            $allowed = ['date_from', 'date_to', 'year', 'month', 'condition', 'finding_status', 'pic', 'search', 'page'];
+            $allowed = ['date_from', 'date_to', 'action_date_from', 'action_date_to', 'action_pic', 'action_year', 'action_month', 'year', 'month', 'condition', 'finding_status', 'pic', 'search', 'page'];
 
             return route('oil-audits.report', Arr::only($returnParams, $allowed));
         }

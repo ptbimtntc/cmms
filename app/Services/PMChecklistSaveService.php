@@ -27,6 +27,10 @@ use Illuminate\Support\Facades\DB;
  */
 class PMChecklistSaveService
 {
+    public function __construct(
+        private PicDisciplineEntryGenerator $disciplineEntryGenerator = new PicDisciplineEntryGenerator
+    ) {}
+
     /**
      * Fields required before a PM checklist may be saved. Read-only check,
      * safe to reuse for offline validation too.
@@ -224,6 +228,8 @@ class PMChecklistSaveService
         $pmSchedule->refresh();
 
         $this->updateStatus($pmSchedule);
+
+        $this->disciplineEntryGenerator->generateFor($pmSchedule);
     }
 
     public function updateStatus(PMSchedule $pmSchedule): void

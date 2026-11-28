@@ -20,6 +20,7 @@
             <x-slot:actions>
                 <x-ui.button variant="outline" href="{{ route('reports.pm') }}">View Report</x-ui.button>
                 @if ($canImport)
+                    <x-ui.button variant="outline" href="{{ route('pm-schedules.export', request()->query()) }}">Export Excel</x-ui.button>
                     <x-ui.button variant="outline" id="pm-import-open">Import CSV</x-ui.button>
                     <x-ui.button href="{{ route('pm-schedules.create') }}">Add Schedule</x-ui.button>
                 @endif
@@ -44,85 +45,77 @@
             </x-ui.alert>
         @endif
 
-        {{-- Filters: plain GET form, same parameter names as before. Single-choice fields first;
-             the two multi-select dropdowns share the last row with the buttons, so an open
-             list never covers another control. --}}
-        <form method="GET" class="card space-y-3 p-4">
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,2fr)_repeat(4,minmax(0,1fr))]">
-                <div class="grid gap-1.5 sm:col-span-2 lg:col-span-1">
-                    <label for="pm-filter-search" class="text-xs font-medium text-text-muted">Search</label>
-                    <input id="pm-filter-search" title="Search machine / type / order number..." type="text" name="search"
-                        value="{{ request('search') }}" placeholder="Machine, type, or order number" class="input lg:min-h-9">
-                </div>
-
-                @if (auth()->user()->seesAllAreas())
-                    <div class="grid gap-1.5">
-                        <label for="pm-filter-area" class="text-xs font-medium text-text-muted">Area</label>
-                        <select id="pm-filter-area" name="area" class="select lg:min-h-9">
-                            <option value="">All Areas</option>
-                            @foreach ($areas as $area)
-                                <option value="{{ $area }}" {{ request('area') == $area ? 'selected' : '' }}>{{ $area }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                @endif
-
-                <div class="grid gap-1.5">
-                    <label for="pm-filter-type" class="text-xs font-medium text-text-muted">Machine type</label>
-                    <select id="pm-filter-type" name="machine_type" class="select lg:min-h-9">
-                        <option value="">All Machine Type</option>
-                        @foreach ($machineTypes as $type)
-                            <option value="{{ $type }}" {{ request('machine_type') == $type ? 'selected' : '' }}>{{ $type }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                @if ($canFilterPic)
-                    <div class="grid gap-1.5">
-                        <label for="pm-filter-pic" class="text-xs font-medium text-text-muted">PIC</label>
-                        <select id="pm-filter-pic" name="pic" class="select lg:min-h-9">
-                            <option value="">All PIC</option>
-                            <option value="__UNASSIGNED__" {{ request('pic') === '__UNASSIGNED__' ? 'selected' : '' }}>Unassigned</option>
-                            @foreach ($picFilterOptions as $picOption)
-                                <option value="{{ $picOption }}" {{ request('pic') === $picOption ? 'selected' : '' }}>{{ $picOption }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                @endif
-
-                <div class="grid gap-1.5">
-                    <label for="pm-filter-year" class="text-xs font-medium text-text-muted">Year</label>
-                    <select id="pm-filter-year" name="plan_year" class="select lg:min-h-9">
-                        <option value="">All Year</option>
-                        @foreach ($years as $y)
-                            <option value="{{ $y }}" {{ request('plan_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
-                        @endforeach
-                    </select>
-                </div>
+        {{-- Filters: plain GET form, same parameter names as before. Every field sits in one
+             flex-wrap row with its own compact width (not a stretched grid column), so they
+             read as a single toolbar on desktop and stack one per line on phones. --}}
+        <form method="GET" class="card flex flex-wrap items-end gap-3 p-4">
+            <div class="grid w-full gap-1.5 sm:w-56">
+                <label for="pm-filter-search" class="text-xs font-medium text-text-muted">Search</label>
+                <input id="pm-filter-search" title="Search machine / type / order number..." type="text" name="search"
+                    value="{{ request('search') }}" placeholder="Machine, type, or order number" class="input lg:min-h-9">
             </div>
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                <div class="grid gap-1.5">
-                    <span class="text-xs font-medium text-text-muted">Status</span>
-                    <x-checkbox-dropdown name="status" label="Status" :options="[
-                        'OPEN' => 'OPEN',
-                        'IN_PROGRESS' => 'IN PROGRESS',
-                        'FINISHED' => 'FINISHED',
-                        'FINISHED_ON_TIME' => 'FINISHED ON TIME',
-                        'MISSED' => 'MISSED',
-                    ]" :selected="(array) request('status', [])" />
+            @if (auth()->user()->seesAllAreas())
+                <div class="grid w-full gap-1.5 sm:w-36">
+                    <label for="pm-filter-area" class="text-xs font-medium text-text-muted">Area</label>
+                    <select id="pm-filter-area" name="area" class="select lg:min-h-9">
+                        <option value="">All Areas</option>
+                        @foreach ($areas as $area)
+                            <option value="{{ $area }}" {{ request('area') == $area ? 'selected' : '' }}>{{ $area }}</option>
+                        @endforeach
+                    </select>
                 </div>
+            @endif
 
-                <div class="grid gap-1.5">
-                    <span class="text-xs font-medium text-text-muted">Month</span>
-                    <x-checkbox-dropdown name="plan_month" label="Month" :options="array_combine($months, $months)"
-                        :selected="(array) request('plan_month', [])" />
+            @if ($canFilterPic)
+                <div class="grid w-full gap-1.5 sm:w-36">
+                    <label for="pm-filter-pic" class="text-xs font-medium text-text-muted">PIC</label>
+                    <select id="pm-filter-pic" name="pic" class="select lg:min-h-9">
+                        <option value="">All PIC</option>
+                        <option value="__UNASSIGNED__" {{ request('pic') === '__UNASSIGNED__' ? 'selected' : '' }}>Unassigned</option>
+                        @foreach ($picFilterOptions as $picOption)
+                            <option value="{{ $picOption }}" {{ request('pic') === $picOption ? 'selected' : '' }}>{{ $picOption }}</option>
+                        @endforeach
+                    </select>
                 </div>
+            @endif
 
-                <div class="flex gap-2 sm:ml-auto">
-                    <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
-                    <x-ui.button variant="ghost" href="{{ route('pm-schedules.index') }}" class="lg:min-h-9">Reset</x-ui.button>
-                </div>
+            <div class="grid w-full gap-1.5 sm:w-28">
+                <label for="pm-filter-year" class="text-xs font-medium text-text-muted">Year</label>
+                <select id="pm-filter-year" name="plan_year" class="select lg:min-h-9">
+                    <option value="">All Year</option>
+                    @foreach ($years as $y)
+                        <option value="{{ $y }}" {{ request('plan_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="grid w-full gap-1.5 sm:w-auto">
+                <span class="text-xs font-medium text-text-muted">Machine type</span>
+                <x-checkbox-dropdown name="machine_type" label="Machine Type" :options="array_combine($machineTypes->all(), $machineTypes->all())"
+                    :selected="(array) request('machine_type', [])" all-label="All Machine Type" />
+            </div>
+
+            <div class="grid w-full gap-1.5 sm:w-auto">
+                <span class="text-xs font-medium text-text-muted">Status</span>
+                <x-checkbox-dropdown name="status" label="Status" :options="[
+                    'OPEN' => 'OPEN',
+                    'IN_PROGRESS' => 'IN PROGRESS',
+                    'FINISHED' => 'FINISHED',
+                    'FINISHED_ON_TIME' => 'FINISHED ON TIME',
+                    'MISSED' => 'MISSED',
+                ]" :selected="(array) request('status', [])" />
+            </div>
+
+            <div class="grid w-full gap-1.5 sm:w-auto">
+                <span class="text-xs font-medium text-text-muted">Month</span>
+                <x-checkbox-dropdown name="plan_month" label="Month" :options="array_combine($months, $months)"
+                    :selected="(array) request('plan_month', [])" />
+            </div>
+
+            <div class="flex w-full gap-2 sm:w-auto sm:ml-auto">
+                <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
+                <x-ui.button variant="ghost" href="{{ route('pm-schedules.index') }}" class="lg:min-h-9">Reset</x-ui.button>
             </div>
         </form>
 

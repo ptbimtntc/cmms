@@ -48,6 +48,36 @@
             </section>
         @endif
 
+        {{-- Machines due an oil refill: the same rule as the reminder on the audit entry page. --}}
+        @if ($refillDue->isNotEmpty())
+            {{-- Collapsed by default so a long list does not push the table down. --}}
+            <section class="card px-4 py-1 sm:px-5" aria-labelledby="refill-heading" x-data="{ open: false }">
+                <h2 id="refill-heading">
+                    <button type="button" class="flex min-h-11 w-full items-center justify-between gap-3 text-left font-semibold text-text"
+                        @click="open = !open" x-bind:aria-expanded="open.toString()" aria-expanded="false" aria-controls="refill-list">
+                        <span>Oil refill due <span class="font-normal text-text-muted">({{ $refillDue->count() }})</span></span>
+                        <svg class="size-4 shrink-0 text-text-muted transition-transform" :class="open ? '' : '-rotate-90'" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M5 7.5h10L10 13z" />
+                        </svg>
+                    </button>
+                </h2>
+                <div id="refill-list" class="pb-4" x-show="open" x-cloak>
+                <p class="mb-3 text-sm text-text-muted">Pantau {{ \App\Models\OilAudit::PANTAU_REFILL_REMINDER_AT }} times or more in a row with no action. Refill the oil, then record the action.</p>
+                <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    @foreach ($refillDue as $machine)
+                        <a href="{{ $historyUrl($machine) }}" class="flex min-w-0 items-center justify-between gap-3 rounded-control border border-border bg-surface px-3 py-3 transition-colors hover:border-border-strong">
+                            <div class="min-w-0">
+                                <p class="truncate font-semibold text-text">{{ $machine->machine_number }}</p>
+                                <p class="truncate text-xs text-text-muted">Last checked {{ \Carbon\Carbon::parse($machine->last_audited_at)->format('d M Y') }}</p>
+                            </div>
+                            <x-ui.badge tone="info" class="shrink-0">Pantau &times;{{ $machine->streak }}</x-ui.badge>
+                        </a>
+                    @endforeach
+                </div>
+                </div>
+            </section>
+        @endif
+
         {{-- Summary of the filtered records. --}}
         <dl class="card grid grid-cols-3 divide-border p-4 sm:divide-x">
             <div class="px-1 py-2 sm:px-4">
@@ -87,10 +117,19 @@
             @endif
         </section>
 
-        {{-- Filters: plain GET, same parameter names. Multi-selects on the last row.
-             On phones the eight fields fold away behind a toggle (open when a filter is active),
-             so the list is not pushed three screens down; from md they are always shown. --}}
-        @php($activeFilters = collect(request()->only(['search', 'date_from', 'date_to', 'year', 'pic', 'finding_status', 'month', 'condition']))->filter(fn ($v) => filled($v))->count())
+        {{-- Filters: plain GET, same parameter names. Grouped by what each field filters on:
+             General (the audit record itself), Audit (audit date and auditor, `pic`) and
+             Action (follow-up date and its PIC, `action_pic`). On phones the form folds away
+             behind a toggle (open when a filter is active); from md it is always shown. --}}
+        @php($activeFilters = collect(request()->only(['search', 'condition', 'finding_status', 'date_from', 'date_to', 'year', 'month', 'pic', 'action_date_from', 'action_date_to', 'action_year', 'action_month', 'action_pic']))->filter(fn ($v) => filled($v))->count())
+        @php($groupRow = 'grid gap-2 py-3 first:pt-0 last:pb-0 lg:grid-cols-[4.5rem_1fr] lg:items-end lg:gap-4')
+        @php($groupLabel = 'text-xs font-semibold text-text lg:pb-2.5')
+        @php($fieldLabel = 'text-xs font-medium text-text-muted')
+        @php($fields = 'flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end')
+        {{-- Below md the Audit and Action groups start collapsed behind a disclosure
+             button, unless one of their own filters is active; from md they are always open. --}}
+        @php($auditOpen = collect(request()->only(['date_from', 'date_to', 'year', 'month', 'pic']))->filter(fn ($v) => filled($v))->isNotEmpty())
+        @php($actionOpen = collect(request()->only(['action_date_from', 'action_date_to', 'action_year', 'action_month', 'action_pic']))->filter(fn ($v) => filled($v))->isNotEmpty())
         <div x-data="{ open: {{ $activeFilters ? 'true' : 'false' }} }" class="space-y-3">
         <x-ui.button variant="outline" class="w-full md:hidden" @click="open = !open" x-bind:aria-expanded="open.toString()" aria-controls="oa-filter-form">
             <span x-text="open ? 'Hide filters' : 'Show filters'">{{ $activeFilters ? 'Hide filters' : 'Show filters' }}</span>
@@ -98,65 +137,128 @@
                 <x-ui.badge tone="primary">{{ $activeFilters }} active</x-ui.badge>
             @endif
         </x-ui.button>
-        <form id="oa-filter-form" method="GET" class="card space-y-3 p-4 md:!block" x-show="open" x-cloak>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,2fr)_repeat(4,minmax(0,1fr))]">
-                <div class="grid gap-1.5 sm:col-span-2 lg:col-span-1">
-                    <label for="oa-search" class="text-xs font-medium text-text-muted">Search</label>
-                    <input id="oa-search" name="search" value="{{ request('search') }}" placeholder="Machine number, type, or finding" class="input lg:min-h-9">
-                </div>
-                <div class="grid gap-1.5">
-                    <label for="oa-from" class="text-xs font-medium text-text-muted">Audit date from</label>
-                    <input id="oa-from" type="date" name="date_from" value="{{ request('date_from') }}" class="input lg:min-h-9">
-                </div>
-                <div class="grid gap-1.5">
-                    <label for="oa-to" class="text-xs font-medium text-text-muted">To</label>
-                    <input id="oa-to" type="date" name="date_to" value="{{ request('date_to') }}" class="input lg:min-h-9">
-                </div>
-                <div class="grid gap-1.5">
-                    <label for="oa-year" class="text-xs font-medium text-text-muted">Year</label>
-                    <select id="oa-year" name="year" class="select lg:min-h-9">
-                        <option value="">All years</option>
-                        @foreach (range(now()->year, now()->year - 5) as $y)
-                            <option value="{{ $y }}" @selected((string) request('year') === (string) $y)>{{ $y }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="grid gap-1.5">
-                    <label for="oa-pic" class="text-xs font-medium text-text-muted">PIC</label>
-                    <select id="oa-pic" name="pic" class="select lg:min-h-9">
-                        <option value="">All PICs</option>
-                        @foreach ($pics as $p)
-                            <option value="{{ $p }}" @selected(request('pic') === $p)>{{ $p }}</option>
-                        @endforeach
-                    </select>
+        <form id="oa-filter-form" method="GET" class="card divide-y divide-border p-4 md:!block" x-show="open" x-cloak>
+            <div role="group" aria-labelledby="oa-group-general" class="{{ $groupRow }}">
+                <span id="oa-group-general" class="{{ $groupLabel }}">General</span>
+                <div class="{{ $fields }}">
+                    <div class="grid gap-1.5 sm:min-w-64 sm:flex-1">
+                        <label for="oa-search" class="{{ $fieldLabel }}">Search</label>
+                        <input id="oa-search" name="search" value="{{ request('search') }}" placeholder="Machine number, type, or finding" class="input lg:min-h-9">
+                    </div>
+                    <div class="grid gap-1.5">
+                        <span class="{{ $fieldLabel }}">Condition</span>
+                        <x-checkbox-dropdown name="condition" label="Condition" all-label="All conditions"
+                            :options="\App\Models\OilAudit::CONDITION_LABELS"
+                            :selected="collect((array) request('condition'))->filter(fn ($c) => is_string($c) && array_key_exists($c, \App\Models\OilAudit::CONDITION_LABELS))->values()->all()" />
+                    </div>
+                    <div class="grid gap-1.5 sm:w-48">
+                        <label for="oa-finding-status" class="{{ $fieldLabel }}">Finding status</label>
+                        <select id="oa-finding-status" name="finding_status" class="select lg:min-h-9">
+                            <option value="">All finding statuses</option>
+                            <option value="NO_FINDING" @selected(request('finding_status') === 'NO_FINDING')>No Finding</option>
+                            <option value="OPEN" @selected(request('finding_status') === 'OPEN')>Open</option>
+                            <option value="COMPLETED" @selected(request('finding_status') === 'COMPLETED')>Completed</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-                <div class="grid gap-1.5 sm:w-52">
-                    <label for="oa-finding-status" class="text-xs font-medium text-text-muted">Finding status</label>
-                    <select id="oa-finding-status" name="finding_status" class="select lg:min-h-9">
-                        <option value="">All finding statuses</option>
-                        <option value="NO_FINDING" @selected(request('finding_status') === 'NO_FINDING')>No Finding</option>
-                        <option value="OPEN" @selected(request('finding_status') === 'OPEN')>Open</option>
-                        <option value="COMPLETED" @selected(request('finding_status') === 'COMPLETED')>Completed</option>
-                    </select>
+            <div role="group" aria-labelledby="oa-group-audit" class="{{ $groupRow }}" x-data="{ open: {{ $auditOpen ? 'true' : 'false' }} }">
+                <div class="flex items-center justify-between lg:pb-2.5">
+                    <span id="oa-group-audit" class="text-xs font-semibold text-text">Audit</span>
+                    <button type="button" class="-my-3 -mr-3 grid size-11 place-items-center text-text-muted md:hidden" @click="open = !open"
+                        x-bind:aria-expanded="open.toString()" aria-controls="oa-fields-audit" aria-label="Audit filters">
+                        <svg class="size-4 transition-transform" :class="open ? '' : '-rotate-90'" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M5 7.5h10L10 13z" />
+                        </svg>
+                    </button>
                 </div>
-                <div class="grid gap-1.5">
-                    <span class="text-xs font-medium text-text-muted">Month</span>
-                    <x-checkbox-dropdown name="month" label="Month" all-label="All months"
-                        :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
-                        :selected="collect((array) request('month'))->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && $m >= 1 && $m <= 12)->map(fn ($m) => (int) $m)->unique()->values()->all()" />
+                <div id="oa-fields-audit" class="{{ $fields }} md:!flex" x-show="open">
+                    <div class="grid gap-1.5 sm:w-40">
+                        <label for="oa-from" class="{{ $fieldLabel }}">From</label>
+                        <input id="oa-from" type="date" name="date_from" value="{{ request('date_from') }}" class="input lg:min-h-9">
+                    </div>
+                    <div class="grid gap-1.5 sm:w-40">
+                        <label for="oa-to" class="{{ $fieldLabel }}">To</label>
+                        <input id="oa-to" type="date" name="date_to" value="{{ request('date_to') }}" class="input lg:min-h-9">
+                    </div>
+                    <div class="grid gap-1.5 sm:w-32">
+                        <label for="oa-year" class="{{ $fieldLabel }}">Year</label>
+                        <select id="oa-year" name="year" class="select lg:min-h-9">
+                            <option value="">All years</option>
+                            @foreach (range(now()->year, now()->year - 5) as $y)
+                                <option value="{{ $y }}" @selected((string) request('year') === (string) $y)>{{ $y }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="grid gap-1.5">
+                        <span class="{{ $fieldLabel }}">Month</span>
+                        <x-checkbox-dropdown name="month" label="Month" all-label="All months"
+                            :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
+                            :selected="collect((array) request('month'))->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && $m >= 1 && $m <= 12)->map(fn ($m) => (int) $m)->unique()->values()->all()" />
+                    </div>
+                    <div class="grid gap-1.5 sm:w-48">
+                        <label for="oa-pic" class="{{ $fieldLabel }}">Auditor</label>
+                        <select id="oa-pic" name="pic" class="select lg:min-h-9">
+                            <option value="">All auditors</option>
+                            @foreach ($pics as $p)
+                                <option value="{{ $p }}" @selected(request('pic') === $p)>{{ $p }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
-                <div class="grid gap-1.5">
-                    <span class="text-xs font-medium text-text-muted">Condition</span>
-                    <x-checkbox-dropdown name="condition" label="Condition" all-label="All conditions"
-                        :options="\App\Models\OilAudit::CONDITION_LABELS"
-                        :selected="collect((array) request('condition'))->filter(fn ($c) => is_string($c) && array_key_exists($c, \App\Models\OilAudit::CONDITION_LABELS))->values()->all()" />
+            </div>
+
+            <div role="group" aria-labelledby="oa-group-action" class="{{ $groupRow }}" x-data="{ open: {{ $actionOpen ? 'true' : 'false' }} }">
+                <div class="flex items-center justify-between lg:pb-2.5">
+                    <span id="oa-group-action" class="text-xs font-semibold text-text">Action</span>
+                    <button type="button" class="-my-3 -mr-3 grid size-11 place-items-center text-text-muted md:hidden" @click="open = !open"
+                        x-bind:aria-expanded="open.toString()" aria-controls="oa-fields-action" aria-label="Action filters">
+                        <svg class="size-4 transition-transform" :class="open ? '' : '-rotate-90'" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M5 7.5h10L10 13z" />
+                        </svg>
+                    </button>
                 </div>
-                <div class="flex gap-2 sm:ml-auto">
+                {{-- Filter/Reset sit outside the collapsible fields so they stay reachable on phones. --}}
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div id="oa-fields-action" class="{{ $fields }} sm:flex-1 md:!flex" x-show="open">
+                    <div class="grid gap-1.5 sm:w-40">
+                        <label for="oa-action-from" class="{{ $fieldLabel }}">From</label>
+                        <input id="oa-action-from" type="date" name="action_date_from" value="{{ request('action_date_from') }}" class="input lg:min-h-9">
+                    </div>
+                    <div class="grid gap-1.5 sm:w-40">
+                        <label for="oa-action-to" class="{{ $fieldLabel }}">To</label>
+                        <input id="oa-action-to" type="date" name="action_date_to" value="{{ request('action_date_to') }}" class="input lg:min-h-9">
+                    </div>
+                    <div class="grid gap-1.5 sm:w-32">
+                        <label for="oa-action-year" class="{{ $fieldLabel }}">Year</label>
+                        <select id="oa-action-year" name="action_year" class="select lg:min-h-9">
+                            <option value="">All years</option>
+                            @foreach (range(now()->year, now()->year - 5) as $y)
+                                <option value="{{ $y }}" @selected((string) request('action_year') === (string) $y)>{{ $y }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="grid gap-1.5">
+                        <span class="{{ $fieldLabel }}">Month</span>
+                        <x-checkbox-dropdown name="action_month" label="Month" all-label="All months"
+                            :options="collect(range(1, 12))->mapWithKeys(fn ($m) => [$m => \Carbon\Carbon::create(null, $m, 1)->format('F')])->all()"
+                            :selected="collect((array) request('action_month'))->filter(fn ($m) => is_scalar($m) && ctype_digit((string) $m) && $m >= 1 && $m <= 12)->map(fn ($m) => (int) $m)->unique()->values()->all()" />
+                    </div>
+                    <div class="grid gap-1.5 sm:w-48">
+                        <label for="oa-action-pic" class="{{ $fieldLabel }}">PIC</label>
+                        <select id="oa-action-pic" name="action_pic" class="select lg:min-h-9">
+                            <option value="">All PICs</option>
+                            @foreach ($actionPics as $p)
+                                <option value="{{ $p }}" @selected(request('action_pic') === $p)>{{ $p }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="flex shrink-0 gap-2 sm:ml-auto">
                     <x-ui.button type="submit" class="flex-1 sm:flex-none lg:min-h-9">Filter</x-ui.button>
                     <x-ui.button variant="ghost" href="{{ route('oil-audits.report') }}" class="lg:min-h-9">Reset</x-ui.button>
+                </div>
                 </div>
             </div>
         </form>
@@ -176,10 +278,11 @@
                             <tr>
                                 <th scope="col">Machine</th>
                                 <th scope="col">Audit Date</th>
-                                <th scope="col">PIC</th>
+                                <th scope="col">Auditor</th>
                                 <th scope="col">Condition</th>
                                 <th scope="col">Finding</th>
                                 <th scope="col">Follow-up Status</th>
+                                <th scope="col">Action PIC</th>
                                 {{-- Actions stay pinned on the right when the table scrolls sideways. --}}
                                 <th scope="col" class="sticky right-0 bg-surface-sunken"><span class="sr-only">Action</span></th>
                             </tr>
@@ -213,6 +316,7 @@
                                             <x-ui.badge tone="warning">Open</x-ui.badge>
                                         @endif
                                     </td>
+                                    <td class="text-text-muted">{{ $audit->followUp?->pic_name ?: '-' }}</td>
                                     <td class="sticky right-0 whitespace-nowrap bg-surface shadow-[-10px_0_10px_-10px_rgb(15_23_42/0.25)]">
                                         <div class="flex items-center justify-end gap-2">
                                             <x-ui.button size="sm" variant="outline" href="{{ $historyUrl($audit) }}">View</x-ui.button>

@@ -12,13 +12,22 @@
 
 <div class="flex flex-wrap items-center justify-end gap-2">
     @if ($canManage)
-        <x-ui.button size="sm" variant="outline" href="{{ $editUrl }}">Edit</x-ui.button>
-        @if ($pm->status === 'IN_PROGRESS')
-            <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
-                onsubmit="return confirm('Revert this PM back to Open?')">
+        @if ($pm->isLocked())
+            <x-ui.button size="sm" variant="outline" href="{{ $editUrl }}">View</x-ui.button>
+            <form action="{{ route('pm-schedules.reopen-edit', $pm->id) }}" method="POST"
+                onsubmit="return confirm('Reopen this PM for editing?')">
                 @csrf
-                <x-ui.button type="submit" size="sm" variant="ghost">Revert to Open</x-ui.button>
+                <x-ui.button type="submit" size="sm" variant="ghost">Reopen Edit</x-ui.button>
             </form>
+        @else
+            <x-ui.button size="sm" variant="outline" href="{{ $editUrl }}">Edit</x-ui.button>
+            @if ($pm->status === 'IN_PROGRESS')
+                <form action="{{ route('pm-schedules.revert-to-open', $pm->id) }}" method="POST"
+                    onsubmit="return confirm('Revert this PM back to Open?')">
+                    @csrf
+                    <x-ui.button type="submit" size="sm" variant="ghost">Revert to Open</x-ui.button>
+                </form>
+            @endif
         @endif
         <form action="{{ route('pm-schedules.destroy', $pm->id) }}" method="POST"
             onsubmit="return confirm('Delete PM schedule for machine {{ $pm->machine_number }}? This cannot be undone.')">

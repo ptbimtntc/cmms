@@ -24,6 +24,14 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
     <script>
+        // No separate Alpine <script> tag here on purpose: the fluxScripts directive near the
+        // end of body calls Livewire's forceAssetInjection(), which loads livewire.js
+        // (Livewire's own bundled Alpine) on every app page now, not just Livewire component
+        // pages. A second, separate Alpine build loaded here would run alongside it ("Detected
+        // multiple instances of Alpine running"), and whichever one's "alpine:init" fires first
+        // wins Flux's window.Flux/$flux registration while the other silently falls back to a
+        // no-op stub -- this is what broke dark mode persisting across navigations.
+        //
         // Mobile drawer state for partials/sidebar + partials/topbar. `desktop` tracks the lg
         // breakpoint so the drawer is only made inert where it actually slides off-screen.
         document.addEventListener('alpine:init', () => {
@@ -38,7 +46,6 @@
             });
         });
     </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
 <body class="h-dvh overflow-hidden bg-background text-text">
@@ -120,8 +127,11 @@
 
     </div>
 
-    {{-- Always loaded now (not just for $slot/Livewire pages): the topbar's
-         dark-mode toggle needs the $flux Alpine magic on every page. --}}
+    {{-- Always loaded now (not just for $slot/Livewire pages): the topbar's dark-mode
+         toggle needs the $flux Alpine magic on every page. This directive also calls
+         Livewire's forceAssetInjection() internally, which is what now supplies Alpine
+         on every page (see the <head> comment above — there is no separate Alpine
+         <script> tag). --}}
     @fluxScripts
 </body>
 

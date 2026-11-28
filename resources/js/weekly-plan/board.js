@@ -373,7 +373,7 @@ export function initWeeklyPlan(root) {
     function cardHtml(card) {
         const key = cardKey(card);
         const placed = card.day !== null;
-        const due = card.due_date ? `Due ${formatShortDate(card.due_date)}` : card.plan_date ? `Plan ${formatShortDate(card.plan_date)}` : '';
+        const due = card.due_date ? `Plan ${formatShortDate(card.due_date)}` : card.plan_date ? `Plan ${formatShortDate(card.plan_date)}` : '';
         const fieldId = `wp-${key}`;
         const label = 'text-xs font-medium text-text-muted';
         const control = 'w-full min-w-0 min-h-11 py-1 text-sm lg:min-h-0';

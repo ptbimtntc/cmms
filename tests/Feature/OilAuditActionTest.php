@@ -409,6 +409,144 @@ test('audit date range filter narrows the action page', function () {
         ->and($ids(['date_from' => 'not-a-date', 'date_to' => '2026-13-45']))->toBe([$old->id, $mid->id, $new->id]);
 });
 
+test('action date range filter narrows the action page to findings actioned in range', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $early = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2026-09-01 10:00:00']);
+    $mid = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2026-09-01 10:00:00']);
+    $late = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2026-09-01 10:00:00']);
+    $open = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2026-09-01 10:00:00']);
+
+    foreach ([[$early, '2026-09-03 09:00:00'], [$mid, '2026-09-15 23:30:00'], [$late, '2026-10-05 08:00:00']] as [$audit, $at]) {
+        OilAuditFollowUp::create(['oil_audit_id' => $audit->id, 'problem' => 'Kapstan', 'action_taken' => 'Fixed', 'pic_name' => 'Andi', 'actioned_at' => $at]);
+    }
+
+    $ids = fn (array $query) => $this->actingAs($admin)->get(route('oil-audits.report', $query))
+        ->viewData('audits')->pluck('id')->sort()->values()->all();
+
+    expect($ids(['action_date_from' => '2026-09-10', 'action_date_to' => '2026-09-15']))->toBe([$mid->id])
+        ->and($ids(['action_date_from' => '2026-09-10']))->toBe([$mid->id, $late->id])
+        ->and($ids(['action_date_to' => '2026-09-03']))->toBe([$early->id])
+        ->and($ids(['action_date_from' => 'not-a-date', 'action_date_to' => '2026-13-45']))->toBe([$early->id, $mid->id, $late->id, $open->id]);
+
+    $this->actingAs($admin)->get(route('oil-audits.report'))
+        ->assertSee('name="action_date_from"', false)
+        ->assertSee('name="action_date_to"', false);
+});
+
+test('auditor and action PIC filters are separate on the action page', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $byBudi = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_by_name' => 'Budi']);
+    $byCici = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_by_name' => 'Cici']);
+    $open = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_by_name' => 'Budi']);
+
+    OilAuditFollowUp::create(['oil_audit_id' => $byBudi->id, 'problem' => 'Kapstan', 'action_taken' => 'Fixed', 'pic_name' => 'Andi', 'actioned_at' => '2026-09-03']);
+    OilAuditFollowUp::create(['oil_audit_id' => $byCici->id, 'problem' => 'Kapstan', 'action_taken' => 'Fixed', 'pic_name' => 'Dodi', 'actioned_at' => '2026-09-03']);
+
+    $ids = fn (array $query) => $this->actingAs($admin)->get(route('oil-audits.report', $query))
+        ->viewData('audits')->pluck('id')->sort()->values()->all();
+
+    expect($ids(['action_pic' => 'Andi']))->toBe([$byBudi->id])
+        ->and($ids(['pic' => 'Budi']))->toBe([$byBudi->id, $open->id])
+        ->and($ids(['pic' => 'Budi', 'action_pic' => 'Dodi']))->toBe([]);
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report'));
+    $response->assertOk()
+        ->assertSee('name="action_pic"', false)
+        ->assertSee('All auditors')
+        ->assertSee('All PICs');
+    expect($response->viewData('actionPics')->all())->toBe(['Andi', 'Dodi']);
+});
+
+test('action year and month filters narrow by actioned date, not audit date', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $sep = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2025-12-20 10:00:00']);
+    $nov = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2025-12-20 10:00:00']);
+    $lastYear = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2025-08-20 10:00:00']);
+    $open = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_at' => '2026-09-01 10:00:00']);
+
+    foreach ([[$sep, '2026-09-03'], [$nov, '2026-11-10'], [$lastYear, '2025-09-15']] as [$audit, $at]) {
+        OilAuditFollowUp::create(['oil_audit_id' => $audit->id, 'problem' => 'Kapstan', 'action_taken' => 'Fixed', 'pic_name' => 'Andi', 'actioned_at' => $at]);
+    }
+
+    $ids = fn (array $query) => $this->actingAs($admin)->get(route('oil-audits.report', $query))
+        ->viewData('audits')->pluck('id')->sort()->values()->all();
+
+    expect($ids(['action_year' => 2026]))->toBe([$sep->id, $nov->id])
+        ->and($ids(['action_month' => [9]]))->toBe([$sep->id, $lastYear->id])
+        ->and($ids(['action_month' => [9, 11], 'action_year' => 2026]))->toBe([$sep->id, $nov->id])
+        ->and($ids(['action_month' => ['x', '13']]))->toBe([$sep->id, $nov->id, $lastYear->id, $open->id]);
+
+    $this->actingAs($admin)->get(route('oil-audits.report'))
+        ->assertSee('name="action_year"', false)
+        ->assertSee('action_month', false);
+});
+
+test('audit and action filter groups start collapsed on phones unless one of their filters is active', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $this->actingAs($admin)->get(route('oil-audits.report'))
+        ->assertSee('aria-labelledby="oa-group-audit" class="grid gap-2 py-3 first:pt-0 last:pb-0 lg:grid-cols-[4.5rem_1fr] lg:items-end lg:gap-4" x-data="{ open: false }"', false)
+        ->assertSee('aria-controls="oa-fields-action"', false);
+
+    $this->actingAs($admin)->get(route('oil-audits.report', ['action_pic' => 'Andi']))
+        ->assertSee('aria-labelledby="oa-group-audit" class="grid gap-2 py-3 first:pt-0 last:pb-0 lg:grid-cols-[4.5rem_1fr] lg:items-end lg:gap-4" x-data="{ open: false }"', false)
+        ->assertSee('aria-labelledby="oa-group-action" class="grid gap-2 py-3 first:pt-0 last:pb-0 lg:grid-cols-[4.5rem_1fr] lg:items-end lg:gap-4" x-data="{ open: true }"', false);
+});
+
+test('the action table shows the auditor and the action PIC in separate columns', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $audit = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS', 'audited_by_name' => 'Budi Auditor']);
+    OilAuditFollowUp::create(['oil_audit_id' => $audit->id, 'problem' => 'Kapstan', 'action_taken' => 'Fixed', 'pic_name' => 'Andi Teknisi', 'actioned_at' => '2026-09-03']);
+
+    $this->actingAs($admin)->get(route('oil-audits.report'))
+        ->assertOk()
+        ->assertSeeInOrder(['>Auditor</th>', '>Action PIC</th>'], false)
+        ->assertSeeInOrder(['Budi Auditor', 'Andi Teknisi']);
+});
+
+test('oil refill due card lists machines with a pantau streak at the reminder threshold', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $series = function (array $conditions) {
+        $machine = actionOilAuditMachine();
+        $audits = [];
+        foreach ($conditions as $i => $condition) {
+            $audits[] = actionOilAudit($machine, ['condition' => $condition, 'audited_at' => now()->subDays(count($conditions) - $i)]);
+        }
+
+        return [$machine, $audits];
+    };
+
+    [$four] = $series(['OKE', 'PANTAU', 'PANTAU', 'PANTAU', 'PANTAU']);
+    [$five] = $series(['PANTAU', 'PANTAU', 'PANTAU', 'PANTAU', 'PANTAU']);
+    [$three] = $series(['PANTAU', 'PANTAU', 'PANTAU']);
+    [$broken] = $series(['PANTAU', 'PANTAU', 'PANTAU', 'PANTAU', 'OKE', 'PANTAU']);
+    [$refilled, $refilledAudits] = $series(['PANTAU', 'PANTAU', 'PANTAU', 'PANTAU', 'PANTAU']);
+    OilAuditFollowUp::create(['oil_audit_id' => end($refilledAudits)->id, 'refill_oil' => true, 'full_check' => false, 'pic_name' => 'Andi', 'actioned_at' => now()]);
+
+    $response = $this->actingAs($admin)->get(route('oil-audits.report'));
+    $response->assertOk()->assertSee('Oil refill due');
+
+    $due = $response->viewData('refillDue')->mapWithKeys(fn ($row) => [$row->machine_id => (int) $row->streak])->all();
+    expect($due)->toBe([$five->id => 5, $four->id => 4]);
+
+    foreach ([$four, $five, $three, $broken, $refilled] as $machine) {
+        $expected = OilAudit::pantauStreak($machine->id) >= OilAudit::PANTAU_REFILL_REMINDER_AT;
+        expect(array_key_exists($machine->id, $due))->toBe($expected);
+    }
+});
+
+test('oil refill due card is hidden when no machine reaches the threshold', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $machine = actionOilAuditMachine();
+    foreach (range(3, 1) as $daysAgo) {
+        actionOilAudit($machine, ['condition' => 'PANTAU', 'audited_at' => now()->subDays($daysAgo)]);
+    }
+
+    $this->actingAs($admin)->get(route('oil-audits.report'))
+        ->assertOk()
+        ->assertDontSee('Oil refill due');
+});
+
 test('other filters still work on the action page', function () {
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $kritis = actionOilAudit(actionOilAuditMachine(), ['condition' => 'KRITIS']);
@@ -462,14 +600,14 @@ test('back from history keeps the date and multi-select filters of the action pa
     $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
     $machine = actionOilAuditMachine();
     actionOilAudit($machine);
-    $return = 'date_from=2026-09-01&date_to=2026-09-30&condition%5B0%5D=KRITIS&condition%5B1%5D=OKE&month%5B0%5D=9';
+    $return = 'date_from=2026-09-01&date_to=2026-09-30&action_date_from=2026-09-05&action_date_to=2026-09-20&action_pic=Andi&action_year=2026&action_month%5B0%5D=9&condition%5B0%5D=KRITIS&condition%5B1%5D=OKE&month%5B0%5D=9';
 
     $response = $this->actingAs($admin)->get(route('oil-audits.history', [
         $machine->machine_number, 'from' => 'action', 'return' => $return,
     ]));
 
     $expected = route('oil-audits.report', [
-        'date_from' => '2026-09-01', 'date_to' => '2026-09-30', 'condition' => ['KRITIS', 'OKE'], 'month' => [9],
+        'date_from' => '2026-09-01', 'date_to' => '2026-09-30', 'action_date_from' => '2026-09-05', 'action_date_to' => '2026-09-20', 'action_pic' => 'Andi', 'action_year' => '2026', 'action_month' => ['9'], 'condition' => ['KRITIS', 'OKE'], 'month' => [9],
     ]);
     $response->assertOk()->assertSee(e($expected), false);
 });

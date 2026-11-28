@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class OilAudit extends Model
 {
@@ -263,6 +264,44 @@ class OilAudit extends Model
 
     /** Streak length at which the entry page asks for an oil refill. */
     public const PANTAU_REFILL_REMINDER_AT = 4;
+
+    /**
+     * Machines whose current pantauStreak() is at least PANTAU_REFILL_REMINDER_AT,
+     * in one query: the PANTAU audits with no action that have no later "breaking"
+     * audit (not PANTAU, or with an action) on the same machine, counted per machine.
+     * Same newest-first order as pantauStreak(): audited_at, then id.
+     *
+     * @return Collection<int, object{machine_id: int, machine_number: string, streak: int, last_audited_at: string}>
+     */
+    public static function refillDueMachines(Builder $scope): Collection
+    {
+        return $scope
+            ->from('oil_audits as a')
+            ->where('a.condition', 'PANTAU')
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')
+                ->from('oil_audit_follow_ups as f')
+                ->whereColumn('f.oil_audit_id', 'a.id'))
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')
+                ->from('oil_audits as b')
+                ->whereColumn('b.machine_id', 'a.machine_id')
+                ->where(fn ($later) => $later
+                    ->whereColumn('b.audited_at', '>', 'a.audited_at')
+                    ->orWhere(fn ($tie) => $tie
+                        ->whereColumn('b.audited_at', 'a.audited_at')
+                        ->whereColumn('b.id', '>', 'a.id')))
+                ->where(fn ($breaks) => $breaks
+                    ->where('b.condition', '!=', 'PANTAU')
+                    ->orWhereExists(fn ($f) => $f->selectRaw('1')
+                        ->from('oil_audit_follow_ups as bf')
+                        ->whereColumn('bf.oil_audit_id', 'b.id'))))
+            ->groupBy('a.machine_id', 'a.machine_number')
+            ->havingRaw('count(*) >= ?', [self::PANTAU_REFILL_REMINDER_AT])
+            ->selectRaw('a.machine_id, a.machine_number, count(*) as streak, max(a.audited_at) as last_audited_at')
+            ->orderByDesc('streak')
+            ->orderBy('a.machine_number')
+            ->toBase()
+            ->get();
+    }
 
     /**
      * Extracted verbatim from OilAuditController::assertFollowUpAllowed()'s

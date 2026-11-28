@@ -2,6 +2,8 @@
 
 @php
     $fullWidth = true;
+    $isLocked = $pmSchedule->isLocked();
+    $canEditPic = auth()->user()->isAdmin() || auth()->user()->isKoordinator();
     $pmDate = $executionDate
         ? $executionDate->format('d-m-Y')
         : ($pmSchedule->actual_date ? \Carbon\Carbon::parse($pmSchedule->actual_date)->format('d-m-Y') : '-');
@@ -32,6 +34,17 @@
 
         @if (session('warning'))
             <x-ui.alert tone="danger" title="Warning!">{{ session('warning') }}</x-ui.alert>
+        @endif
+
+        @if ($isLocked)
+            <x-ui.alert tone="info" title="Read-only">
+                This PM is finished and locked for editing.
+                @if ($canEditPic)
+                    Click "Reopen Edit" below to edit it again.
+                @else
+                    Ask a koordinator to reopen edit.
+                @endif
+            </x-ui.alert>
         @endif
 
         <section class="card p-5" aria-labelledby="checklist-machine-heading">
@@ -92,6 +105,7 @@
 
             <div id="pm-checklist-data" data-pm-schedule-id="{{ $pmSchedule->id }}" data-pm-status="{{ $pmSchedule->status }}" data-pm-checklist-baseline="{{ json_encode($checklistBaseline) }}"></div>
 
+            <fieldset @disabled($isLocked) class="space-y-5 border-0 p-0 m-0">
             <section aria-labelledby="checklist-heading">
                 <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                     <h2 id="checklist-heading" class="font-signage text-xl font-semibold text-text">Checklist</h2>
@@ -195,12 +209,26 @@
                     </table>
                 </div>
             </section>
+            </fieldset>
 
             <div class="sticky bottom-0 z-10 -mx-4 border-t border-border bg-surface/95 px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <x-ui.button variant="ghost" href="{{ route('pm-schedules.edit', $pmSchedule->id) }}" class="hidden sm:inline-flex">Back to Fill PM</x-ui.button>
-                    <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Save Checklist</x-ui.button>
-                </div>
+                @if ($isLocked)
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm text-text-muted">This PM is finished and cannot be edited.</p>
+                        @if ($canEditPic)
+                            <form action="{{ route('pm-schedules.reopen-edit', $pmSchedule) }}" method="POST"
+                                onsubmit="return confirm('Reopen this PM for editing?')">
+                                @csrf
+                                <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Reopen Edit</x-ui.button>
+                            </form>
+                        @endif
+                    </div>
+                @else
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <x-ui.button variant="ghost" href="{{ route('pm-schedules.edit', $pmSchedule->id) }}" class="hidden sm:inline-flex">Back to Fill PM</x-ui.button>
+                        <x-ui.button type="submit" size="lg" class="w-full sm:w-auto">Save Checklist</x-ui.button>
+                    </div>
+                @endif
             </div>
         </form>
     </div>

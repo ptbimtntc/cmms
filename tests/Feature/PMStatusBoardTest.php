@@ -216,6 +216,30 @@ test('a missed schedule displays as open, not a new status', function () {
     expect($row['status'])->toBe('OPEN');
 });
 
+test('an in_progress schedule is not listed at all, not even mislabeled as open', function () {
+    $machine = pmStatusBoardMachine(['machine_number' => 'MC-IN-PROGRESS']);
+    pmStatusBoardSchedule($machine, ['plan_date' => now(), 'status' => 'IN_PROGRESS']);
+
+    $response = $this->get(pmStatusUrl('wwd'));
+
+    expect($response->viewData('schedules'))->toHaveCount(0);
+    $response->assertDontSee('MC-IN-PROGRESS');
+});
+
+test('month endpoint also hides in_progress schedules', function () {
+    Carbon::setTestNow(Carbon::parse('2026-09-22', 'Asia/Jakarta'));
+
+    $machine = pmStatusBoardMachine(['machine_number' => 'MC-OCT-IN-PROGRESS']);
+    pmStatusBoardSchedule($machine, ['plan_date' => '2026-10-10', 'status' => 'IN_PROGRESS']);
+
+    $json = $this->getJson(route('pm-status.month', ['area' => 'wwd', 'offset' => 1]))->json();
+
+    expect($json['desktop'])->not->toContain('MC-OCT-IN-PROGRESS');
+    expect($json['mobile'])->not->toContain('MC-OCT-IN-PROGRESS');
+
+    Carbon::setTestNow();
+});
+
 test('board never renders a status other than open', function () {
     $machine = pmStatusBoardMachine();
     pmStatusBoardSchedule($machine, ['plan_date' => now(), 'status' => 'IN_PROGRESS']);

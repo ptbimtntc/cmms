@@ -12,10 +12,14 @@
 
     <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3 text-sm">
         <div class="min-w-0">
-            <dt class="text-xs text-text-muted">PIC</dt>
+            <dt class="text-xs text-text-muted">Auditor</dt>
             <dd class="mt-0.5 truncate font-medium text-text">{{ $audit->audited_by_name ?: '-' }}</dd>
         </div>
         <div class="min-w-0">
+            <dt class="text-xs text-text-muted">Action PIC</dt>
+            <dd class="mt-0.5 truncate font-medium text-text">{{ $audit->followUp?->pic_name ?: '-' }}</dd>
+        </div>
+        <div class="col-span-2 min-w-0">
             <dt class="text-xs text-text-muted">Finding</dt>
             <dd class="mt-0.5 wrap-anywhere font-medium text-text">
                 @if (! $audit->needsFollowUp())

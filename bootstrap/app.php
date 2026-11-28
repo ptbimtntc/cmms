@@ -39,6 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // minute, same as any Laravel scheduler.
         $schedule->command('pm-schedules:mark-overdue-missed')->dailyAt('00:05');
 
+        // Same idea as the sweep above, for the Kedisiplinan PIC admin items
+        // — see app/Console/Commands/MarkOverduePicDisciplineEntriesBreached.php.
+        $schedule->command('pic-discipline:mark-overdue-breached')->dailyAt('00:10');
+
         // Daily check; database is created weekly and source code every two
         // weeks (config/backup.php), then copied to Google Drive when set up.
         $schedule->command('backup:scheduled')

@@ -28,5 +28,6 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call(MachineMaintenanceRequirementSeeder::class);
+        $this->call(PicDisciplineItemTypeSeeder::class);
     }
 }
